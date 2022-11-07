@@ -31,9 +31,10 @@ def log_to_writer(iteration, losses, writer, opt):
             print_str = print_str + str(key) + f": {losses[key].item() : 0.05f} " 
             writer.add_scalar(str(key), losses[key].item(), iteration)
         print(print_str)
-        GBytes = (torch.cuda.max_memory_allocated(device=opt['device']) \
-            / (1024**3))
-        writer.add_scalar('GPU memory (GB)', GBytes, iteration)
+        if("cuda" in opt['device']):
+            GBytes = (torch.cuda.max_memory_allocated(device=opt['device']) \
+                / (1024**3))
+            writer.add_scalar('GPU memory (GB)', GBytes, iteration)
 
 def log_image(model, grid_to_sample, writer, iteration, dataset):
     with torch.no_grad():
@@ -61,15 +62,11 @@ def logging(writer, iteration, losses, opt, grid_to_sample, dataset):
     if(opt['log_image'] and iteration % opt['log_image_every'] == 0):
         log_image(model, grid_to_sample, writer, iteration, dataset)
                     
-def train(rank, model, dataset, opt):
+def train( model, dataset, opt):
       
     model = model.to(opt['device'])        
     print("Training on %s" % (opt["device"]), 
         os.path.join(save_folder, opt["save_name"]))
-
-    for name, param in model.named_parameters(): 
-        if param.requires_grad: 
-            print(name)
 
     optimizer = optim.Adam(model.parameters(), lr=opt["lr"],
         betas=[opt['beta_1'], opt['beta_2']]) 
@@ -84,7 +81,7 @@ def train(rank, model, dataset, opt):
     writer.add_image("Ground Truth", gt_img, 0, dataformats="CHW")
     
     model.train(True)
-    print(optimizer.param_groups)
+
     loss_func = get_loss_func(opt)
     with torch.profiler.profile(
         activities=[
@@ -230,7 +227,7 @@ if __name__ == '__main__':
     now = datetime.datetime.now()
     start_time = time.time()
     
-    train(opt['device'], model, dataset,opt)
+    train(model, dataset, opt)
         
     opt['iteration_number'] = 0
     save_model(model, opt)

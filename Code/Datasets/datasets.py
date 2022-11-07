@@ -23,12 +23,6 @@ class Dataset(torch.utils.data.Dataset):
         
         d = nc_to_tensor(folder_to_load).to(opt['data_device'])
         self.data = d
-            
-        self.index_grid = make_coord_grid(
-            self.data.shape[2:], 
-            self.opt['data_device'],
-            flatten=True,
-            align_corners=self.opt['align_corners'])
 
     def min(self):
         if self.min_ is not None:
@@ -87,31 +81,13 @@ class Dataset(torch.utils.data.Dataset):
         return self.full_coord_grid
 
     def get_random_points(self, n_points, device="cpu"):        
-        possible_spots = self.index_grid
-
-        if(self.opt['interpolate']):
-            x = torch.rand([1, 1, 1, n_points, self.opt['n_dims']], 
+        
+        x = torch.rand([1, 1, 1, n_points, self.opt['n_dims']], 
                 device=self.opt['data_device']) * 2 - 1
-            y = F.grid_sample(self.data,
-                x, mode='bilinear', 
-                align_corners=self.opt['align_corners'])
-        else:
-            if(n_points >= possible_spots.shape[0]):
-                x = possible_spots.clone().unsqueeze_(0)
-            else:
-                samples = torch.randperm(possible_spots.shape[0], 
-                    dtype=torch.long, device=self.opt['data_device'])[:n_points]
-                # Change above to not use CPU when not on MPS
-                # Verify that the bottom two lines do the same thing
-                x = torch.index_select(possible_spots, 0, samples).clone().unsqueeze_(0)
-                #x = possible_spots[samples].clone().unsqueeze_(0)
-            for _ in range(len(self.data.shape[2:])-1):
-                x = x.unsqueeze(-2)
-            
-
-            y = F.grid_sample(self.data, 
-                x, mode='nearest', 
-                align_corners=self.opt['align_corners'])
+        
+        y = F.grid_sample(self.data,
+            x, mode='bilinear', 
+            align_corners=self.opt['align_corners'])
         
         x = x.squeeze()
         y = y.squeeze()

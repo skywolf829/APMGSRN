@@ -363,7 +363,7 @@ def tensor_to_cdf(t, location, channel_names=None):
         else:
             ch = channel_names[i]
         d.createVariable(ch, np.float32, dims)
-        d[ch][:] = t[0,i].clone().detach().cpu().numpy()
+        d[ch][:] = t[0,i].detach().cpu().numpy()
     d.close()
 
 def nc_to_tensor(location):

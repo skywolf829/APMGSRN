@@ -1,7 +1,7 @@
 {
     "1": [ "test.py",
         {        
-        "load_from": "tornado",
+        "load_from": "Isotropic_64featgrid_6layers64",
         "tests": "reconstruction"
     }]
 }
