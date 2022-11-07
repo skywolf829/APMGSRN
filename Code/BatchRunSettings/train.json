@@ -1,8 +1,8 @@
 {
     "0": [ "train.py",
         {        
-        "save_name": "IsotropicMag_large",
-        "data": "IsotropicMag.nc",
+        "save_name": "Supernova_featgrid64_4layers64",
+        "data": "Supernova.nc",
         "n_dims": 3,
         "n_features": 16,
         "feature_grid_shape": "64,64,64",
@@ -13,14 +13,50 @@
         "iterations": 10000,
         "points_per_iteration": 10000,
         "interpolate": true,
-        "log_every": 5,
+        "log_every": 10,
         "log_image": true,
-        "log_image_every": 1250
+        "log_image_every": 2000
+    }]
+    ,"0j": [ "train.py",
+    {        
+        "save_name": "Supernova_featgrid64_4layers32",
+        "data": "Supernova.nc",
+        "n_dims": 3,
+        "n_features": 16,
+        "feature_grid_shape": "64,64,64",
+        "n_outputs": 1,
+        "n_layers": 4,
+        "nodes_per_layer": 32,
+        "lr": 0.01,
+        "iterations": 10000,
+        "points_per_iteration": 10000,
+        "interpolate": true,
+        "log_every": 10,
+        "log_image": true,
+        "log_image_every": 2000
+    }],
+    "0jb": [ "train.py",
+    {        
+        "save_name": "Supernova_featgrid64_4layers128",
+        "data": "Supernova.nc",
+        "n_dims": 3,
+        "n_features": 16,
+        "feature_grid_shape": "64,64,64",
+        "n_outputs": 1,
+        "n_layers": 4,
+        "nodes_per_layer": 128,
+        "lr": 0.01,
+        "iterations": 10000,
+        "points_per_iteration": 10000,
+        "interpolate": true,
+        "log_every": 10,
+        "log_image": true,
+        "log_image_every": 2000
     }],
     "1": [ "train.py",
         {        
-        "save_name": "IsotropicMag_medium",
-        "data": "IsotropicMag.nc",
+        "save_name": "Supernova_featgrid32_4layers64",
+        "data": "Supernova.nc",
         "n_dims": 3,
         "n_features": 16,
         "feature_grid_shape": "32,32,32",
@@ -31,14 +67,14 @@
         "iterations": 10000,
         "points_per_iteration": 10000,
         "interpolate": true,
-        "log_every": 5,
+        "log_every": 10,
         "log_image": true,
-        "log_image_every": 1250
+        "log_image_every": 2000
     }],
     "2": [ "train.py",
         {        
-        "save_name": "IsotropicMag_small",
-        "data": "IsotropicMag.nc",
+        "save_name": "Supernova_featgrid32_4layers32",
+        "data": "Supernova.nc",
         "n_dims": 3,
         "n_features": 16,
         "feature_grid_shape": "32,32,32",
@@ -49,8 +85,26 @@
         "iterations": 10000,
         "points_per_iteration": 10000,
         "interpolate": true,
-        "log_every": 5,
+        "log_every": 10,
         "log_image": true,
-        "log_image_every": 1250
+        "log_image_every": 2000
+    }],
+    "2g": [ "train.py",
+        {        
+        "save_name": "Supernova_featgrid32_4layers128",
+        "data": "Supernova.nc",
+        "n_dims": 3,
+        "n_features": 16,
+        "feature_grid_shape": "32,32,32",
+        "n_outputs": 1,
+        "n_layers": 4,
+        "nodes_per_layer": 128,
+        "lr": 0.01,
+        "iterations": 10000,
+        "points_per_iteration": 10000,
+        "interpolate": true,
+        "log_every": 10,
+        "log_image": true,
+        "log_image_every": 2000
     }]
 }
