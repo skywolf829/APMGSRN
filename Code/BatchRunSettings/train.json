@@ -1,7 +1,7 @@
 {
     "0": [ "train.py",
         {        
-        "save_name": "Supernova_2080Ti",
+        "save_name": "Supernova_MacbookPro",
         "data": "Supernova.nc",
         "n_dims": 3,
         "n_features": 16,
