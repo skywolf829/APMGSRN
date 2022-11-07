@@ -102,13 +102,16 @@ class fVSRN(nn.Module):
         grid_shape = opt['feature_grid_shape'].split(",")
         for i in range(len(grid_shape)):
             feat_shape.append(int(grid_shape[i]))
-        self.feature_grid = torch.randn(grid_shape, device=self.opt['device'], dtype=torch.float32)
-        
+        print(f'Feature grid shape: {feat_shape}')
+        self.feature_grid = torch.rand(feat_shape, 
+            device=self.opt['device'], dtype=torch.float32)
+        self.feature_grid = torch.nn.Parameter(self.feature_grid, 
+            requires_grad=True)
+
         self.decoder = nn.ModuleList()
         first_layer_input_size = opt['num_positional_encoding_terms']*opt['n_dims']*2 + opt['n_features']
         layer = SnakeAltLayer(first_layer_input_size, 
-                            opt['nodes_per_layer'], 
-                            is_first=True)
+                            opt['nodes_per_layer'])
         self.decoder.append(layer)
         
         for i in range(opt['n_layers']):
@@ -133,12 +136,14 @@ class fVSRN(nn.Module):
         nn.init.normal_(new_last_layer.weight, 0, 0.001)
         self.decoder.append(new_last_layer)
         
+        
     def forward(self, x):     
         
         pe = self.pe(x)
         feats = F.grid_sample(self.feature_grid,
                 x.unsqueeze(0).unsqueeze(0).unsqueeze(0),
-                mode='bilinear', align_corners=True)    
+                mode='bilinear', align_corners=True)   
+        feats = feats.squeeze().permute(1, 0)
         y = torch.cat([pe, feats], dim=1)
         
         i = 0

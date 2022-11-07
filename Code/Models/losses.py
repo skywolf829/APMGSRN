@@ -8,7 +8,7 @@ def mse(x, y):
     return F.mse_loss(x, y)
 
 def l1_loss(network_output, target):
-    return l1(network_output, target['data'])
+    return l1(network_output, target)
 
 def l1_occupancy(gt, y):
     # Expects x to be [..., 3] or [..., 4] for (u, v, o) or (u, v, w, o)
@@ -63,15 +63,15 @@ def magangle_same_loss(x, y):
     return 0.9*mags + 0.1*weighted_angles.mean()
 
 def uvwf_any_loss(network_output, target):
-    l1_err = l1(network_output[:,0:3], target['data'])
+    l1_err = l1(network_output[:,0:3], target)
     grads_f = torch.autograd.grad(network_output[:,3], target['inputs'], 
         grad_outputs=torch.ones_like(network_output[:,3]),
         create_graph=True)[0]
-    f_err = angle_orthogonal_loss(grads_f, target['data'])
+    f_err = angle_orthogonal_loss(grads_f, target)
     return l1_err + f_err
 
 def uvwf_parallel_loss(network_output, target):
-    l1_err = l1(network_output[:,0:3], target['data'])
+    l1_err = l1(network_output[:,0:3], target)
     grads_f = torch.autograd.grad(network_output[:,3], target['inputs'], 
         grad_outputs=torch.ones_like(network_output[:,3]),
         create_graph=True)[0]
@@ -79,7 +79,7 @@ def uvwf_parallel_loss(network_output, target):
     return l1_err + f_err
 
 def uvwf_direction_loss(network_output, target):
-    l1_err = l1(network_output[:,0:3], target['data'])
+    l1_err = l1(network_output[:,0:3], target)
     grads_f = torch.autograd.grad(network_output[:,3], target['inputs'], 
         grad_outputs=torch.ones_like(network_output[:,3]),
         create_graph=True)[0]
@@ -94,7 +94,7 @@ def dsf_any_loss(network_output, target):
         grad_outputs=torch.ones_like(network_output[:,1]),
         create_graph=True)[0]
     dsf = torch.cross(grads_f, grads_g, dim=1)
-    angle_err = angle_same_loss(dsf, target['data'])
+    angle_err = angle_same_loss(dsf, target)
     return angle_err
 
 def dsf_parallel_loss(network_output, target):
@@ -106,7 +106,7 @@ def dsf_parallel_loss(network_output, target):
         create_graph=True)[0]
     normal_err = angle_parallel_loss(grads_f, target['normal'])
     dsf = torch.cross(grads_f.detach(), grads_g, dim=1)
-    angle_err = angle_same_loss(dsf, target['data'])
+    angle_err = angle_same_loss(dsf, target)
     return normal_err + angle_err
 
 def dsf_direction_loss(network_output, target):
@@ -118,7 +118,7 @@ def dsf_direction_loss(network_output, target):
         create_graph=True)[0]
     normal_err = angle_same_loss(grads_f, target['normal'])
     dsf = torch.cross(grads_f.detach(), grads_g, dim=1)
-    angle_err = angle_same_loss(dsf, target['data'])
+    angle_err = angle_same_loss(dsf, target)
     return normal_err + angle_err
 
 def dsfm_any_loss(network_output, target):
@@ -129,8 +129,8 @@ def dsfm_any_loss(network_output, target):
         grad_outputs=torch.ones_like(network_output[:,1]),
         create_graph=True)[0]
     dsf = torch.cross(grads_f, grads_g, dim=1)
-    angle_err = angle_same_loss(dsf, target['data'])
-    l1_err = l1(network_output[:,-1], torch.norm(target['data'], dim=-1))
+    angle_err = angle_same_loss(dsf, target)
+    l1_err = l1(network_output[:,-1], torch.norm(target, dim=-1))
     return angle_err + l1_err
 
 def dsfm_parallel_loss(network_output, target):
@@ -142,8 +142,8 @@ def dsfm_parallel_loss(network_output, target):
         create_graph=True)[0]
     normal_err = angle_parallel_loss(grads_f, target['normal'])
     dsf = torch.cross(grads_f.detach(), grads_g, dim=1)
-    angle_err = angle_same_loss(dsf, target['data'])    
-    l1_err = l1(network_output[:,-1], torch.norm(target['data'], dim=-1))
+    angle_err = angle_same_loss(dsf, target)    
+    l1_err = l1(network_output[:,-1], torch.norm(target, dim=-1))
     return normal_err + angle_err + l1_err
 
 def dsfm_direction_loss(network_output, target):
@@ -155,15 +155,15 @@ def dsfm_direction_loss(network_output, target):
         create_graph=True)[0]
     normal_err = angle_same_loss(grads_f, target['normal'])
     dsf = torch.cross(grads_f.detach(), grads_g, dim=1)
-    angle_err = angle_same_loss(dsf, target['data'])
-    l1_err = l1(network_output[:,-1], torch.norm(target['data'], dim=-1))
+    angle_err = angle_same_loss(dsf, target)
+    l1_err = l1(network_output[:,-1], torch.norm(target, dim=-1))
     return normal_err + angle_err + l1_err
 
 def f_any_loss(network_output, target):
     grads_f = torch.autograd.grad(network_output[:,0], target['inputs'], 
         grad_outputs=torch.ones_like(network_output[:,0]),
         create_graph=True)[0]
-    normal_err = angle_orthogonal_loss(grads_f, target['data'])
+    normal_err = angle_orthogonal_loss(grads_f, target)
     return normal_err
 
 def f_parallel_loss(network_output, target):

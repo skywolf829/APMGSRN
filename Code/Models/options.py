@@ -8,7 +8,7 @@ class Options():
         # For descriptions of all variables, see train.py
         opt['n_dims']                               = 3       
         opt['n_outputs']                            = 2
-        opt['feature_grid_resolution']              = "16,16,16"   
+        opt['feature_grid_shape']                   = "32,32,32"   
         opt['n_features']                           = 6      
         opt['num_positional_encoding_terms']        = 6
         
@@ -19,22 +19,24 @@ class Options():
         opt['nodes_per_layer']                      = 128
         opt['interpolate']                          = False
         
-        opt['iters_to_train_new_layer']             = 500
+        opt['iters_to_train_new_layer']             = 1000
         opt['iters_since_new_layer']                = 0
 
         opt['device']                               = 'cuda:0'
         opt['data_device']                          = 'cuda:0'
 
-        opt['iterations']                           = 10000
+        opt['iterations']                           = 20000
         opt['points_per_iteration']                 = 200000   
-        opt['lr']                                   = 5e-5 
+        opt['lr']                                   = 0.01
         opt['beta_1']                               = 0.9
         opt['beta_2']                               = 0.999
 
         opt['iteration_number']                     = 0
         opt['save_every']                           = 100
         opt['log_every']                            = 5
+        opt['log_image_every']                      = 100
         opt['log_image']                            = False
+        opt['profile']                              = False
 
         return opt
 

@@ -5,7 +5,7 @@ import json
 import time
 import subprocess
 import shlex
-from utility_functions import create_path
+from Other.utility_functions import create_path
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
 project_folder_path = os.path.join(project_folder_path, "..")

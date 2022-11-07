@@ -63,8 +63,7 @@ def sample_grad_grid(model, grid,
 
     output_shape = list(coord_grid.shape)
     output_shape[-1] = model.opt['n_dims']
-    print("Output shape")
-    print(output_shape)
+    
     output = torch.empty(output_shape, 
         dtype=torch.float32, device=model.opt['device'], 
         requires_grad=False)

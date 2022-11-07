@@ -40,13 +40,6 @@ def log_image(model, grid_to_sample, writer, iteration, dataset):
         img = sample_grid_for_image(model, grid_to_sample)
         writer.add_image('Reconstruction', img.clamp(0, 1), 
             iteration, dataformats='HWC')
-        gaussian_density = model.gaussian_density(grid_to_sample)
-        gt_img = dataset.get_2D_slice().permute(1, 2, 0).repeat(1, 1, 3).to(gaussian_density.device)
-        gt_img[:,:,0] += gaussian_density[:,:,0]
-        gt_img /= gt_img.max()
-        
-        writer.add_image("Gaussian density", gt_img.clamp(0,1),
-            iteration, dataformats = 'HWC')
 
 def log_grad_image(model, grid_to_sample, writer, iteration):
     grad_img = model.sample_grad_grid_for_image(grid_to_sample)
@@ -63,10 +56,10 @@ def log_grad_image(model, grid_to_sample, writer, iteration):
                 iteration, dataformats='HWC')
 
 def logging(writer, iteration, losses, opt, grid_to_sample, dataset):
-    if(iteration % 5 == 0):
+    if(iteration % opt['log_every'] == 0):
         log_to_writer(iteration, losses, writer, opt)
-        if(opt['log_image']):
-            log_image(model, grid_to_sample, writer, iteration, dataset)
+    if(opt['log_image'] and iteration % opt['log_image_every'] == 0):
+        log_image(model, grid_to_sample, writer, iteration, dataset)
                     
 def train(rank, model, dataset, opt):
       
@@ -74,9 +67,12 @@ def train(rank, model, dataset, opt):
     print("Training on %s" % (opt["device"]), 
         os.path.join(save_folder, opt["save_name"]))
 
-    optimizer = optim.Adam(model.network_parameters, lr=opt["lr"],
-        betas=[opt['beta_1'], opt['beta_2']]) 
+    for name, param in model.named_parameters(): 
+        if param.requires_grad: 
+            print(name)
 
+    optimizer = optim.Adam(model.parameters(), lr=opt["lr"],
+        betas=[opt['beta_1'], opt['beta_2']]) 
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 
         step_size=opt['iterations']//3, gamma=0.1)
 
@@ -88,25 +84,51 @@ def train(rank, model, dataset, opt):
     writer.add_image("Ground Truth", gt_img, 0, dataformats="CHW")
     
     model.train(True)
-
+    print(optimizer.param_groups)
     loss_func = get_loss_func(opt)
+    with torch.profiler.profile(
+        activities=[
+            torch.profiler.ProfilerActivity.CPU,
+            torch.profiler.ProfilerActivity.CUDA,
+        ],
+        schedule=torch.profiler.schedule(
+            wait=2,
+            warmup=8,
+            active=1,
+            repeat=1),
+        record_shapes=True,
+        profile_memory=True,
+        with_flops=True,
+        with_modules=True,
+        on_trace_ready=torch.profiler.tensorboard_trace_handler(
+            os.path.join('tensorboard',opt['save_name'])),
+    with_stack=True) as profiler:
 
-    for iteration in range(0, opt['iterations']):
-        opt['iteration_number'] = iteration
-        optimizer.zero_grad()
-        
-        x, y = dataset.get_random_points(opt['points_per_iteration'],
-                device=opt['device'])
-        
-        model_output = model(x)
-        loss = loss_func(y, model_output)
+        for iteration in range(0, opt['iterations']):
+            opt['iteration_number'] = iteration
+            optimizer.zero_grad()
+            
+            x, y = dataset.get_random_points(opt['points_per_iteration'],
+                    device=opt['device'])
+            
+            model_output = model(x)
+            loss = loss_func(y, model_output)
 
-        loss.backward()        
-        optimizer.step()
-        scheduler.step()
-        
-        logging(writer, iteration, {"Fitting loss": loss}, opt, dataset.data.shape[2:], dataset)
-    
+            loss.backward()        
+            optimizer.step()
+            scheduler.step()        
+            profiler.step()
+
+            logging(writer, iteration, {"Fitting loss": loss}, opt, dataset.data.shape[2:], dataset)
+            if(iteration % opt['save_every'] == 0):
+                save_model(model, opt)
+
+            #if(iteration == 100):
+                #model.add_layer()
+                #optimizer.param_groups.pop(0)
+                #optimizer.param_groups.append(model.parameters())
+
+            
     writer.close()
     save_model(model, opt)
 
@@ -117,7 +139,7 @@ if __name__ == '__main__':
         help='Number of dimensions in the data')
     parser.add_argument('--n_outputs',default=None,type=int,
         help='Number of output channels for the data (ex. 1 for scalar field, 3 for image or vector field)')
-    parser.add_argument('--feature_grid_resolution',default=None,type=str,
+    parser.add_argument('--feature_grid_shape',default=None,type=str,
         help='Resolution for feature grid')
     parser.add_argument('--n_features',default=None,type=int,
         help='Number of features in the feature grid')   
@@ -165,6 +187,8 @@ if __name__ == '__main__':
         help='How often to save the model')
     parser.add_argument('--log_every',default=None, type=int,
         help='How often to log the loss')
+    parser.add_argument('--log_image_every',default=None, type=int,
+        help='How often to log the image')
     parser.add_argument('--load_from',default=None, type=str,
         help='Model to load to start training from')
     parser.add_argument('--log_image',default=None, type=str2bool,
