@@ -8,7 +8,7 @@
     "extents": "0,512,0,512,512,1024",
     "feature_grid_shape": "64,64,64",
     "interpolate": true,
-    "iteration_number": 0,
+    "iteration_number": 4300,
     "iterations": 10000,
     "iters_since_new_layer": 0,
     "iters_to_train_new_layer": 1000,
