@@ -41,6 +41,8 @@ def build_commands(settings_path):
             command = command + str(variables[var_name]) + " "
         commands.append(command)
         if("train" in script_name):
+            if(os.path.exists(os.path.join(save_folder, variables["save_name"], "train_log.txt"))):
+                os.remove(os.path.join(save_folder, variables["save_name"], "train_log.txt"))
             log_locations.append(os.path.join(save_folder, variables["save_name"], "train_log.txt"))
             create_path(os.path.join(save_folder, variables["save_name"]))
         elif("test" in script_name):
