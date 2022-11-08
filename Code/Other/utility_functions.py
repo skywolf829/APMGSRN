@@ -44,10 +44,19 @@ def create_window_3D(window_size, channel):
     window = torch.Tensor(_3D_window.expand(channel, 1, window_size, window_size, window_size).contiguous())
     return window
 
-def PSNR(x, y, range = torch.tensor(1.0, dtype=torch.float32)):
+def PSNR(x, y, range = torch.tensor(1.0, dtype=torch.float32), in_place=False):
     range = range.to(x.device)
-    return 20*torch.log10(range) - \
-        10*torch.log10(((y-x)**2).mean())
+    if(in_place):
+        y -= x
+        y **= 2
+        y = y.mean()
+        y = torch.log10(y)
+        y *= 10
+        y = 20* torch.log10(range) - y
+        return y
+    else:
+        return 20*torch.log10(range) - \
+            10*torch.log10(((y-x)**2).mean())
         
 def _ssim(img1 : torch.Tensor, img2 : torch.Tensor, window : torch.Tensor, 
 window_size : torch.Tensor, channel : int, size_average : Optional[bool] = True):
@@ -366,12 +375,17 @@ def tensor_to_cdf(t, location, channel_names=None):
         d[ch][:] = t[0,i].detach().cpu().numpy()
     d.close()
 
-def nc_to_tensor(location):
+def nc_to_tensor(location, opt = None):
     import netCDF4 as nc
     f = nc.Dataset(location)
     channels = []
     for a in f.variables:
-        d = np.array(f[a])
+        if(opt['extents'] is None):
+            d = np.array(f[a])
+        else:
+            ext = opt['extents'].split(',')
+            ext = [eval(i) for i in ext]
+            d = np.array(f[a][ext[0]:ext[1],ext[2]:ext[3],ext[4]:ext[5]])
         channels.append(d)
     d = np.stack(channels)
     d = torch.tensor(d).unsqueeze(0)

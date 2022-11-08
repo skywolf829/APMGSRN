@@ -142,6 +142,9 @@ if __name__ == '__main__':
         help='Number of features in the feature grid')   
     parser.add_argument('--num_positional_encoding_terms',default=None,type=int,
         help='Number of positional encoding terms')   
+    parser.add_argument('--extents',default=None,type=str,
+        help='Spatial extents to use for this model from the data')   
+    
 
     parser.add_argument('--data',default=None,type=str,
         help='Data file name')

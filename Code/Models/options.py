@@ -11,6 +11,7 @@ class Options():
         opt['feature_grid_shape']                   = "32,32,32"   
         opt['n_features']                           = 6      
         opt['num_positional_encoding_terms']        = 6
+        opt['extents']                              = None
         
         opt['data']                                 = 'tornado.nc'
         opt['save_name']                            = 'tornado'

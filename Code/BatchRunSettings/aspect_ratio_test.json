@@ -1,0 +1,127 @@
+{
+    "full": [ "test.py",
+        {        
+        "load_from": "Isotropic_full_64featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "octant0": [ "test.py",
+        {        
+        "load_from": "Isotropic_octant0_64featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "octant1": [ "test.py",
+        {        
+        "load_from": "Isotropic_octant1_64featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "octant2": [ "test.py",
+        {        
+        "load_from": "Isotropic_octant2_64featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "octant3": [ "test.py",
+        {        
+        "load_from": "Isotropic_octant3_64featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "octant4": [ "test.py",
+        {        
+        "load_from": "Isotropic_octant4_64featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "octant5": [ "test.py",
+        {        
+        "load_from": "Isotropic_octant5_64featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "octant6": [ "test.py",
+        {        
+        "load_from": "Isotropic_octant6_64featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "octant7": [ "test.py",
+        {        
+        "load_from": "Isotropic_octant7_64featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "slice0": [ "test.py",
+        {        
+        "load_from": "Isotropic_slice0_128x128x16featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "slice1": [ "test.py",
+        {        
+        "load_from": "Isotropic_slice1_128x128x16featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "slice2": [ "test.py",
+        {        
+        "load_from": "Isotropic_slice2_128x128x16featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "slice3": [ "test.py",
+        {        
+        "load_from": "Isotropic_slice3_128x128x16featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "slice4": [ "test.py",
+        {        
+        "load_from": "Isotropic_slice4_128x128x16featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "slice5": [ "test.py",
+        {        
+        "load_from": "Isotropic_slice5_128x128x16featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "slice6": [ "test.py",
+        {        
+        "load_from": "Isotropic_slice6_128x128x16featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "slice7": [ "test.py",
+        {        
+        "load_from": "Isotropic_slice7_128x128x16featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "slice0_uniform": [ "test.py",
+        {        
+        "load_from": "Isotropic_slice0_64featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "slice1_uniform": [ "test.py",
+        {        
+        "load_from": "Isotropic_slice1_64featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "slice2_uniform": [ "test.py",
+        {        
+        "load_from": "Isotropic_slice2_64featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "slice_uniform3": [ "test.py",
+        {        
+        "load_from": "Isotropic_slice3_64featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "slice4_uniform": [ "test.py",
+        {        
+        "load_from": "Isotropic_slice4_64featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "slice5_uniform": [ "test.py",
+        {        
+        "load_from": "Isotropic_slice5_64featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "slice6_uniform": [ "test.py",
+        {        
+        "load_from": "Isotropic_slice6_64featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }],
+    "slice7_uniform": [ "test.py",
+        {        
+        "load_from": "Isotropic_slice7_64featgrid_4layers32nodes",
+        "tests": "reconstruction"
+    }]
+}

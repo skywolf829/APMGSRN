@@ -16,14 +16,14 @@ save_folder = os.path.join(project_folder_path, "SavedModels")
 def model_reconstruction(model, dataset, opt):
     grid = list(dataset.data.shape[2:])
     with torch.no_grad():
-        result = sample_grid(model, grid, 100000)
+        result = sample_grid(model, grid, 1000000)
     result = result.to(opt['data_device'])
     result = result.permute(3, 0, 1, 2).unsqueeze(0)
-    p = PSNR(result.to("cpu"), dataset.data.to("cpu"))
-
-    print(f"PSNR: {p : 0.02f}")
     create_path(os.path.join(output_folder, "Reconstruction"))
     tensor_to_cdf(result, os.path.join(output_folder, "Reconstruction", opt['save_name']+".nc"))
+    
+    p = PSNR(dataset.data, result, in_place=True)
+    print(f"PSNR: {p : 0.03f}")
 
     
 def perform_tests(model, data, tests, opt):

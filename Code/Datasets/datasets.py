@@ -21,7 +21,7 @@ class Dataset(torch.utils.data.Dataset):
 
         print(f"Initializing dataset - reading {folder_to_load}")
         
-        d = nc_to_tensor(folder_to_load).to(opt['data_device'])
+        d = nc_to_tensor(folder_to_load, opt).to(opt['data_device'])
         self.data = d
 
     def min(self):
