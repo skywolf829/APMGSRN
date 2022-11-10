@@ -27,13 +27,15 @@ Settings files to run are in /Code/BatchRunSettings/
 def build_commands(settings_path):
     f = open(settings_path)
     data = json.load(f)
+    f.close()
     commands = []
     command_names = []
     log_locations = []
-    for run_name in data.keys():
+    for i in range(len(data)):
+        run_name = str(i)
         command_names.append(run_name)
-        script_name = data[run_name][0]
-        variables = data[run_name][1]
+        script_name = data[i][0]
+        variables = data[i][1]
         command = "python Code/" + str(script_name) + " "
             
         for var_name in variables.keys():
@@ -51,7 +53,7 @@ def build_commands(settings_path):
         else:
             log_locations.append(os.path.join(save_folder, variables["load_from"], "log.txt"))
             create_path(os.path.join(save_folder, variables["load_from"]))
-    f.close()
+    
     return command_names, commands, log_locations
 
 # Parses the string of usable devices

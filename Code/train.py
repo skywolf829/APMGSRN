@@ -117,8 +117,8 @@ def train( model, dataset, opt):
             profiler.step()
 
             logging(writer, iteration, {"Fitting loss": loss}, opt, dataset.data.shape[2:], dataset)
-            if(iteration % opt['save_every'] == 0):
-                save_model(model, opt)
+            #if(iteration % opt['save_every'] == 0):
+            #    save_model(model, opt)
 
             #if(iteration == 100):
                 #model.add_layer()

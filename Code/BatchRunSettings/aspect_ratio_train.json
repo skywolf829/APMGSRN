@@ -1,7 +1,7 @@
-{
-    "0": [ "train.py",
+[
+    [ "train.py",
         {        
-        "save_name": "Isotropic_full_64featgrid_4layers32nodes",
+        "save_name": "Isotropic_64featgrid_4layers32nodes_full",
         "data": "Isotropic.nc",
         "n_dims": 3,
         "n_features": 16,
@@ -17,9 +17,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    "1": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_octant0_64featgrid_4layers32nodes",
+        "save_name": "Isotropic_64featgrid_4layers32nodes_octant0",
         "extents": "0,512,0,512,0,512",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -35,11 +35,10 @@
         "log_every": 10,
         "log_image": false,
         "log_image_every": 2000
-    }],
-    
-    "2": [ "train.py",
+    }],    
+    ["train.py",
         {        
-        "save_name": "Isotropic_octant1_64featgrid_4layers32nodes",
+        "save_name": "Isotropic_64featgrid_4layers32nodes_octant1",
         "extents": "0,512,0,512,512,1024",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -56,10 +55,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    "3": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_octant2_64featgrid_4layers32nodes",
+        "save_name": "Isotropic_64featgrid_4layers32nodes_octant2",
         "extents": "0,512,512,1024,0,512",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -76,10 +74,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    "4": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_octant3_64featgrid_4layers32nodes",
+        "save_name": "Isotropic_64featgrid_4layers32nodes_octant3",
         "extents": "0,512,512,1024,512,1024",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -96,10 +93,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    "5": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_octant4_64featgrid_4layers32nodes",
+        "save_name": "Isotropic_64featgrid_4layers32nodes_octant4",
         "extents": "512,1024,0,512,0,512",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -116,10 +112,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    "6": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_octant5_64featgrid_4layers32nodes",
+        "save_name": "Isotropic_64featgrid_4layers32nodes_octant5",
         "extents": "512,1024,0,512,512,1024",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -136,10 +131,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    "7": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_octant6_64featgrid_4layers32nodes",
+        "save_name": "Isotropic_64featgrid_4layers32nodes_octant6",
         "extents": "512,1024,512,1024,0,512",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -156,10 +150,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    "8": [ "train.py",
+     [ "train.py",
         {        
-        "save_name": "Isotropic_octant7_64featgrid_4layers32nodes",
+        "save_name": "Isotropic_64featgrid_4layers32nodes_octant7",
         "extents": "512,1024,512,1024,512,1024",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -176,10 +169,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    "9": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_slice0_128x128x16featgrid_4layers32nodes",
+        "save_name": "Isotropic_128x128x16featgrid_4layers32nodes_slice0",
         "extents": "0,1024,0,1024,0,128",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -196,10 +188,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    "10": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_slice1_128x128x16featgrid_4layers32nodes",
+        "save_name": "Isotropic_128x128x16featgrid_4layers32nodes_slice1",
         "extents": "0,1024,0,1024,128,256",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -216,10 +207,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    "11": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_slice2_128x128x16featgrid_4layers32nodes",
+        "save_name": "Isotropic_128x128x16featgrid_4layers32nodes_slice2",
         "extents": "0,1024,0,1024,256,384",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -236,10 +226,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    "12": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_slice3_128x128x16featgrid_4layers32nodes",
+        "save_name": "Isotropic_128x128x16featgrid_4layers32nodes_slice3",
         "extents": "0,1024,0,1024,384,512",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -255,12 +244,10 @@
         "log_every": 10,
         "log_image": false,
         "log_image_every": 2000
-    }]
-    ,
-    
-    "13": [ "train.py",
+    }],
+    [ "train.py",
         {        
-        "save_name": "Isotropic_slice4_128x128x16featgrid_4layers32nodes",
+        "save_name": "Isotropic_128x128x16featgrid_4layers32nodes_slice4",
         "extents": "0,1024,0,1024,512,640",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -277,10 +264,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    "14": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_slice5_128x128x16featgrid_4layers32nodes",
+        "save_name": "Isotropic_128x128x16featgrid_4layers32nodes_slice5",
         "extents": "0,1024,0,1024,640,768",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -297,10 +283,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    "15": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_slice6_128x128x16featgrid_4layers32nodes",
+        "save_name": "Isotropic_128x128x16featgrid_4layers32nodes_slice6",
         "extents": "0,1024,0,1024,768,896",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -317,11 +302,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    
-    "16": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_slice7_128x128x16featgrid_4layers32nodes",
+        "save_name": "Isotropic_128x128x16featgrid_4layers32nodes_slice7",
         "extents": "0,1024,0,1024,896,1024",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -338,10 +321,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    "17": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_slice0_64featgrid_4layers32nodes",
+        "save_name": "Isotropic_64featgrid_4layers32nodes_slice0",
         "extents": "0,1024,0,1024,0,128",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -358,10 +340,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    "18": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_slice1_64featgrid_4layers32nodes",
+        "save_name": "Isotropic_64featgrid_4layers32nodes_slice1",
         "extents": "0,1024,0,1024,128,256",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -378,10 +359,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    "19": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_slice2_64featgrid_4layers32nodes",
+        "save_name": "Isotropic_64featgrid_4layers32nodes_slice2",
         "extents": "0,1024,0,1024,256,384",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -398,10 +378,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    "20": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_slice3_64featgrid_4layers32nodes",
+        "save_name": "Isotropic_64featgrid_4layers32nodes_slice3",
         "extents": "0,1024,0,1024,384,512",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -417,12 +396,10 @@
         "log_every": 10,
         "log_image": false,
         "log_image_every": 2000
-    }]
-    ,
-    
-    "21": [ "train.py",
+    }],
+    [ "train.py",
         {        
-        "save_name": "Isotropic_slice4_64featgrid_4layers32nodes",
+        "save_name": "Isotropic_64featgrid_4layers32nodes_slice4",
         "extents": "0,1024,0,1024,512,640",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -439,10 +416,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    "22": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_slice5_64featgrid_4layers32nodes",
+        "save_name": "Isotropic_64featgrid_4layers32nodes_slice5",
         "extents": "0,1024,0,1024,640,768",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -459,10 +435,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    "23": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_slice6_64featgrid_4layers32nodes",
+        "save_name": "Isotropic_64featgrid_4layers32nodes_slice6",
         "extents": "0,1024,0,1024,768,896",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -479,11 +454,9 @@
         "log_image": false,
         "log_image_every": 2000
     }],
-    
-    
-    "24": [ "train.py",
+    [ "train.py",
         {        
-        "save_name": "Isotropic_slice7_64featgrid_4layers32nodes",
+        "save_name": "Isotropic_64featgrid_4layers32nodes_slice7",
         "extents": "0,1024,0,1024,896,1024",
         "data": "Isotropic.nc",
         "n_dims": 3,
@@ -500,4 +473,4 @@
         "log_image": false,
         "log_image_every": 2000
     }]
-}
+]

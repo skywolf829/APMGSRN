@@ -102,7 +102,7 @@ class fVSRN(nn.Module):
         grid_shape = opt['feature_grid_shape'].split(",")
         for i in range(len(grid_shape)):
             feat_shape.append(int(grid_shape[i]))
-        print(f'Feature grid shape: {feat_shape}')
+        #print(f'Feature grid shape: {feat_shape}')
         self.feature_grid = torch.rand(feat_shape, 
             device=self.opt['device'], dtype=torch.float32)
         self.feature_grid = torch.nn.Parameter(self.feature_grid, 

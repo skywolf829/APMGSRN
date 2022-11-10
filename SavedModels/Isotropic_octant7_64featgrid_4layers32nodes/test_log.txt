@@ -1,4 +1,0 @@
-D:\GitHub\DistributedINR\Code\..\SavedModels\Isotropic_octant7_64featgrid_4layers32nodes
-Feature grid shape: [1, 16, 64, 64, 64]
-Initializing dataset - reading D:\GitHub\DistributedINR\Code\Datasets\..\..\Data\Isotropic.nc
-PSNR:  37.551

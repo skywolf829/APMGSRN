@@ -1,4 +1,0 @@
-D:\GitHub\DistributedINR\Code\..\SavedModels\Supernova_featgrid64_8layers128
-Feature grid shape: [1, 16, 64, 64, 64]
-Initializing dataset - reading D:\GitHub\DistributedINR\Code\Datasets\..\..\Data\Supernova.nc
-PSNR:  11.74

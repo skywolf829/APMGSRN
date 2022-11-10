@@ -2,6 +2,7 @@ import os
 import torch
 from Other.utility_functions import make_coord_grid, nc_to_tensor, curl
 import torch.nn.functional as F
+import time
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
 project_folder_path = os.path.join(project_folder_path, "..", "..")
@@ -20,8 +21,10 @@ class Dataset(torch.utils.data.Dataset):
         folder_to_load = os.path.join(data_folder, self.opt['data'])
 
         print(f"Initializing dataset - reading {folder_to_load}")
-        
+        t1 = time.time()
         d = nc_to_tensor(folder_to_load, opt).to(opt['data_device'])
+        t2 = time.time()
+        print(f"IO time loading data: {t2-t1 : 0.04f}")
         self.data = d
 
     def min(self):
