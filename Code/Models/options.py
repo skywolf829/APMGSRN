@@ -12,9 +12,11 @@ class Options():
         opt['n_features']                           = 6      
         opt['num_positional_encoding_terms']        = 6
         opt['extents']                              = None
+        opt['use_global_position']                  = False
         
         opt['data']                                 = 'tornado.nc'
         opt['save_name']                            = 'tornado'
+        opt['full_shape']                           = None
         opt['align_corners']                        = True
         opt['n_layers']                             = 4       
         opt['nodes_per_layer']                      = 128

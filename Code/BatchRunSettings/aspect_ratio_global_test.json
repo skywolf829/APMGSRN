@@ -1,0 +1,17 @@
+[
+    [ "test_ensemble.py",
+        {        
+        "load_from": "Isotropic_64featgrid_global_4layers32nodes_octant_global",
+        "tests": "reconstruction"
+    }],
+    [ "test_ensemble.py",
+        {        
+        "load_from": "Isotropic_64featgrid_global_4layers32nodes_slice",
+        "tests": "reconstruction"
+    }],
+    [ "test_ensemble.py",
+        {        
+        "load_from": "Isotropic_128x128x16featgrid_global_4layers32nodes_slice",
+        "tests": "reconstruction"
+    }]
+]

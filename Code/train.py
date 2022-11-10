@@ -144,6 +144,8 @@ if __name__ == '__main__':
         help='Number of positional encoding terms')   
     parser.add_argument('--extents',default=None,type=str,
         help='Spatial extents to use for this model from the data')   
+    parser.add_argument('--use_global_position',default=None,type=str2bool,
+        help='For the fourier featuers, whether to use the global position or local.')   
     
 
     parser.add_argument('--data',default=None,type=str,

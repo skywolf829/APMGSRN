@@ -1,7 +1,7 @@
-{
-    "1": [ "test.py",
+[
+    [ "test.py",
         {        
-        "load_from": "Isotropic_64featgrid_6layers64",
+        "load_from": "Isotropic_128x128x16featgrid_4layers32nodes_slice5",
         "tests": "reconstruction"
     }]
-}
+]

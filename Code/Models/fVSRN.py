@@ -96,6 +96,28 @@ class fVSRN(nn.Module):
         
         self.opt = opt
         self.recently_added_layer = False
+
+        ext = opt['extents'].split(',')
+        self.ext = [eval(i) for i in ext]
+        dim_size_voxels = [
+            self.ext[1]-self.ext[0], self.ext[3]-self.ext[2], self.ext[5]-self.ext[4]
+        ]
+        dim_start = [
+            (self.ext[0] / self.opt['full_shape'][0])*2 - 1,
+            (self.ext[1] / self.opt['full_shape'][1])*2 - 1,
+            (self.ext[2] / self.opt['full_shape'][2])*2 - 1
+        ]
+        dim_global_proportions = [
+            2*dim_size_voxels[0]/self.opt['full_shape'][0],
+            2*dim_size_voxels[1]/self.opt['full_shape'][1],
+            2*dim_size_voxels[2]/self.opt['full_shape'][2]
+        ]
+
+        self.register_buffer("dim_start", 
+            torch.tensor(dim_start), persistent=False)
+        self.register_buffer("dim_global_proportions", 
+            torch.tensor(dim_global_proportions), persistent=False)
+
         self.pe = PositionalEncoding(opt)
         
         feat_shape = [1, opt['n_features']]
@@ -139,10 +161,15 @@ class fVSRN(nn.Module):
         
     def forward(self, x):     
         
-        pe = self.pe(x)
         feats = F.grid_sample(self.feature_grid,
                 x.unsqueeze(0).unsqueeze(0).unsqueeze(0),
-                mode='bilinear', align_corners=True)   
+                mode='bilinear', align_corners=True) 
+        if(self.opt['use_global_position']):
+            x = x + 1.0
+            x = x / 2.0
+            x = x * self.dim_global_proportions
+            x = x + self.dim_start
+        pe = self.pe(x)  
         feats = feats.squeeze().permute(1, 0)
         y = torch.cat([pe, feats], dim=1)
         

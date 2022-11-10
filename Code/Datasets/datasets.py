@@ -22,10 +22,12 @@ class Dataset(torch.utils.data.Dataset):
 
         print(f"Initializing dataset - reading {folder_to_load}")
         t1 = time.time()
-        d = nc_to_tensor(folder_to_load, opt).to(opt['data_device'])
+        d, full_shape = nc_to_tensor(folder_to_load, opt)
+        d = d.to(self.opt['data_device'])
         t2 = time.time()
         print(f"IO time loading data: {t2-t1 : 0.04f}")
         self.data = d
+        opt['full_shape'] = full_shape
 
     def min(self):
         if self.min_ is not None:
