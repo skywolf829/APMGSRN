@@ -1,13 +1,11 @@
 [
     [ "train.py",
         {        
-            "save_name": "Isotropic_128x128x16featgrid_4layers32nodes_slice5",
-            "extents": "0,1024,0,1024,640,768",
+            "save_name": "Isotropic_128featgrid",
             "data": "Isotropic.nc",
-            "use_global_position": true,
             "n_dims": 3,
             "n_features": 16,
-            "feature_grid_shape": "128,128,16",
+            "feature_grid_shape": "128,128,128",
             "n_outputs": 1,
             "n_layers": 4,
             "nodes_per_layer": 32,

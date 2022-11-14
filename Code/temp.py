@@ -18,9 +18,7 @@ save_folder = os.path.join(project_folder_path, "SavedModels")
 
 if __name__ == '__main__':
     
-    d = h5py.File(os.path.join(data_folder, "Supernova.h5"))
-    d = np.array(d['data'])
+    d, full_shape = nc_to_tensor(os.path.join(data_folder, "Plume.nc"))
     print(d.shape)
-    d = torch.tensor(d).unsqueeze(0)
-    tensor_to_cdf(d, os.path.join(data_folder, "Supernova.nc"))
+    print(full_shape)
     quit()

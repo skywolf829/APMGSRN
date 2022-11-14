@@ -150,6 +150,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--data',default=None,type=str,
         help='Data file name')
+    parser.add_argument('--model',default=None,type=str,
+        help='The model architecture to use')
     parser.add_argument('--save_name',default=None,type=str,
         help='Save name for the model')
     parser.add_argument('--align_corners',default=None,type=str2bool,

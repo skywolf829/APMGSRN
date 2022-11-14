@@ -382,7 +382,7 @@ def nc_to_tensor(location, opt = None):
     channels = []
     for a in f.variables:
         full_shape = f[a].shape
-        if(opt['extents'] is None):
+        if(opt is None or opt['extents'] is None):
             d = np.array(f[a])
         else:
             ext = opt['extents'].split(',')

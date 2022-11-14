@@ -1,0 +1,17 @@
+[
+    [ "test.py",
+        {        
+        "load_from": "Nyx_10000samples",
+        "tests": "reconstruction"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Nyx_100000samples",
+        "tests": "reconstruction"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Nyx_1000000samples",
+        "tests": "reconstruction"
+    }]
+]

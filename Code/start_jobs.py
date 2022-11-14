@@ -90,6 +90,7 @@ if __name__ == '__main__':
     else:
         available_devices = parse_devices(args['devices'])
 
+    total_jobs = len(commands)
     jobs_training = []
     while(len(commands) + len(jobs_training) > 0):
         # Check if any jobs have finished and a GPU is freed
@@ -122,7 +123,7 @@ if __name__ == '__main__':
             # Logging location
             output_path = open(log_location,'a+')
             # Start the job
-            print(f"Starting job {c_name} on device {g}")
+            print(f"Starting job {c_name}/{total_jobs} on device {g}")
             job = subprocess.Popen(c_split, stdout=output_path, stderr=output_path)
             jobs_training.append((c_name, job, g, time.time()))
         else:
