@@ -54,11 +54,7 @@ class afVSRN(nn.Module):
         
     def forward(self, x):     
         
-        feat_distance = x.unsqueeze(1).repeat(1, self.total_n_features, 1)
-        feat_distance = feat_distance - self.feature_locations
-        feat_distance = feat_distance ** 2
-        feat_distance = feat_distance.sum(dim=-1)
-        feat_distance = feat_distance ** 0.5
+        feat_distance = torch.cdist(x, self.feature_locations)
         feat_distance = 1 / (feat_distance + 1e-6)
         feat_distance = F.softmax(feat_distance, dim=1)
         

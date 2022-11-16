@@ -6,6 +6,7 @@ from Models.models import load_model, sample_grid
 from Models.options import load_options
 from Datasets.datasets import Dataset
 import torch
+import numpy as np
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
 project_folder_path = os.path.join(project_folder_path, "..")
@@ -16,7 +17,7 @@ save_folder = os.path.join(project_folder_path, "SavedModels")
 def model_reconstruction(model, dataset, opt):
     grid = list(dataset.data.shape[2:])
     with torch.no_grad():
-        result = sample_grid(model, grid, 1000000)
+        result = sample_grid(model, grid, 10000)
     result = result.to(opt['data_device'])
     result = result.permute(3, 0, 1, 2).unsqueeze(0)
     create_path(os.path.join(output_folder, "Reconstruction"))
@@ -25,10 +26,16 @@ def model_reconstruction(model, dataset, opt):
     p = PSNR(dataset.data, result, in_place=True)
     print(f"PSNR: {p : 0.03f}")
 
+def feature_locations(model, opt):
+    feat_locations = model.feature_locations.detach().cpu().numpy()
+    np.savetxt(os.path.join(output_folder, "feature_locations", opt['save_name']+".csv"),
+               feat_locations, delimiter=",")
     
 def perform_tests(model, data, tests, opt):
     if("reconstruction" in tests):
-        model_reconstruction(model, data, opt)
+        model_reconstruction(model, data, opt),
+    if("feature_locations" in tests):
+        feature_locations(model, opt)
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate a model on some tests')
