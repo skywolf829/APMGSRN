@@ -1,0 +1,7 @@
+[
+    [ "test.py",
+        {        
+        "load_from": "Supernova_AMRSRN_16feats_4grids_16x16x16",
+        "tests": "reconstruction,feature_locations"
+    }]
+]

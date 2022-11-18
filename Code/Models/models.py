@@ -8,6 +8,7 @@ from math import pi
 from Models.options import *
 from Models.fVSRN import fVSRN
 from Models.afVSRN import afVSRN
+from Models.AMRSRN import AMRSRN
 from Other.utility_functions import create_folder
 from Other.utility_functions import make_coord_grid
 
@@ -43,6 +44,8 @@ def create_model(opt):
         return fVSRN(opt)
     elif(opt['model'] == "afVSRN"):
         return afVSRN(opt)
+    elif(opt['model'] == "AMRSRN"):
+        return AMRSRN(opt)
 
 def sample_grid(model, grid, max_points = 100000):
     coord_grid = make_coord_grid(grid, 

@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 import argparse
 import os
-from Other.utility_functions import PSNR, tensor_to_cdf, create_path
+from Other.utility_functions import PSNR, tensor_to_cdf, create_path, make_coord_grid
 from Models.models import load_model, sample_grid
 from Models.options import load_options
 from Datasets.datasets import Dataset
@@ -27,9 +27,36 @@ def model_reconstruction(model, dataset, opt):
     print(f"PSNR: {p : 0.03f}")
 
 def feature_locations(model, opt):
-    feat_locations = model.feature_locations.detach().cpu().numpy()
-    np.savetxt(os.path.join(output_folder, "feature_locations", opt['save_name']+".csv"),
-               feat_locations, delimiter=",")
+    if(opt['model'] == "afVSRN"):
+        feat_locations = model.feature_locations.detach().cpu().numpy()
+        np.savetxt(os.path.join(output_folder, "feature_locations", opt['save_name']+".csv"),
+                feat_locations, delimiter=",")
+    elif(opt['model'] == "AMRSRN"):
+        feat_grid_shape = opt['feature_grid_shape'].split(',')
+        feat_grid_shape = [eval(i) for i in feat_grid_shape]
+        with torch.no_grad():
+            global_points = make_coord_grid(feat_grid_shape, opt['device'], 
+                                flatten=True, align_corners=True)
+            
+            print(f"Ex transform matrix 1: {model.feature_grid_transform_matrices[0]}")
+            print(f"Ex transform matrix 2: {model.feature_grid_transform_matrices[1]}")
+            
+            transformed_points = torch.cat([global_points, torch.ones(
+                [global_points.shape[0], 1], 
+                device=opt['device'],
+                dtype=torch.float32)], 
+                dim=1)
+            transformed_points = transformed_points.unsqueeze(0).expand(
+                opt['n_grids'], transformed_points.shape[0], transformed_points.shape[1])
+            local_to_global_matrices = torch.inverse(model.feature_grid_transform_matrices.transpose(-1, -2))
+            transformed_points = torch.bmm(transformed_points, 
+                                        local_to_global_matrices)
+            transformed_points = transformed_points[...,0:3]
+            transformed_points = transformed_points.flatten(0,1).detach().cpu().numpy()
+        np.savetxt(os.path.join(output_folder, "feature_locations", opt['save_name']+".csv"),
+                transformed_points, delimiter=",")
+        
+        print(f"Largest/smallest transformed points: {transformed_points.min()} {transformed_points.max()}")
     
 def perform_tests(model, data, tests, opt):
     if("reconstruction" in tests):

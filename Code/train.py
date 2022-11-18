@@ -117,6 +117,31 @@ def train( model, dataset, opt):
             profiler.step()
 
             logging(writer, iteration, {"Fitting loss": loss}, opt, dataset.data.shape[2:], dataset)
+            
+            if iteration % 50 == 0:
+                
+                from Other.utility_functions import make_coord_grid
+                import numpy as np
+                
+                feat_grid_shape = opt['feature_grid_shape'].split(',')
+                feat_grid_shape = [eval(i) for i in feat_grid_shape]
+                
+                global_points = make_coord_grid(feat_grid_shape, opt['device'], 
+                                flatten=True, align_corners=True)
+                transformed_points = torch.cat([global_points, torch.ones(
+                    [global_points.shape[0], 1], 
+                    device=opt['device'],
+                    dtype=torch.float32)], 
+                    dim=1)
+                transformed_points = transformed_points.unsqueeze(0).expand(
+                    opt['n_grids'], transformed_points.shape[0], transformed_points.shape[1])
+                local_to_global_matrices = torch.inverse(model.feature_grid_transform_matrices.transpose(-1, -2))
+                transformed_points = torch.bmm(transformed_points, 
+                                            local_to_global_matrices)
+                transformed_points = transformed_points[0,:,0:3].detach().cpu().numpy()
+                np.savetxt(os.path.join(output_folder, "feature_locations", opt['save_name']+"_"+str(iteration)+".csv"),
+                    transformed_points, delimiter=",")
+            
             #if(iteration % opt['save_every'] == 0):
             #    save_model(model, opt)
 
@@ -139,7 +164,9 @@ if __name__ == '__main__':
     parser.add_argument('--feature_grid_shape',default=None,type=str,
         help='Resolution for feature grid')
     parser.add_argument('--n_features',default=None,type=int,
-        help='Number of features in the feature grid')   
+        help='Number of features in the feature grid')       
+    parser.add_argument('--n_grids',default=None,type=int,
+        help='Number of grids for AMRSRN')
     parser.add_argument('--num_positional_encoding_terms',default=None,type=int,
         help='Number of positional encoding terms')   
     parser.add_argument('--extents',default=None,type=str,

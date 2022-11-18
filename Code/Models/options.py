@@ -9,8 +9,9 @@ class Options():
         opt['model']                                = 'fVSRN'
         opt['n_dims']                               = 3       
         opt['n_outputs']                            = 2
-        opt['feature_grid_shape']                   = "32,32,32"   
+        opt['feature_grid_shape']                   = "8,8,8"   
         opt['n_features']                           = 6      
+        opt['n_grids']                              = 64
         opt['num_positional_encoding_terms']        = 6
         opt['extents']                              = None
         opt['use_global_position']                  = False

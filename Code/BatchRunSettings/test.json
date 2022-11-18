@@ -1,7 +1,7 @@
 [
     [ "test.py",
         {        
-        "load_from": "Isotropic_128featgrid",
+        "load_from": "Supernova_fVSRN",
         "tests": "reconstruction"
     }]
 ]
