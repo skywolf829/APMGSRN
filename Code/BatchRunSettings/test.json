@@ -2,6 +2,6 @@
     [ "test.py",
         {        
         "load_from": "Supernova_fVSRN",
-        "tests": "reconstruction"
+        "tests": "reconstruction,error_volume"
     }]
 ]

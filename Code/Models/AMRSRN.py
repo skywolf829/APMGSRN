@@ -16,74 +16,39 @@ class AMRSRN(nn.Module):
         feat_grid_shape = opt['feature_grid_shape'].split(',')
         feat_grid_shape = [eval(i) for i in feat_grid_shape]
         
-        init_grid_transforms = torch.zeros(
-                [self.opt['n_grids'], 4, 4],
+        init_scales = torch.ones(
+                [self.opt['n_grids'], 3],
                 device = opt['device']
-            ).normal_(1, 1)
+            ).uniform_(1, 4)
+
+        init_translations = torch.zeros(
+                [self.opt['n_grids'], 3],
+                device = opt['device']
+            ).uniform_(-1, 1) * (init_scales-1)
+
+        #init_grid_transforms = torch.zeros(
+        #        [self.opt['n_grids'], 4, 4],
+        #        device = opt['device']
+        #    ).normal_(1, 1)
         
-        init_grid_transforms[:,-1,:] = 0
-        init_grid_transforms[:,-1,-1] = 1
-        init_grid_transforms[:] = torch.eye(4,
-                            dtype=torch.float32,
-                            device=opt['device'])
-        
-        '''
-        level = 0
-        grid = 0
-        translate_start = 0
-        while grid < opt['n_grids']:
-            grids_remaining = opt['n_grids'] - grid
-            scale = 0.5 ** level
-            
-            grids_this_level = 8**level
-            # if all can fit uniformly
-            if(grids_remaining >= grids_this_level):
-                grids_per_dim = int(2 ** level) 
-                
-                for x in range(grids_per_dim):
-                    for y in range(grids_per_dim):
-                        for z in range(grids_per_dim):
-                            x_trans = translate_start + x*scale
-                            y_trans = translate_start + y*scale
-                            z_trans = translate_start + z*scale
-                            
-                            init_grid_transforms[grid,0,0] = scale
-                            init_grid_transforms[grid,1,1] = scale
-                            init_grid_transforms[grid,2,2] = scale
-                            
-                            init_grid_transforms[grid,0,-1] = x_trans
-                            init_grid_transforms[grid,1,-1] = y_trans
-                            init_grid_transforms[grid,2,-1] = z_trans                            
-                            
-                            init_grid_transforms[grid,-1,-1] = 1
-                            
-                            grid += 1
-            else:
-                init_grid_transforms[grid:,0,0] = scale
-                init_grid_transforms[grid:,1,1] = scale          
-                init_grid_transforms[grid:,2,2] = scale
-                
-                init_grid_transforms[grid:,0,-1] = torch.rand([opt['n_grids']-grid], 
-                                                              device=opt['device'],
-                                                              dtype=torch.float32)
-                init_grid_transforms[grid:,1,-1] = torch.rand([opt['n_grids']-grid], 
-                                                              device=opt['device'],
-                                                              dtype=torch.float32)
-                init_grid_transforms[grid:,2,-1] = torch.rand([opt['n_grids']-grid], 
-                                                              device=opt['device'],
-                                                              dtype=torch.float32)              
-                
-                init_grid_transforms[grid:,-1,-1] = 1
-                grid += opt['n_grids'] - grid
-            
-            translate_start -= 0.5**(level+1)
-            level += 1
-        '''
-        
-        self.feature_grid_transform_matrices =  torch.nn.parameter.Parameter(
-            init_grid_transforms,
+        #init_grid_transforms[:,-1,:] = 0
+        #init_grid_transforms[:,-1,-1] = 1
+        #init_grid_transforms[:] = torch.eye(4,
+        #                    dtype=torch.float32,
+        #                    device=opt['device'])
+    
+        self.grid_scales = torch.nn.Parameter(
+            init_scales,
             requires_grad=True
         )
+        self.grid_translations = torch.nn.Parameter(
+            init_translations,
+            requires_grad=True
+        )
+        #self.feature_grid_transform_matrices =  torch.nn.parameter.Parameter(
+        #    init_grid_transforms,
+        #    requires_grad=True
+        #)
         
         self.feature_grids =  torch.nn.parameter.Parameter(
             torch.ones(
@@ -99,7 +64,7 @@ class AMRSRN(nn.Module):
         self.decoder = nn.ModuleList()
         
         first_layer_input_size = opt['num_positional_encoding_terms']*opt['n_dims']*2 + \
-            opt['n_features']*opt['n_grids']        
+            opt['n_features']*(opt['n_grids'])        
         layer = SnakeAltLayer(first_layer_input_size, 
                             opt['nodes_per_layer'])
         self.decoder.append(layer)
@@ -113,7 +78,18 @@ class AMRSRN(nn.Module):
                 layer = SnakeAltLayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
                 self.decoder.append(layer)
     
-        
+    def get_transformation_matrices(self):
+        transformation_matrices = torch.zeros(
+                [self.opt['n_grids'], 4, 4],
+                device = self.opt['device']
+            )
+        transformation_matrices[:,-1,-1] = 1
+        transformation_matrices[:,0,0] = self.grid_scales[:,0]
+        transformation_matrices[:,1,1] = self.grid_scales[:,1]
+        transformation_matrices[:,2,2] = self.grid_scales[:,2]
+        transformation_matrices[:,0:3,-1] = self.grid_translations
+        return transformation_matrices
+
     def forward(self, x):   
         
         transformed_points = torch.cat([x, torch.ones([x.shape[0], 1], 
@@ -125,8 +101,11 @@ class AMRSRN(nn.Module):
             transformed_points.shape[0], 
             transformed_points.shape[1])
         
+        transformation_matrices = self.get_transformation_matrices()
+        #transformed_points = torch.bmm(transformed_points, 
+        #                    self.feature_grid_transform_matrices.transpose(-1, -2))
         transformed_points = torch.bmm(transformed_points, 
-                            self.feature_grid_transform_matrices.transpose(-1, -2))
+                            transformation_matrices.transpose(-1, -2))
         transformed_points = transformed_points[...,0:3]
        
         
@@ -134,8 +113,17 @@ class AMRSRN(nn.Module):
         feats = F.grid_sample(self.feature_grids,
                 transformed_points,
                 mode='bilinear', align_corners=True,
-                padding_mode="zeros") 
+                padding_mode="zeros").squeeze()
+
+        # test 1
         feats = feats.squeeze().flatten(0,1).permute(1, 0)
+
+        # test 2
+        #feats = feats.squeeze().sum(dim=0).permute(1, 0)
+
+        # test 3
+        #feats = feats.reshape(16, -1, feats.shape[1], feats.shape[2])
+        #feats = feats.sum(dim=0).flatten(0,1).permute(1, 0)
         
         if(self.opt['use_global_position']):
             x = x + 1.0
@@ -145,6 +133,7 @@ class AMRSRN(nn.Module):
         
         pe = self.pe(x)  
         y = torch.cat([pe, feats], dim=1)
+        
         
         i = 0
         while i < len(self.decoder):

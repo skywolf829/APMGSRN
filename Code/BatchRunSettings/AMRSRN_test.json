@@ -1,7 +1,7 @@
 [
     [ "test.py",
         {        
-        "load_from": "Supernova_AMRSRN_16feats_4grids_16x16x16",
-        "tests": "reconstruction,feature_locations"
+        "load_from": "Supernova_AMRSRN_4feats_32grids_4x4x4",
+        "tests": "reconstruction,feature_locations,error_volume"
     }]
 ]

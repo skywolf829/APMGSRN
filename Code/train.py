@@ -17,6 +17,8 @@ import torch.multiprocessing as mp
 from Models.losses import *
 import shutil
 from Models.models import sample_grid_for_image
+from Other.utility_functions import make_coord_grid, create_path
+import numpy as np
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
 project_folder_path = os.path.join(project_folder_path, "..")
@@ -56,22 +58,70 @@ def log_grad_image(model, grid_to_sample, writer, iteration):
                 grad_img[output_index][...,input_index:input_index+1].clamp(0, 1), 
                 iteration, dataformats='HWC')
 
-def logging(writer, iteration, losses, opt, grid_to_sample, dataset):
+def logging(writer, iteration, losses, model, opt, grid_to_sample, dataset):
     if(iteration % opt['log_every'] == 0):
         log_to_writer(iteration, losses, writer, opt)
     if(opt['log_image'] and iteration % opt['log_image_every'] == 0):
         log_image(model, grid_to_sample, writer, iteration, dataset)
-                    
+    if(iteration % 50 == 0 and "AMRSRN" in opt['model']):
+        log_feature_points(model, dataset, opt, iteration)
+
+def log_feature_points(model, dataset, opt, iteration):
+    feat_grid_shape = opt['feature_grid_shape'].split(',')
+    feat_grid_shape = [eval(i) for i in feat_grid_shape]
+    
+    global_points = make_coord_grid(feat_grid_shape, opt['device'], 
+                    flatten=True, align_corners=True)
+    transformed_points = torch.cat([global_points, torch.ones(
+        [global_points.shape[0], 1], 
+        device=opt['device'],
+        dtype=torch.float32)], 
+        dim=1)
+    transformed_points = transformed_points.unsqueeze(0).expand(
+        opt['n_grids'], transformed_points.shape[0], transformed_points.shape[1])
+    local_to_global_matrices = torch.inverse(model.get_transformation_matrices().transpose(-1, -2))
+    transformed_points = torch.bmm(transformed_points, 
+                                local_to_global_matrices)
+    transformed_points = transformed_points[...,0:3].detach().cpu()
+    transformed_points[...,0] += 1
+    transformed_points[...,1] += 1
+    transformed_points[...,2] += 1
+    transformed_points[...,0] *= 0.5 * dataset.data.shape[2]
+    transformed_points[...,1] *= 0.5 * dataset.data.shape[3]
+    transformed_points[...,2] *= 0.5 * dataset.data.shape[4]
+    ids = torch.arange(transformed_points.shape[0])
+    ids = ids.unsqueeze(1).unsqueeze(1)
+    ids = ids.repeat([1, transformed_points.shape[1], 1])
+    transformed_points = torch.cat((transformed_points, ids), dim=2)
+    transformed_points = transformed_points.flatten(0,1).numpy()
+    
+    create_path(os.path.join(output_folder, "FeatureLocations", opt['save_name']))
+    np.savetxt(os.path.join(output_folder, "FeatureLocations", 
+        opt['save_name'], opt['save_name']+"_"+str(iteration)+".csv"),
+        transformed_points, delimiter=",", header="x,y,z,id")
+
 def train( model, dataset, opt):
       
     model = model.to(opt['device'])        
     print("Training on %s" % (opt["device"]), 
         os.path.join(save_folder, opt["save_name"]))
-
-    optimizer = optim.Adam(model.parameters(), lr=opt["lr"],
+    if("AMRSRN" in opt['model']):
+        optimizer = optim.Adam([
+            {
+            "params": [model.grid_scales, model.grid_translations], "lr": opt["lr"]
+            },
+            {
+            "params": [model.feature_grids], "lr": opt["lr"]
+            },
+            {
+            "params": model.decoder.parameters(), "lr": opt["lr"]
+            }
+        ], betas=[opt['beta_1'], opt['beta_2']]) 
+    else:
+        optimizer = optim.Adam(model.parameters(), lr=opt["lr"], 
         betas=[opt['beta_1'], opt['beta_2']]) 
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 
-        step_size=opt['iterations']//3, gamma=0.1)
+        step_size=opt['iterations']//2, gamma=0.1)
 
     if(os.path.exists(os.path.join(project_folder_path, "tensorboard", opt['save_name']))):
         shutil.rmtree(os.path.join(project_folder_path, "tensorboard", opt['save_name']))
@@ -100,7 +150,6 @@ def train( model, dataset, opt):
         on_trace_ready=torch.profiler.tensorboard_trace_handler(
             os.path.join('tensorboard',opt['save_name'])),
     with_stack=True) as profiler:
-
         for iteration in range(0, opt['iterations']):
             opt['iteration_number'] = iteration
             optimizer.zero_grad()
@@ -112,44 +161,31 @@ def train( model, dataset, opt):
             loss = loss_func(y, model_output)
 
             loss.backward()        
+            
+            '''
+            if(int(iteration / 3) % 2 == 0):
+                model.grid_scales.grad.detach_()
+                model.grid_translations.grad.detach_()
+                model.grid_scales.grad.zero_()
+                model.grid_translations.grad.zero_()
+            else:
+                model.feature_grids.grad.detach_()
+                model.feature_grids.grad.zero_()
+                for p in model.decoder.parameters():
+                    p.grad.detach_()
+                    p.grad.zero_()
+            '''
             optimizer.step()
             scheduler.step()        
             profiler.step()
+            if("AMRSRN" in opt['model']):
+                with torch.no_grad():
+                    model.grid_scales.clamp_(1, 32)
+                    max_deviation = model.grid_scales-1
+                    model.grid_translations.clamp_(-max_deviation, max_deviation)
 
-            logging(writer, iteration, {"Fitting loss": loss}, opt, dataset.data.shape[2:], dataset)
-            
-            if iteration % 50 == 0:
-                
-                from Other.utility_functions import make_coord_grid
-                import numpy as np
-                
-                feat_grid_shape = opt['feature_grid_shape'].split(',')
-                feat_grid_shape = [eval(i) for i in feat_grid_shape]
-                
-                global_points = make_coord_grid(feat_grid_shape, opt['device'], 
-                                flatten=True, align_corners=True)
-                transformed_points = torch.cat([global_points, torch.ones(
-                    [global_points.shape[0], 1], 
-                    device=opt['device'],
-                    dtype=torch.float32)], 
-                    dim=1)
-                transformed_points = transformed_points.unsqueeze(0).expand(
-                    opt['n_grids'], transformed_points.shape[0], transformed_points.shape[1])
-                local_to_global_matrices = torch.inverse(model.feature_grid_transform_matrices.transpose(-1, -2))
-                transformed_points = torch.bmm(transformed_points, 
-                                            local_to_global_matrices)
-                transformed_points = transformed_points[0,:,0:3].detach().cpu().numpy()
-                np.savetxt(os.path.join(output_folder, "feature_locations", opt['save_name']+"_"+str(iteration)+".csv"),
-                    transformed_points, delimiter=",")
-            
-            #if(iteration % opt['save_every'] == 0):
-            #    save_model(model, opt)
-
-            #if(iteration == 100):
-                #model.add_layer()
-                #optimizer.param_groups.pop(0)
-                #optimizer.param_groups.append(model.parameters())
-
+            logging(writer, iteration, {"Fitting loss": loss}, 
+                model, opt, dataset.data.shape[2:], dataset)
             
     writer.close()
     save_model(model, opt)

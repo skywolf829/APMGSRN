@@ -21,10 +21,26 @@ def model_reconstruction(model, dataset, opt):
     result = result.to(opt['data_device'])
     result = result.permute(3, 0, 1, 2).unsqueeze(0)
     create_path(os.path.join(output_folder, "Reconstruction"))
-    tensor_to_cdf(result, os.path.join(output_folder, "Reconstruction", opt['save_name']+".nc"))
+    tensor_to_cdf(result, 
+        os.path.join(output_folder, 
+        "Reconstruction", opt['save_name']+".nc"))
     
     p = PSNR(dataset.data, result, in_place=True)
     print(f"PSNR: {p : 0.03f}")
+
+def error_volume(model, dataset, opt):
+    grid = list(dataset.data.shape[2:])
+    with torch.no_grad():
+        result = sample_grid(model, grid, 10000)
+    result = result.to(opt['data_device'])
+    result = result.permute(3, 0, 1, 2).unsqueeze(0)
+    create_path(os.path.join(output_folder, "ErrorVolume"))
+    
+    result -= dataset.data
+    result.abs_()
+    tensor_to_cdf(result, 
+        os.path.join(output_folder, "ErrorVolume",
+        opt['save_name'] + "_error.nc"))
 
 def feature_locations(model, opt):
     if(opt['model'] == "afVSRN"):
@@ -38,8 +54,8 @@ def feature_locations(model, opt):
             global_points = make_coord_grid(feat_grid_shape, opt['device'], 
                                 flatten=True, align_corners=True)
             
-            print(f"Ex transform matrix 1: {model.feature_grid_transform_matrices[0]}")
-            print(f"Ex transform matrix 2: {model.feature_grid_transform_matrices[1]}")
+            print(f"Ex transform matrix 1: {model.get_transformation_matrices()[0]}")
+            print(f"Ex transform matrix 2: {model.get_transformation_matrices()[1]}")
             
             transformed_points = torch.cat([global_points, torch.ones(
                 [global_points.shape[0], 1], 
@@ -48,13 +64,20 @@ def feature_locations(model, opt):
                 dim=1)
             transformed_points = transformed_points.unsqueeze(0).expand(
                 opt['n_grids'], transformed_points.shape[0], transformed_points.shape[1])
-            local_to_global_matrices = torch.inverse(model.feature_grid_transform_matrices.transpose(-1, -2))
+            local_to_global_matrices = torch.inverse(model.get_transformation_matrices().transpose(-1, -2))
             transformed_points = torch.bmm(transformed_points, 
                                         local_to_global_matrices)
-            transformed_points = transformed_points[...,0:3]
-            transformed_points = transformed_points.flatten(0,1).detach().cpu().numpy()
-        np.savetxt(os.path.join(output_folder, "feature_locations", opt['save_name']+".csv"),
-                transformed_points, delimiter=",")
+            transformed_points = transformed_points[...,0:3].detach().cpu()
+            ids = torch.arange(transformed_points.shape[0])
+            ids = ids.unsqueeze(1).unsqueeze(1)
+            ids = ids.repeat([1, transformed_points.shape[1], 1])
+            transformed_points = torch.cat((transformed_points, ids), dim=2)
+            transformed_points = transformed_points.flatten(0,1).numpy()
+        #transformed_points = transformed_points.astype(str)
+        create_path(os.path.join(output_folder, "FeatureLocations"))
+
+        np.savetxt(os.path.join(output_folder, "FeatureLocations", opt['save_name']+".csv"),
+                transformed_points, delimiter=",", header="x,y,z,id")
         
         print(f"Largest/smallest transformed points: {transformed_points.min()} {transformed_points.max()}")
     
@@ -63,6 +86,8 @@ def perform_tests(model, data, tests, opt):
         model_reconstruction(model, data, opt),
     if("feature_locations" in tests):
         feature_locations(model, opt)
+    if("error_volume" in tests):
+        error_volume(model, data, opt)
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate a model on some tests')
