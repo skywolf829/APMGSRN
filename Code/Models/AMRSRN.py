@@ -19,7 +19,7 @@ class AMRSRN(nn.Module):
         init_scales = torch.ones(
                 [self.opt['n_grids'], 3],
                 device = opt['device']
-            ).uniform_(1, 4)
+            ).uniform_(1,4)
 
         init_translations = torch.zeros(
                 [self.opt['n_grids'], 3],
@@ -64,18 +64,18 @@ class AMRSRN(nn.Module):
         self.decoder = nn.ModuleList()
         
         first_layer_input_size = opt['num_positional_encoding_terms']*opt['n_dims']*2 + \
-            opt['n_features']*(opt['n_grids'])        
+            opt['n_features']*opt['n_grids']        
         layer = SnakeAltLayer(first_layer_input_size, 
                             opt['nodes_per_layer'])
         self.decoder.append(layer)
         
         for i in range(opt['n_layers']):
             if i == opt['n_layers'] - 1:
-                layer = nn.Linear(opt['nodes_per_layer'], opt['n_outputs'])
+                layer = nn.Linear(opt['nodes_per_layer'] + opt['n_features']*opt['n_grids'], opt['n_outputs'])
                 nn.init.xavier_normal_(layer.weight)
                 self.decoder.append(layer)
             else:
-                layer = SnakeAltLayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
+                layer = SnakeAltLayer(opt['nodes_per_layer'] + opt['n_features']*opt['n_grids'], opt['nodes_per_layer'])
                 self.decoder.append(layer)
     
     def get_transformation_matrices(self):
@@ -90,16 +90,14 @@ class AMRSRN(nn.Module):
         transformation_matrices[:,0:3,-1] = self.grid_translations
         return transformation_matrices
 
-    def forward(self, x):   
+    def forward(self, x, detach_features=False):   
         
         transformed_points = torch.cat([x, torch.ones([x.shape[0], 1], 
             device=self.opt['device'],
             dtype=torch.float32)], 
-            dim=1)
-        transformed_points = transformed_points.unsqueeze(0).expand(
-            self.opt['n_grids'], 
-            transformed_points.shape[0], 
-            transformed_points.shape[1])
+            dim=1).detach()
+        transformed_points = transformed_points.unsqueeze(0).repeat(
+            self.opt['n_grids'], 1, 1)
         
         transformation_matrices = self.get_transformation_matrices()
         #transformed_points = torch.bmm(transformed_points, 
@@ -113,13 +111,14 @@ class AMRSRN(nn.Module):
         feats = F.grid_sample(self.feature_grids,
                 transformed_points,
                 mode='bilinear', align_corners=True,
-                padding_mode="zeros").squeeze()
-
+                padding_mode="zeros")[:,:,0,0,:]
         # test 1
-        feats = feats.squeeze().flatten(0,1).permute(1, 0)
+        feats = feats.flatten(0,1).permute(1, 0)
+        #feats = feats.detach()
+        
 
         # test 2
-        #feats = feats.squeeze().sum(dim=0).permute(1, 0)
+        #feats = feats.sum(dim=0).permute(1, 0)
 
         # test 3
         #feats = feats.reshape(16, -1, feats.shape[1], feats.shape[2])
@@ -131,12 +130,13 @@ class AMRSRN(nn.Module):
             x = x * self.dim_global_proportions
             x = x + self.dim_start
         
-        pe = self.pe(x)  
-        y = torch.cat([pe, feats], dim=1)
+        pe = self.pe(x.detach())  
+        y = pe
         
         
         i = 0
         while i < len(self.decoder):
+            y = torch.cat([y, feats], dim=1)
             y = self.decoder[i](y)
             i = i + 1
             

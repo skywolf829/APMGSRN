@@ -1,7 +1,7 @@
 [
     [ "test.py",
         {        
-        "load_from": "Supernova_fVSRN",
+        "load_from": "Supernova_fVSRN_32x32x32",
         "tests": "reconstruction,error_volume"
     }]
 ]

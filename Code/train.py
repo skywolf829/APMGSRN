@@ -61,8 +61,6 @@ def log_grad_image(model, grid_to_sample, writer, iteration):
 def logging(writer, iteration, losses, model, opt, grid_to_sample, dataset):
     if(iteration % opt['log_every'] == 0):
         log_to_writer(iteration, losses, writer, opt)
-    if(opt['log_image'] and iteration % opt['log_image_every'] == 0):
-        log_image(model, grid_to_sample, writer, iteration, dataset)
     if(iteration % 50 == 0 and "AMRSRN" in opt['model']):
         log_feature_points(model, dataset, opt, iteration)
 
@@ -108,7 +106,10 @@ def train( model, dataset, opt):
     if("AMRSRN" in opt['model']):
         optimizer = optim.Adam([
             {
-            "params": [model.grid_scales, model.grid_translations], "lr": opt["lr"]
+            "params": [model.grid_scales], "lr": opt["lr"]*1
+            },
+            {
+            "params": [model.grid_translations], "lr": opt["lr"]*1
             },
             {
             "params": [model.feature_grids], "lr": opt["lr"]
@@ -121,7 +122,7 @@ def train( model, dataset, opt):
         optimizer = optim.Adam(model.parameters(), lr=opt["lr"], 
         betas=[opt['beta_1'], opt['beta_2']]) 
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 
-        step_size=opt['iterations']//2, gamma=0.1)
+        step_size=(opt['iterations']*3)//4, gamma=0.1)
 
     if(os.path.exists(os.path.join(project_folder_path, "tensorboard", opt['save_name']))):
         shutil.rmtree(os.path.join(project_folder_path, "tensorboard", opt['save_name']))
@@ -157,24 +158,11 @@ def train( model, dataset, opt):
             x, y = dataset.get_random_points(opt['points_per_iteration'],
                     device=opt['device'])
             
-            model_output = model(x)
+            model_output = model(x, detach_features=(iteration/10000)%2 == 1)
             loss = loss_func(y, model_output)
 
-            loss.backward()        
+            loss.backward()                   
             
-            '''
-            if(int(iteration / 3) % 2 == 0):
-                model.grid_scales.grad.detach_()
-                model.grid_translations.grad.detach_()
-                model.grid_scales.grad.zero_()
-                model.grid_translations.grad.zero_()
-            else:
-                model.feature_grids.grad.detach_()
-                model.feature_grids.grad.zero_()
-                for p in model.decoder.parameters():
-                    p.grad.detach_()
-                    p.grad.zero_()
-            '''
             optimizer.step()
             scheduler.step()        
             profiler.step()

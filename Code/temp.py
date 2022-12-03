@@ -18,7 +18,10 @@ save_folder = os.path.join(project_folder_path, "SavedModels")
 
 if __name__ == '__main__':
     
-    d, full_shape = nc_to_tensor(os.path.join(data_folder, "Plume.nc"))
-    print(d.shape)
-    print(full_shape)
+    d, full_shape = nc_to_tensor(os.path.join(data_folder, "Supernova.nc"))
+    new_d = torch.zeros([1, 1, 432*2, 432*2, 432*2], dtype=torch.float32)
+    new_d[:,:,432:, 0:432, 0:432] = d
+    #new_d[:,:,432:, 0:432, 0:432] = d
+    new_d = new_d[:,:,::2,::2,::2]
+    tensor_to_cdf(new_d, os.path.join(data_folder, "Supernova_test.nc"))
     quit()

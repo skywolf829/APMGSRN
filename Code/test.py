@@ -42,6 +42,19 @@ def error_volume(model, dataset, opt):
         os.path.join(output_folder, "ErrorVolume",
         opt['save_name'] + "_error.nc"))
 
+def scale_distribution(model, opt):
+    import matplotlib.pyplot as plt
+    x_scales = model.grid_scales[:,0].detach().cpu().numpy()
+    y_scales = model.grid_scales[:,1].detach().cpu().numpy()
+    z_scales = model.grid_scales[:,2].detach().cpu().numpy()
+    plt.hist(x_scales, alpha=0.4, bins=20, label="X scales")
+    plt.hist(y_scales, alpha=0.4, bins=20, label="Y scales")
+    plt.hist(z_scales, alpha=0.4, bins=20, label="Z scales")
+    plt.legend(loc='upper right')
+    plt.title("Scale distributions")
+    create_path(os.path.join(output_folder, "ScaleDistributions"))
+    plt.savefig(os.path.join(output_folder, "ScaleDistributions", opt['save_name']+'.png'))
+
 def feature_locations(model, opt):
     if(opt['model'] == "afVSRN"):
         feat_locations = model.feature_locations.detach().cpu().numpy()
@@ -88,6 +101,8 @@ def perform_tests(model, data, tests, opt):
         feature_locations(model, opt)
     if("error_volume" in tests):
         error_volume(model, data, opt)
+    if("scale_distribution" in tests):
+        scale_distribution(model, opt)
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate a model on some tests')
