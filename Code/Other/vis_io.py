@@ -269,6 +269,12 @@ def vtkMatToNumpy(vtkMat):
   vtkMat.DeepCopy(narray.ravel(), vtkMat)
   return narray.copy()
 
+def write_vtm(fpath, vtm):
+  writer = vtk.vtkXMLMultiBlockDataWriter()
+  writer.SetFileName(fpath)
+  writer.SetInputData(vtm)
+  writer.Write()
+
 def write_pvd(vtkPath:list, outPath:str, timesteps=None):
   # root tag
   vtkfile = ET.Element('VTKFile')
