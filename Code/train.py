@@ -18,6 +18,7 @@ from Models.losses import *
 import shutil
 from Models.models import sample_grid_for_image
 from Other.utility_functions import make_coord_grid, create_path
+from Other.vis_io import get_vts, write_vts, write_pvd
 import numpy as np
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
@@ -62,7 +63,8 @@ def logging(writer, iteration, losses, model, opt, grid_to_sample, dataset):
     if(iteration % opt['log_every'] == 0):
         log_to_writer(iteration, losses, writer, opt)
     if(iteration % 50 == 0 and "AMRSRN" in opt['model']):
-        log_feature_points(model, dataset, opt, iteration)
+        # log_feature_points(model, dataset, opt, iteration)
+        log_feature_grids(model, dataset, opt, iteration)
 
 def log_feature_points(model, dataset, opt, iteration):
     feat_grid_shape = opt['feature_grid_shape'].split(',')
@@ -98,6 +100,51 @@ def log_feature_points(model, dataset, opt, iteration):
     np.savetxt(os.path.join(output_folder, "FeatureLocations", 
         opt['save_name'], opt['save_name']+"_"+str(iteration)+".csv"),
         transformed_points, delimiter=",", header="x,y,z,id")
+
+def log_feature_grids(model, dataset, opt, iteration):
+    feat_grid_shape = opt['feature_grid_shape'].split(',')
+    feat_grid_shape = [eval(i) for i in feat_grid_shape]
+    
+    global_points = make_coord_grid(feat_grid_shape, opt['device'], 
+                    flatten=True, align_corners=True)
+    transformed_points = torch.cat([global_points, torch.ones(
+        [global_points.shape[0], 1], 
+        device=opt['device'],
+        dtype=torch.float32)], 
+        dim=1)
+    transformed_points = transformed_points.unsqueeze(0).expand(
+        opt['n_grids'], transformed_points.shape[0], transformed_points.shape[1])
+    local_to_global_matrices = torch.inverse(model.get_transformation_matrices().transpose(-1, -2))
+    transformed_points = torch.bmm(transformed_points, 
+                                local_to_global_matrices)
+    transformed_points = transformed_points[...,0:3].detach().cpu()
+    transformed_points[...,0] += 1
+    transformed_points[...,1] += 1
+    transformed_points[...,2] += 1
+    transformed_points[...,0] *= 0.5 * dataset.data.shape[2]
+    transformed_points[...,1] *= 0.5 * dataset.data.shape[3]
+    transformed_points[...,2] *= 0.5 * dataset.data.shape[4]
+    ids = torch.arange(transformed_points.shape[0])
+    ids = ids.unsqueeze(1).unsqueeze(1)
+    ids = ids.repeat([1, transformed_points.shape[1], 1])
+    transformed_points = torch.cat((transformed_points, ids), dim=2)
+    
+    # use zyx point ordering for vtk files
+    feat_grid_shape_zyx = np.flip(feat_grid_shape)
+    # write each grid as a vts file, and aggregate their info in one .pvd file
+    grid_dir = os.path.join(output_folder, "FeatureLocations", opt['save_name'], f"iter{iteration}")
+    create_path(grid_dir)
+    vtsNames = []
+    for i, grid in enumerate(transformed_points):
+        grid_points = grid[:, :3]
+        grid_ids = grid[:, -1]
+        vts = get_vts(feat_grid_shape_zyx, grid_points, scalar_fields={"id": grid_ids})
+        vtsName = f"grid{i:02}.vts"
+        write_vts(os.path.join(grid_dir, vtsName), vts)
+        vtsNames.append(vtsName)
+    write_pvd(vtsNames, outPath=os.path.join(grid_dir, f"girds.pvd"))
+    
+
 
 def train( model, dataset, opt):
       
