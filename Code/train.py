@@ -178,7 +178,7 @@ def train( model, dataset, opt):
             "params": [model.grid_scales], "lr": opt["lr"]*1
             },
             {
-            "params": [model.grid_translations], "lr": opt["lr"]*0.01
+            "params": [model.grid_translations], "lr": opt["lr"]*1
             },
             {
             "params": [model.feature_grids], "lr": opt["lr"]
