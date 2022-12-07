@@ -133,3 +133,12 @@ dmypy.json
 /Output
 /SavedModels
 SavedModels/
+
+# debugging playgrounds by ty
+fplog.ipynb
+
+# vtk files
+*.vts
+*.vtr
+*.vti
+*.vtp

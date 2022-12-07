@@ -292,6 +292,7 @@ def str2bool(v):
 def make_coord_grid(shape, device, flatten=True, align_corners=False):
     """ 
     Make coordinates at grid centers.
+    return (shape.prod, 3) matrix with (z,y,x) coordinate
     """
     coord_seqs = []
     for i, n in enumerate(shape):
