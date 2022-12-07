@@ -18,7 +18,9 @@ from Models.losses import *
 import shutil
 from Models.models import sample_grid_for_image
 from Other.utility_functions import make_coord_grid, create_path
-from Other.vis_io import get_vts, write_vts, write_pvd
+from Other.vis_io import get_vts, write_vts, write_pvd, write_vtm
+from vtk import vtkMultiBlockDataSet
+import glob
 import numpy as np
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
@@ -63,8 +65,7 @@ def logging(writer, iteration, losses, model, opt, grid_to_sample, dataset):
     if(iteration % opt['log_every'] == 0):
         log_to_writer(iteration, losses, writer, opt)
     if(iteration % 50 == 0 and "AMRSRN" in opt['model']):
-        # log_feature_points(model, dataset, opt, iteration)
-        log_feature_grids(model, dataset, opt, iteration)
+        log_feature_points(model, dataset, opt, iteration)
 
 def log_feature_points(model, dataset, opt, iteration):
     feat_grid_shape = opt['feature_grid_shape'].split(',')
@@ -97,7 +98,7 @@ def log_feature_points(model, dataset, opt, iteration):
     
     create_path(os.path.join(output_folder, "FeatureLocations", opt['save_name']))
     np.savetxt(os.path.join(output_folder, "FeatureLocations", 
-        opt['save_name'], opt['save_name']+"_"+str(iteration)+".csv"),
+        opt['save_name'], opt['save_name']+"_"+ f"{iteration:05}" +".csv"),
         transformed_points, delimiter=",", header="x,y,z,id")
 
 def log_feature_grids(model, dataset, opt, iteration):
@@ -138,11 +139,31 @@ def log_feature_grids(model, dataset, opt, iteration):
         grid_points = grid[:, :3]
         grid_ids = grid[:, -1]
         vts = get_vts(feat_grid_shape_zyx, grid_points, scalar_fields={"id": grid_ids})
-        vtsName = f"grid{i:02}.vts"
+        vtsName = f"grid{i:02}_ts{iteration:05}.vts"
         write_vts(os.path.join(grid_dir, vtsName), vts)
         vtsNames.append(vtsName)
-    write_pvd(vtsNames, outPath=os.path.join(grid_dir, f"girds.pvd"))
+    write_pvd(vtsNames, outPath=os.path.join(grid_dir, f"grids_ts{iteration:05}.pvd"))
+
+def log_feature_grids_from_points(opt):
+    logdir = os.path.join(output_folder, "FeatureLocations", opt['save_name'])
+    csvPaths = sorted(glob.glob(os.path.join(logdir, f"*.csv")))
+    grids_iters = np.array([np.genfromtxt(csvPath, delimiter=',') for csvPath in csvPaths])
     
+    feat_grid_shape = np.array(opt['feature_grid_shape'].split(','), dtype=int)
+    feat_grid_shape_zyx = np.flip(feat_grid_shape)
+    grids_iters = grids_iters.reshape(200, opt['n_grids'], feat_grid_shape.prod(), 4)
+    
+    vtm_dir = os.path.join(logdir, "vtms")
+    create_path(vtm_dir)
+    for i, grids_iter in enumerate(grids_iters):
+        vtm = vtkMultiBlockDataSet()
+        vtm.SetNumberOfBlocks(len(grids_iter))
+        for j, grid in enumerate(grids_iter):
+            grid_points = grid[:, :3]
+            grid_ids = grid[:, -1]
+            vts = get_vts(feat_grid_shape_zyx, grid_points, scalar_fields={"id": grid_ids})
+            vtm.SetBlock(j, vts)
+        write_vtm(os.path.join(vtm_dir, f"grids_{i:03}.vtm", ), vtm)
 
 
 def train( model, dataset, opt):
@@ -333,6 +354,7 @@ if __name__ == '__main__':
     start_time = time.time()
     
     train(model, dataset, opt)
+    log_feature_grids_from_points(opt)
         
     opt['iteration_number'] = 0
     save_model(model, opt)
