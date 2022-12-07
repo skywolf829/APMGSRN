@@ -95,15 +95,14 @@ class AMRSRN(nn.Module):
         transformed_points = torch.cat([x, torch.ones([x.shape[0], 1], 
             device=self.opt['device'],
             dtype=torch.float32)], 
-            dim=1).detach()
+            dim=1)
         transformed_points = transformed_points.unsqueeze(0).repeat(
             self.opt['n_grids'], 1, 1)
-        
         transformation_matrices = self.get_transformation_matrices()
         #transformed_points = torch.bmm(transformed_points, 
         #                    self.feature_grid_transform_matrices.transpose(-1, -2))
-        transformed_points = torch.bmm(transformed_points, 
-                            transformation_matrices.transpose(-1, -2))
+        transformed_points = torch.bmm(transformation_matrices, 
+                            transformed_points.transpose(-1, -2)).transpose(-1, -2)
         transformed_points = transformed_points[...,0:3]
        
         

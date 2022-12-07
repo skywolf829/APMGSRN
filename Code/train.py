@@ -77,9 +77,10 @@ def log_feature_points(model, dataset, opt, iteration):
         dim=1)
     transformed_points = transformed_points.unsqueeze(0).expand(
         opt['n_grids'], transformed_points.shape[0], transformed_points.shape[1])
-    local_to_global_matrices = torch.inverse(model.get_transformation_matrices().transpose(-1, -2))
-    transformed_points = torch.bmm(transformed_points, 
-                                local_to_global_matrices)
+    local_to_global_matrices = torch.inverse(model.get_transformation_matrices())
+    
+    transformed_points = torch.bmm(local_to_global_matrices,
+                                   transformed_points.transpose(-1,-2)).transpose(-1, -2)
     transformed_points = transformed_points[...,0:3].detach().cpu()
     transformed_points[...,0] += 1
     transformed_points[...,1] += 1
@@ -109,7 +110,7 @@ def train( model, dataset, opt):
             "params": [model.grid_scales], "lr": opt["lr"]*1
             },
             {
-            "params": [model.grid_translations], "lr": opt["lr"]*1
+            "params": [model.grid_translations], "lr": opt["lr"]*0.01
             },
             {
             "params": [model.feature_grids], "lr": opt["lr"]
