@@ -63,8 +63,8 @@ class AMRSRN(nn.Module):
         
         self.decoder = nn.ModuleList()
         
-        first_layer_input_size = opt['num_positional_encoding_terms']*opt['n_dims']*2 + \
-            opt['n_features']*opt['n_grids']        
+        first_layer_input_size = opt['n_features']*opt['n_grids'] + opt['num_positional_encoding_terms']*opt['n_dims']*2
+                 
         layer = SnakeAltLayer(first_layer_input_size, 
                             opt['nodes_per_layer'])
         self.decoder.append(layer)
@@ -90,7 +90,7 @@ class AMRSRN(nn.Module):
         transformation_matrices[:,0:3,-1] = self.grid_translations
         return transformation_matrices
 
-    def forward(self, x, detach_features=False):   
+    def forward(self, x):   
         
         transformed_points = torch.cat([x, torch.ones([x.shape[0], 1], 
             device=self.opt['device'],
@@ -99,8 +99,7 @@ class AMRSRN(nn.Module):
         transformed_points = transformed_points.unsqueeze(0).repeat(
             self.opt['n_grids'], 1, 1)
         transformation_matrices = self.get_transformation_matrices()
-        #transformed_points = torch.bmm(transformed_points, 
-        #                    self.feature_grid_transform_matrices.transpose(-1, -2))
+        
         transformed_points = torch.bmm(transformation_matrices, 
                             transformed_points.transpose(-1, -2)).transpose(-1, -2)
         transformed_points = transformed_points[...,0:3]
@@ -131,7 +130,7 @@ class AMRSRN(nn.Module):
         
         pe = self.pe(x.detach())  
         y = pe
-        
+        #y = feats.clone()
         
         i = 0
         while i < len(self.decoder):

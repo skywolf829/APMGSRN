@@ -227,7 +227,7 @@ def train( model, dataset, opt):
             x, y = dataset.get_random_points(opt['points_per_iteration'],
                     device=opt['device'])
             
-            model_output = model(x, detach_features=(iteration/10000)%2 == 1)
+            model_output = model(x)
             loss = loss_func(y, model_output)
 
             loss.backward()                   
