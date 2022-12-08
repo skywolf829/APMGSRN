@@ -151,7 +151,7 @@ def log_feature_grids_from_points(opt):
     
     feat_grid_shape = np.array(opt['feature_grid_shape'].split(','), dtype=int)
     feat_grid_shape_zyx = np.flip(feat_grid_shape)
-    grids_iters = grids_iters.reshape(200, opt['n_grids'], feat_grid_shape.prod(), 4)
+    grids_iters = grids_iters.reshape(len(grids_iters), opt['n_grids'], feat_grid_shape.prod(), 4)
     
     vtm_dir = os.path.join(logdir, "vtms")
     create_path(vtm_dir)
