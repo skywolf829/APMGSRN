@@ -132,7 +132,7 @@ dmypy.json
 /Data
 /Output
 /SavedModels
-SavedModels/
+/tensorboard
 
 # debugging playgrounds by ty
 fplog.ipynb
