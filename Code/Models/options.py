@@ -15,6 +15,9 @@ class Options():
         opt['num_positional_encoding_terms']        = 6
         opt['extents']                              = None
         opt['use_global_position']                  = False
+        opt['hash_log2_size']                       = 19           # hash grid: table size
+        opt['hash_base_resolution']                 = 16           # hash grid: min resolution per dim
+        opt['hash_max_resolution']                  = 2048         # hash grid: max resolution per dim
         
         opt['data']                                 = 'tornado.nc'
         opt['save_name']                            = 'tornado'

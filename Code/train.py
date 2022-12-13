@@ -168,8 +168,7 @@ def log_feature_grids_from_points(opt):
 
 
 def train( model, dataset, opt):
-      
-    model = model.to(opt['device'])        
+    model = model.to(opt['device'])
     print("Training on %s" % (opt["device"]), 
         os.path.join(save_folder, opt["save_name"]))
     if("AMRSRN" in opt['model']):
@@ -265,7 +264,15 @@ if __name__ == '__main__':
     parser.add_argument('--extents',default=None,type=str,
         help='Spatial extents to use for this model from the data')   
     parser.add_argument('--use_global_position',default=None,type=str2bool,
-        help='For the fourier featuers, whether to use the global position or local.')   
+        help='For the fourier featuers, whether to use the global position or local.')
+    
+    # Hash Grid (NGP model) hyperparameters
+    parser.add_argument('--hash_log2_size',default=None,type=int,
+        help='Size of hash table')
+    parser.add_argument('--hash_base_resolution',default=None,type=int,
+        help='Minimum resolution of a single dimension')
+    parser.add_argument('--hash_max_resolution',default=None,type=int,
+        help='Maximum resolution of a single dimension') 
     
 
     parser.add_argument('--data',default=None,type=str,
@@ -355,7 +362,8 @@ if __name__ == '__main__':
     start_time = time.time()
     
     train(model, dataset, opt)
-    log_feature_grids_from_points(opt)
+    if("AMRSRN" in opt['model']):
+        log_feature_grids_from_points(opt)
         
     opt['iteration_number'] = 0
     save_model(model, opt)
