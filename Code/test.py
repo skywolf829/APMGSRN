@@ -67,26 +67,13 @@ def feature_locations(model, opt):
             global_points = make_coord_grid(feat_grid_shape, opt['device'], 
                                 flatten=True, align_corners=True)
             
-            print(f"Ex transform matrix 1: {model.get_transformation_matrices()[0]}")
-            print(f"Ex transform matrix 2: {model.get_transformation_matrices()[1]}")
-            
-            transformed_points = torch.cat([global_points, torch.ones(
-                [global_points.shape[0], 1], 
-                device=opt['device'],
-                dtype=torch.float32)], 
-                dim=1)
-            transformed_points = transformed_points.unsqueeze(0).expand(
-                opt['n_grids'], transformed_points.shape[0], transformed_points.shape[1])
-            local_to_global_matrices = torch.inverse(model.get_transformation_matrices().transpose(-1, -2))
-            transformed_points = torch.bmm(transformed_points, 
-                                        local_to_global_matrices)
-            transformed_points = transformed_points[...,0:3].detach().cpu()
+            transformed_points = model.transform(global_points)
             ids = torch.arange(transformed_points.shape[0])
             ids = ids.unsqueeze(1).unsqueeze(1)
             ids = ids.repeat([1, transformed_points.shape[1], 1])
             transformed_points = torch.cat((transformed_points, ids), dim=2)
             transformed_points = transformed_points.flatten(0,1).numpy()
-        #transformed_points = transformed_points.astype(str)
+        
         create_path(os.path.join(output_folder, "FeatureLocations"))
 
         np.savetxt(os.path.join(output_folder, "FeatureLocations", opt['save_name']+".csv"),

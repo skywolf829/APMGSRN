@@ -9,6 +9,8 @@ from Models.options import *
 from Models.fVSRN import fVSRN
 from Models.afVSRN import afVSRN
 from Models.AMRSRN import AMRSRN
+from Models.SigmoidNet import SigmoidNet
+from Models.ExpNet import ExpNet
 from Other.utility_functions import create_folder
 from Other.utility_functions import make_coord_grid
 
@@ -46,6 +48,10 @@ def create_model(opt):
         return afVSRN(opt)
     elif(opt['model'] == "AMRSRN"):
         return AMRSRN(opt)
+    elif(opt['model'] == "SigmoidNet"):
+        return SigmoidNet(opt)
+    elif(opt['model'] == "ExpNet"):
+        return ExpNet(opt)
 
 def sample_grid(model, grid, max_points = 100000):
     coord_grid = make_coord_grid(grid, 

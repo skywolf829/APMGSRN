@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 class LReLULayer(nn.Module):
     def __init__(self, in_features, out_features, bias=True):

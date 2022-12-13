@@ -1,8 +1,8 @@
 [
     [ "train.py",
         {        
-            "save_name": "Supernova_test_AMRSRN_2feats_32grids_8x8x8",
-            "model": "AMRSRN",
+            "save_name": "Supernova_test_ExpNet_2feats_32grids_8x8x8",
+            "model": "ExpNet",
             "data": "Supernova_test.nc",
             "n_dims": 3,
             "n_features": 2,
