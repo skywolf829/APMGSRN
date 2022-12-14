@@ -19,15 +19,16 @@ class AMRSRN(nn.Module):
         init_scales = torch.ones(
                 [self.opt['n_grids'], 3],
                 device = opt['device']
-            ).uniform_(1.9,2.1)
+            ).uniform_(1,1.5)
+            #.uniform_(1.9,2.1)
 
         init_translations = torch.zeros(
                 [self.opt['n_grids'], 3],
                 device = opt['device']
-            ).uniform_(0.85, 1) * (init_scales-1)
-            #.uniform_(-1, 1) * (init_scales-1)
-        init_translations[:,-1].uniform_(-1, -0.85) 
-        init_translations[:,-1] *= (init_scales[:,-1]-1)
+            ).uniform_(-1, 1) * (init_scales-1)
+            #.uniform_(0.85, 1) * (init_scales-1)
+        #init_translations[:,-1].uniform_(-1, -0.85) 
+        #init_translations[:,-1] *= (init_scales[:,-1]-1)
     
         self.grid_scales = torch.nn.Parameter(
             init_scales,
@@ -108,6 +109,45 @@ class AMRSRN(nn.Module):
                                     transformed_points.transpose(-1,-2)).transpose(-1, -2)
         transformed_points = transformed_points[...,0:3].detach().cpu()
         return transformed_points
+    
+    def feature_density_gaussian(self, x):
+       
+       
+        x = x.unsqueeze(1).repeat(1,self.opt['n_grids'],1)
+        local_to_globals = torch.inverse(self.get_transformation_matrices())
+        grid_centers = local_to_globals[:,0:3,-1]
+        grid_stds = torch.diagonal(local_to_globals, 0, 1, 2)[:,0:3] * 0.5
+        
+        exps = ((x - grid_centers.unsqueeze(0))**2) / (2 * (grid_stds.unsqueeze(0)**2))
+        exps = -torch.sum(exps,dim=2)
+        exps = torch.exp(exps)
+        
+        exps = exps / (torch.prod(grid_stds.unsqueeze(0), dim=2) ** 0.5)
+        exps = torch.sum(exps, dim=1)
+        return exps / exps.max()
+        
+
+    def feature_density_box(self, volume_shape):
+        feat_density = torch.zeros(volume_shape, 
+            device=self.opt['device'], dtype=torch.float32)
+        
+        starts = torch.tensor([-1, -1, -1], device=self.opt['device'], dtype=torch.float32).unsqueeze(0)
+        stops = torch.tensor([1, 1, 1], device=self.opt['device'], dtype=torch.float32).unsqueeze(0)
+
+        ends = torch.cat([starts, stops], dim=0)
+        transformed_points = self.inverse_transform(ends)
+        transformed_points += 1
+        transformed_points *= 0.5 * (torch.tensor(volume_shape)-1)
+        transformed_points = transformed_points.type(torch.LongTensor)
+        print(transformed_points.shape)
+
+        for i in range(transformed_points.shape[0]):
+            feat_density[transformed_points[i,0,0]:transformed_points[i,1,0],
+                transformed_points[i,0,1]:transformed_points[i,1,1],
+                transformed_points[i,0,2]:transformed_points[i,1,2]] += 1
+
+
+        return feat_density.permute(2,1,0)
 
     def fix_params(self):
         with torch.no_grad():
@@ -121,7 +161,7 @@ class AMRSRN(nn.Module):
         
         transformed_points = transformed_points.unsqueeze(1).unsqueeze(1)
         feats = F.grid_sample(self.feature_grids,
-                transformed_points,
+                transformed_points.detach(),
                 mode='bilinear', align_corners=True,
                 padding_mode="zeros")[:,:,0,0,:]
         

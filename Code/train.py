@@ -17,7 +17,7 @@ import torch.multiprocessing as mp
 from Models.losses import *
 import shutil
 from Models.models import sample_grid_for_image
-from Other.utility_functions import make_coord_grid, create_path
+from Other.utility_functions import make_coord_grid, create_path, tensor_to_cdf
 from Other.vis_io import get_vts, write_vts, write_pvd, write_vtm
 from vtk import vtkMultiBlockDataSet
 import glob
@@ -68,6 +68,28 @@ def logging(writer, iteration, losses, model, opt, grid_to_sample, dataset):
         or "SigmoidNet" in opt['model'] \
         or "ExpNet" in opt['model'])):
         log_feature_points(model, dataset, opt, iteration)
+
+def log_feature_density(model, dataset, opt):
+    feat_density = model.feature_density_box(list(dataset.data.shape[2:]))
+    tensor_to_cdf(feat_density.unsqueeze(0).unsqueeze(0), os.path.join(output_folder, "FeatureLocations", 
+        opt['save_name'], "density.nc"))
+    coord_grid = make_coord_grid(list(dataset.data.shape[2:]), 
+        opt['device'], flatten=False,
+        align_corners=True)
+    print(coord_grid.shape)
+    coord_grid_shape = list(coord_grid.shape)
+    coord_grid = coord_grid.view(-1, coord_grid.shape[-1])
+    gaussian_densities = model.feature_density_gaussian(coord_grid)
+    coord_grid_shape[-1] = 1
+    
+    gaussian_densities = gaussian_densities.reshape(coord_grid_shape)
+    print(gaussian_densities.shape)
+
+    gaussian_densities = gaussian_densities.permute(3, 0, 1, 2).unsqueeze(0)
+    tensor_to_cdf(gaussian_densities, os.path.join(output_folder, "FeatureLocations", 
+        opt['save_name'], "gaussian_density.nc"))
+
+    
 
 def log_feature_points(model, dataset, opt, iteration):
     feat_grid_shape = opt['feature_grid_shape'].split(',')
@@ -181,7 +203,6 @@ def train( model, dataset, opt):
         
     model.train(True)
 
-    loss_func = get_loss_func(opt)
     with torch.profiler.profile(
         activities=[
             torch.profiler.ProfilerActivity.CPU,
@@ -207,17 +228,24 @@ def train( model, dataset, opt):
                     device=opt['device'])
             
             model_output = model(x)
-            loss = loss_func(y, model_output)
-
-            loss.backward()                   
+            loss = F.l1_loss(model_output, y)
+            loss.mean().backward()                   
             
+            if(iteration > 100):
+                density = model.feature_density_gaussian(x)            
+                density_loss = density * loss.detach()
+                density_loss = -1 * density_loss.mean()
+                density_loss.backward()
+            else:
+                density_loss = torch.tensor([0])
+
             optimizer.step()
             scheduler.step()        
             profiler.step()
             
             model.fix_params()
 
-            logging(writer, iteration, {"Fitting loss": loss}, 
+            logging(writer, iteration, {"Fitting loss": loss.mean(), "Density loss": density_loss}, 
                 model, opt, dataset.data.shape[2:], dataset)
             
     writer.close()
@@ -331,6 +359,7 @@ if __name__ == '__main__':
     start_time = time.time()
     
     train(model, dataset, opt)
+    #log_feature_density(model, dataset, opt)
     log_feature_grids_from_points(opt)
         
     opt['iteration_number'] = 0
