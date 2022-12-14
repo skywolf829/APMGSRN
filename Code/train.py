@@ -17,7 +17,7 @@ import torch.multiprocessing as mp
 from Models.losses import *
 import shutil
 from Models.models import sample_grid_for_image
-from Other.utility_functions import make_coord_grid, create_path
+from Other.utility_functions import make_coord_grid, create_path, tensor_to_cdf
 from Other.vis_io import get_vts, write_vts, write_pvd, write_vtm
 from vtk import vtkMultiBlockDataSet
 import glob
@@ -64,8 +64,32 @@ def log_grad_image(model, grid_to_sample, writer, iteration):
 def logging(writer, iteration, losses, model, opt, grid_to_sample, dataset):
     if(iteration % opt['log_every'] == 0):
         log_to_writer(iteration, losses, writer, opt)
-    if(iteration % 50 == 0 and "AMRSRN" in opt['model']):
+    if(iteration % 50 == 0 and ("AMRSRN" in opt['model'] \
+        or "SigmoidNet" in opt['model'] \
+        or "ExpNet" in opt['model'])):
         log_feature_points(model, dataset, opt, iteration)
+
+def log_feature_density(model, dataset, opt):
+    feat_density = model.feature_density_box(list(dataset.data.shape[2:]))
+    tensor_to_cdf(feat_density.unsqueeze(0).unsqueeze(0), os.path.join(output_folder, "FeatureLocations", 
+        opt['save_name'], "density.nc"))
+    coord_grid = make_coord_grid(list(dataset.data.shape[2:]), 
+        opt['device'], flatten=False,
+        align_corners=True)
+    print(coord_grid.shape)
+    coord_grid_shape = list(coord_grid.shape)
+    coord_grid = coord_grid.view(-1, coord_grid.shape[-1])
+    gaussian_densities = model.feature_density_gaussian(coord_grid)
+    coord_grid_shape[-1] = 1
+    
+    gaussian_densities = gaussian_densities.reshape(coord_grid_shape)
+    print(gaussian_densities.shape)
+
+    gaussian_densities = gaussian_densities.permute(3, 0, 1, 2).unsqueeze(0)
+    tensor_to_cdf(gaussian_densities, os.path.join(output_folder, "FeatureLocations", 
+        opt['save_name'], "gaussian_density.nc"))
+
+    
 
 def log_feature_points(model, dataset, opt, iteration):
     feat_grid_shape = opt['feature_grid_shape'].split(',')
@@ -73,24 +97,12 @@ def log_feature_points(model, dataset, opt, iteration):
     
     global_points = make_coord_grid(feat_grid_shape, opt['device'], 
                     flatten=True, align_corners=True)
-    transformed_points = torch.cat([global_points, torch.ones(
-        [global_points.shape[0], 1], 
-        device=opt['device'],
-        dtype=torch.float32)], 
-        dim=1)
-    transformed_points = transformed_points.unsqueeze(0).expand(
-        opt['n_grids'], transformed_points.shape[0], transformed_points.shape[1])
-    local_to_global_matrices = torch.inverse(model.get_transformation_matrices())
-    
-    transformed_points = torch.bmm(local_to_global_matrices,
-                                   transformed_points.transpose(-1,-2)).transpose(-1, -2)
-    transformed_points = transformed_points[...,0:3].detach().cpu()
-    transformed_points[...,0] += 1
-    transformed_points[...,1] += 1
-    transformed_points[...,2] += 1
-    transformed_points[...,0] *= 0.5 * dataset.data.shape[2]
-    transformed_points[...,1] *= 0.5 * dataset.data.shape[3]
-    transformed_points[...,2] *= 0.5 * dataset.data.shape[4]
+    transformed_points = model.inverse_transform(global_points)
+
+    transformed_points += 1
+    transformed_points *= 0.5 * torch.tensor(list(dataset.data.shape[2:]))
+    transformed_points = transformed_points.detach().cpu()
+
     ids = torch.arange(transformed_points.shape[0])
     ids = ids.unsqueeze(1).unsqueeze(1)
     ids = ids.repeat([1, transformed_points.shape[1], 1])
@@ -108,23 +120,10 @@ def log_feature_grids(model, dataset, opt, iteration):
     
     global_points = make_coord_grid(feat_grid_shape, opt['device'], 
                     flatten=True, align_corners=True)
-    transformed_points = torch.cat([global_points, torch.ones(
-        [global_points.shape[0], 1], 
-        device=opt['device'],
-        dtype=torch.float32)], 
-        dim=1)
-    transformed_points = transformed_points.unsqueeze(0).expand(
-        opt['n_grids'], transformed_points.shape[0], transformed_points.shape[1])
-    local_to_global_matrices = torch.inverse(model.get_transformation_matrices().transpose(-1, -2))
-    transformed_points = torch.bmm(transformed_points, 
-                                local_to_global_matrices)
-    transformed_points = transformed_points[...,0:3].detach().cpu()
-    transformed_points[...,0] += 1
-    transformed_points[...,1] += 1
-    transformed_points[...,2] += 1
-    transformed_points[...,0] *= 0.5 * dataset.data.shape[2]
-    transformed_points[...,1] *= 0.5 * dataset.data.shape[3]
-    transformed_points[...,2] *= 0.5 * dataset.data.shape[4]
+    transformed_points = model.transform(global_points)
+
+    transformed_points += 1
+    transformed_points *= 0.5 * torch.tensor(dataset.data.shape)
     ids = torch.arange(transformed_points.shape[0])
     ids = ids.unsqueeze(1).unsqueeze(1)
     ids = ids.repeat([1, transformed_points.shape[1], 1])
@@ -132,6 +131,7 @@ def log_feature_grids(model, dataset, opt, iteration):
     
     # use zyx point ordering for vtk files
     feat_grid_shape_zyx = np.flip(feat_grid_shape)
+
     # write each grid as a vts file, and aggregate their info in one .pvd file
     grid_dir = os.path.join(output_folder, "FeatureLocations", opt['save_name'], f"iter{iteration}")
     create_path(grid_dir)
@@ -185,7 +185,7 @@ def train( model, dataset, opt):
             {
             "params": model.decoder.parameters(), "lr": opt["lr"]
             }
-        ], betas=[opt['beta_1'], opt['beta_2']]) 
+        ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15) 
     else:
         optimizer = optim.Adam(model.parameters(), lr=opt["lr"], 
         betas=[opt['beta_1'], opt['beta_2']]) 
@@ -194,14 +194,14 @@ def train( model, dataset, opt):
 
     if(os.path.exists(os.path.join(project_folder_path, "tensorboard", opt['save_name']))):
         shutil.rmtree(os.path.join(project_folder_path, "tensorboard", opt['save_name']))
+    
+    if(os.path.exists(os.path.join(output_folder, "FeatureLocations", opt['save_name']))):
+        shutil.rmtree(os.path.join(output_folder, "FeatureLocations", opt['save_name']))
         
     writer = SummaryWriter(os.path.join('tensorboard',opt['save_name']))
-    gt_img = dataset.get_2D_slice()
-    writer.add_image("Ground Truth", gt_img, 0, dataformats="CHW")
-    
+        
     model.train(True)
 
-    loss_func = get_loss_func(opt)
     with torch.profiler.profile(
         activities=[
             torch.profiler.ProfilerActivity.CPU,
@@ -227,20 +227,24 @@ def train( model, dataset, opt):
                     device=opt['device'])
             
             model_output = model(x)
-            loss = loss_func(y, model_output)
-
-            loss.backward()                   
+            loss = F.l1_loss(model_output, y)
+            loss.mean().backward()                   
             
+            if(iteration > 100):
+                density = model.feature_density_gaussian(x)            
+                density_loss = density * loss.detach()
+                density_loss = -1 * density_loss.mean()
+                density_loss.backward()
+            else:
+                density_loss = torch.tensor([0])
+
             optimizer.step()
             scheduler.step()        
             profiler.step()
-            if("AMRSRN" in opt['model']):
-                with torch.no_grad():
-                    model.grid_scales.clamp_(1, 32)
-                    max_deviation = model.grid_scales-1
-                    model.grid_translations.clamp_(-max_deviation, max_deviation)
+            
+            model.fix_params()
 
-            logging(writer, iteration, {"Fitting loss": loss}, 
+            logging(writer, iteration, {"Fitting loss": loss.mean(), "Density loss": density_loss}, 
                 model, opt, dataset.data.shape[2:], dataset)
             
     writer.close()
@@ -362,8 +366,13 @@ if __name__ == '__main__':
     start_time = time.time()
     
     train(model, dataset, opt)
+<<<<<<< HEAD
     if("AMRSRN" in opt['model']):
         log_feature_grids_from_points(opt)
+=======
+    #log_feature_density(model, dataset, opt)
+    log_feature_grids_from_points(opt)
+>>>>>>> b0c6d9930eebbbe445eed1f670c16dd1e04c1704
         
     opt['iteration_number'] = 0
     save_model(model, opt)

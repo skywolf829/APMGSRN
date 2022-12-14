@@ -37,7 +37,7 @@ class Options():
         opt['points_per_iteration']                 = 200000   
         opt['lr']                                   = 0.01
         opt['beta_1']                               = 0.9
-        opt['beta_2']                               = 0.999
+        opt['beta_2']                               = 0.99
 
         opt['iteration_number']                     = 0
         opt['save_every']                           = 100

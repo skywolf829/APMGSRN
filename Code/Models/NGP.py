@@ -51,8 +51,9 @@ class HashGrid(nn.Module):
         )  # growth factor for resolution from base to max, eq(3)
         
         # resolution for grid on each level, eq(2)
-        self.resolution = torch.tensor([self.base_resolution*per_level_scale**i for i in range(self.n_grids)],
-                                       device=self.opt['device'])
+        self.resolution = torch.floor(
+            torch.tensor([self.base_resolution*per_level_scale**i for i in range(self.n_grids)])
+        ).long().tolist()
         
         self.feature_grid = nn.ModuleList([nn.Embedding(self.table_size, self.feat_dim) for i in range(self.n_grids)])
         for grid in self.feature_grid:
@@ -61,9 +62,9 @@ class HashGrid(nn.Module):
         self.table_size = torch.tensor(self.table_size, dtype=torch.int32, device=self.opt['device'])
 
     def spatial_hashing(self, x:torch.Tensor):
-        xor_result = x[..., 0]*self.PRIMES[0]
+        xor_result = torch.zeros()
         with torch.no_grad():
-            for i in range(1, x.shape[-1]):
+            for i in range(x.shape[-1]):
                 xor_result ^= x[..., i]*self.PRIMES[i]
             return xor_result % self.table_size
         
@@ -121,8 +122,6 @@ class HashGrid(nn.Module):
 class NGP(nn.Module):
     def __init__(self, opt) -> None:
         super().__init__()
-        
-        raise NotImplementedError()
     
         self.opt = opt
         
@@ -139,8 +138,6 @@ class NGP(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError()
-    
         return self.decoder(self.hash_grid(x))
 
 class NGP_TCNN(nn.Module):

@@ -1,8 +1,8 @@
 [
     [ "train.py",
-        {        
-            "save_name": "Supernova_test_TCNN_2feats_16grids_9_4-128",
-            "model": "NGP_TCNN",
+        {
+            "save_name": "Supernova_test_NGP_2feats_16grids_9_4-128",
+            "model": "NGP",
             "data": "Supernova_test.nc",
 
             "n_dims": 3,
@@ -22,10 +22,14 @@
             "log_every": 10,
             "log_image": false,
             "log_image_every": 2000
-    }],
+        }
+    ],
+
     [ "test.py",
-    {        
-    "load_from": "Supernova_test_TCNN_2feats_16grids_9_4-128",
-    "tests": "reconstruction,error_volume"
-    }]
+        {
+            "load_from": "Supernova_test_NGP_2feats_16grids_9_4-128",
+            "tests": "reconstruction"
+        }
+    ]
+    
 ]
