@@ -55,7 +55,7 @@ class AMRSRN(nn.Module):
         
         first_layer_input_size = opt['n_features']*opt['n_grids'] #+ opt['num_positional_encoding_terms']*opt['n_dims']*2
                  
-        layer = SnakeAltLayer(first_layer_input_size, 
+        layer = LReLULayer(first_layer_input_size, 
                             opt['nodes_per_layer'])
         self.decoder.append(layer)
         
