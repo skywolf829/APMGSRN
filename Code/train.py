@@ -166,6 +166,51 @@ def log_feature_grids_from_points(opt):
             vtm.SetBlock(j, vts)
         write_vtm(os.path.join(vtm_dir, f"grids_{i:03}.vtm", ), vtm)
 
+def train_step_AMRSRN(opt, iteration, dataset, model, optimizer, scheduler, profiler, writer):
+    opt['iteration_number'] = iteration
+    optimizer.zero_grad()
+    
+    x, y = dataset.get_random_points(opt['points_per_iteration'],
+            device=opt['device'])
+    
+    model_output = model(x)
+    loss = F.l1_loss(model_output, y)
+    loss.mean().backward()                   
+    
+    if(iteration > 100):
+        density = model.feature_density_gaussian(x)            
+        density_loss = density * loss.detach()
+        density_loss = -1 * density_loss.mean()
+        density_loss.backward()
+    else:
+        density_loss = torch.tensor([0])
+
+    optimizer.step()
+    scheduler.step()        
+    profiler.step()
+    
+    model.fix_params()
+    
+    logging(writer, iteration, {"Fitting loss": loss.mean(), "Density loss": density_loss}, 
+        model, opt, dataset.data.shape[2:], dataset)
+
+def train_step_vanilla(opt, iteration, dataset, model, optimizer, scheduler, profiler, writer):
+    opt['iteration_number'] = iteration
+    optimizer.zero_grad()
+    
+    x, y = dataset.get_random_points(opt['points_per_iteration'],
+            device=opt['device'])
+    
+    model_output = model(x)
+    loss = F.l1_loss(model_output, y)
+    loss.mean().backward()                   
+
+    optimizer.step()
+    scheduler.step()        
+    profiler.step()
+    
+    logging(writer, iteration, {"Fitting loss": loss.mean()}, 
+        model, opt, dataset.data.shape[2:], dataset)
 
 def train( model, dataset, opt):
     model = model.to(opt['device'])
@@ -202,6 +247,11 @@ def train( model, dataset, opt):
         
     model.train(True)
 
+    # choose the specific training iteration function based on the model
+    train_step = train_step_vanilla
+    if 'AMRSRN' in opt['model']:
+        train_step = train_step_AMRSRN
+    
     with torch.profiler.profile(
         activities=[
             torch.profiler.ProfilerActivity.CPU,
@@ -220,32 +270,14 @@ def train( model, dataset, opt):
             os.path.join('tensorboard',opt['save_name'])),
     with_stack=True) as profiler:
         for iteration in range(0, opt['iterations']):
-            opt['iteration_number'] = iteration
-            optimizer.zero_grad()
-            
-            x, y = dataset.get_random_points(opt['points_per_iteration'],
-                    device=opt['device'])
-            
-            model_output = model(x)
-            loss = F.l1_loss(model_output, y)
-            loss.mean().backward()                   
-            
-            if(iteration > 100):
-                density = model.feature_density_gaussian(x)            
-                density_loss = density * loss.detach()
-                density_loss = -1 * density_loss.mean()
-                density_loss.backward()
-            else:
-                density_loss = torch.tensor([0])
-
-            optimizer.step()
-            scheduler.step()        
-            profiler.step()
-            
-            model.fix_params()
-
-            logging(writer, iteration, {"Fitting loss": loss.mean(), "Density loss": density_loss}, 
-                model, opt, dataset.data.shape[2:], dataset)
+            train_step(opt,
+                       iteration,
+                       dataset,
+                       model,
+                       optimizer,
+                       scheduler,
+                       profiler,
+                       writer)
             
     writer.close()
     save_model(model, opt)
@@ -366,13 +398,8 @@ if __name__ == '__main__':
     start_time = time.time()
     
     train(model, dataset, opt)
-<<<<<<< HEAD
     if("AMRSRN" in opt['model']):
         log_feature_grids_from_points(opt)
-=======
-    #log_feature_density(model, dataset, opt)
-    log_feature_grids_from_points(opt)
->>>>>>> b0c6d9930eebbbe445eed1f670c16dd1e04c1704
         
     opt['iteration_number'] = 0
     save_model(model, opt)

@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 from math import exp, log
 from Other.utility_functions import make_coord_grid
+from Models.layers import LinearLayer
 import tinycudann as tcnn
 # from Models.layers import LReLULayer, SineLayer, SnakeAltLayer, PositionalEncoding
 
@@ -30,17 +31,17 @@ class FeatureGrid(nn.Module):
                               mode='bilinear', align_corners=True)
         return feats
 
-
-class HashGrid(nn.Module):
+# TODO: for grid size < table size, use FeatureGrid to avoid inefficient hasing + interpolation implemnentaion -ty
+class MultiHashGrid(nn.Module):
     def __init__(self, opt) -> None:
         super().__init__()
         self.opt = opt
         # interpolation metadata
         self.VOXEL_VTX_OFFSET = torch.tensor([[[i,j,k] for i in [0, 1] for j in [0, 1] for k in [0, 1]]],
-                                             device=self.opt['device'])
+                                             device=self.opt['device']).long()
         self.bbox = torch.tensor([[-1,-1,-1],[1,1,1]], device=self.opt['device'])
         # hash grid metadata
-        self.PRIMES = [1958374283, 2654435761, 805459861, 3674653429, 2097192037, 1434869437, 2165219737] # from tiny-cuda-nn implementation
+        self.PRIMES = [1, 2654435761, 805459861, 3674653429, 2097192037, 1434869437, 2165219737] # from tiny-cuda-nn implementation
         self.max_resolution = opt['hash_max_resolution']
         self.base_resolution = opt['hash_base_resolution']
         self.n_grids = opt['n_grids']
@@ -61,8 +62,8 @@ class HashGrid(nn.Module):
             
         self.table_size = torch.tensor(self.table_size, dtype=torch.int32, device=self.opt['device'])
 
-    def spatial_hashing(self, x:torch.Tensor):
-        xor_result = torch.zeros()
+    def spatial_hashing(self, x:torch.LongTensor):
+        xor_result = torch.zeros(x.shape[:-1], dtype=x.dtype, device=x.device)
         with torch.no_grad():
             for i in range(x.shape[-1]):
                 xor_result ^= x[..., i]*self.PRIMES[i]
@@ -77,9 +78,9 @@ class HashGrid(nn.Module):
         '''
         bbox_min, bbox_max = self.bbox
         with torch.no_grad():
-            x_normed = (x - bbox_min) / (bbox_max - bbox_min) * (grid_resolution)
+            x_normed = (x - bbox_min) / (bbox_max - bbox_min) * grid_resolution
             # map coordinate from bbox scale to [0, grid_resolution] for easier interpolation weight calc
-        voxel_idx_000 = torch.floor(x_normed).int()
+        voxel_idx_000 = torch.floor(x_normed).long()
         interp_w = x_normed - voxel_idx_000
         
         voxel_idx_all = voxel_idx_000.unsqueeze(1) + self.VOXEL_VTX_OFFSET
@@ -125,18 +126,20 @@ class NGP(nn.Module):
     
         self.opt = opt
         
-        self.hash_grid = HashGrid(opt)
+        self.hash_grid = MultiHashGrid(opt)
         
         self.decoder_indim = self.hash_grid.feat_dim * self.hash_grid.n_grids
         self.decoder_dim = opt['nodes_per_layer']
         self.decoder_outdim = opt['n_outputs']
         self.decoder_layers = opt['n_layers']
         self.decoder = nn.Sequential(
-            nn.Linear(self.decoder_indim, self.decoder_dim),
-            *[nn.Linear(self.decoder_dim, self.decoder_dim) for i in range(self.decoder_layers-1)],
+            LinearLayer(self.decoder_indim, self.decoder_dim),
+            *[LinearLayer(self.decoder_dim, self.decoder_dim) for i in range(self.decoder_layers-1)],
             nn.Linear(self.decoder_dim, self.decoder_outdim)
         )
-
+    def fix_params(self): # emtpy function in case train.py calling
+        return
+        
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.decoder(self.hash_grid(x))
 
@@ -179,7 +182,9 @@ class NGP_TCNN(nn.Module):
                 "n_hidden_layers": self.decoder_layers,
             },
         )
-
+    def fix_params(self): # emtpy function in case train.py calling
+        return
+    
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
 

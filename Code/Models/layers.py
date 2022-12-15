@@ -2,6 +2,19 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+class LinearLayer(nn.Module):
+  def __init__(self, in_features, out_features=256, act_fn=nn.ReLU(), use_norm=False) -> None:
+    super(LinearLayer, self).__init__()
+    self.layer = nn.ModuleList([ nn.Linear(in_features, out_features) ])
+    if use_norm:
+      self.layer.append(nn.LayerNorm(in_features))
+    if act_fn is not None:
+      self.layer.append(act_fn)
+    self.layer = nn.Sequential(*self.layer)
+    
+  def forward(self, x):
+    return self.layer(x)
+
 class LReLULayer(nn.Module):
     def __init__(self, in_features, out_features, bias=True):
         super().__init__()
