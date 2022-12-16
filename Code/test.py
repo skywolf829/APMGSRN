@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 import argparse
 import os
 from Other.utility_functions import PSNR, tensor_to_cdf, create_path, make_coord_grid
-from Models.models import load_model, sample_grid
+from Models.models import load_model, sample_grid, forward_maxpoints
 from Models.options import load_options
 from Datasets.datasets import Dataset
 import torch
@@ -55,6 +55,24 @@ def scale_distribution(model, opt):
     create_path(os.path.join(output_folder, "ScaleDistributions"))
     plt.savefig(os.path.join(output_folder, "ScaleDistributions", opt['save_name']+'.png'))
 
+def feature_density(model, dataset, opt):
+    data_shape = list(dataset.data.shape[2:])
+    grid = make_coord_grid(data_shape, opt['device'], 
+                           flatten=True, align_corners=True)
+    with torch.no_grad():
+        print(grid.device)
+        
+        density = forward_maxpoints(model.feature_density_gaussian, grid, 
+                                    data_device=opt['data_device'], model_device=opt['device'])
+        density = density.reshape(data_shape)
+        density = density.unsqueeze(0).unsqueeze(0)
+        density = density / ((2**opt['n_dims']) * torch.prod(torch.tensor(data_shape)))
+    
+    create_path(os.path.join(output_folder, "FeatureDensity"))
+    tensor_to_cdf(density, 
+        os.path.join(output_folder, 
+        "FeatureDensity", opt['save_name']+".nc"))
+    
 def feature_locations(model, opt):
     if(opt['model'] == "afVSRN"):
         feat_locations = model.feature_locations.detach().cpu().numpy()
@@ -90,6 +108,8 @@ def perform_tests(model, data, tests, opt):
         error_volume(model, data, opt)
     if("scale_distribution" in tests):
         scale_distribution(model, opt)
+    if("feature_density" in tests):
+        feature_density(model, data, opt)
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate a model on some tests')

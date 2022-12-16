@@ -7,6 +7,8 @@ from Other.utility_functions import make_coord_grid
 from Models.layers import LReLULayer, SineLayer, SnakeAltLayer, PositionalEncoding
 
        
+       
+       
 class AMRSRN(nn.Module):
     def __init__(self, opt):
         super().__init__()
@@ -19,7 +21,7 @@ class AMRSRN(nn.Module):
         init_scales = torch.ones(
                 [self.opt['n_grids'], 3],
                 device = opt['device']
-            ).uniform_(1,1.5)
+            ).uniform_(1,2)
             #.uniform_(1.9,2.1)
 
         init_translations = torch.zeros(
@@ -39,6 +41,15 @@ class AMRSRN(nn.Module):
             requires_grad=True
         )
         
+        self.register_buffer("ROOT_TWO", 
+                torch.tensor([2.0 ** 0.5]),
+                persistent=False)            
+        self.register_buffer("FLAT_TOP_GAUSSIAN_EXP", 
+                torch.tensor([2.0 * 10.0]),
+                persistent=False)
+        self.register_buffer("DIM_COEFF", 
+                torch.tensor([(2.0 * torch.pi) **(self.opt['n_dims']/2)]),
+                persistent=False)
         
         self.feature_grids =  torch.nn.parameter.Parameter(
             torch.ones(
@@ -112,19 +123,23 @@ class AMRSRN(nn.Module):
     
     def feature_density_gaussian(self, x):
        
-       
         x = x.unsqueeze(1).repeat(1,self.opt['n_grids'],1)
         local_to_globals = torch.inverse(self.get_transformation_matrices())
         grid_centers = local_to_globals[:,0:3,-1]
-        grid_stds = torch.diagonal(local_to_globals, 0, 1, 2)[:,0:3] * 0.5
+        #grid_stds = torch.diagonal(local_to_globals, 0, 1, 2)[:,0:3]
+        grid_stds = 1 / self.grid_scales
         
-        exps = ((x - grid_centers.unsqueeze(0))**2) / (2 * (grid_stds.unsqueeze(0)**2))
-        exps = -torch.sum(exps,dim=2)
-        exps = torch.exp(exps)
+        coeffs = 1 / \
+        (torch.prod(grid_stds, dim=-1).unsqueeze(0) * \
+            self.DIM_COEFF)
         
-        exps = exps / (torch.prod(grid_stds.unsqueeze(0), dim=2) ** 0.5)
-        exps = torch.sum(exps, dim=1)
-        return exps / exps.max()
+        exps = torch.exp(-1 * \
+            torch.sum(
+                (((x - grid_centers.unsqueeze(0))) / \
+                (self.ROOT_TWO * grid_stds.unsqueeze(0)))**self.FLAT_TOP_GAUSSIAN_EXP, 
+            dim=-1))
+        
+        return torch.sum(coeffs * exps, dim=-1, keepdim=True)
         
 
     def feature_density_box(self, volume_shape):
@@ -150,7 +165,7 @@ class AMRSRN(nn.Module):
         return feat_density.permute(2,1,0)
 
     def fix_params(self):
-        with torch.no_grad():
+        with torch.no_grad():            
             self.grid_scales.clamp_(1, 32)
             max_deviation = self.grid_scales-1
             self.grid_translations.clamp_(-max_deviation, max_deviation)
@@ -179,7 +194,7 @@ class AMRSRN(nn.Module):
         while i < len(self.decoder):
             y = self.decoder[i](y)
             i = i + 1
-            
+        
         return y
 
         

@@ -112,14 +112,16 @@ def sample_grid_for_image(model, grid,
     vals = vals.reshape(coord_grid_shape)
     return vals
 
-def forward_maxpoints(model, coords, max_points=100000):
+def forward_maxpoints(model, coords, out_dim=1, max_points=100000, 
+                      data_device="cuda", model_device="cuda"):
     output_shape = list(coords.shape)
-    output_shape[-1] = model.opt['n_outputs']
+    output_shape[-1] = out_dim
     output = torch.empty(output_shape, 
-        dtype=torch.float32, device=model.opt['device'])
-
+        dtype=torch.float32, 
+        device=data_device)
+    
     for start in range(0, coords.shape[0], max_points):
         output[start:min(start+max_points, coords.shape[0])] = \
-            model(coords[start:min(start+max_points, coords.shape[0])].to(model.opt['device']))
+            model(coords[start:min(start+max_points, coords.shape[0])].to(model_device))
     return output
 

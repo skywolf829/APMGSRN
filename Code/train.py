@@ -99,8 +99,8 @@ def log_feature_points(model, dataset, opt, iteration):
                     flatten=True, align_corners=True)
     transformed_points = model.inverse_transform(global_points)
 
-    transformed_points += 1
-    transformed_points *= 0.5 * torch.tensor(list(dataset.data.shape[2:]))
+    transformed_points += 1.0
+    transformed_points *= 0.5 * (torch.tensor(list(dataset.data.shape[2:]))-1)
     transformed_points = transformed_points.detach().cpu()
 
     ids = torch.arange(transformed_points.shape[0])
@@ -122,8 +122,8 @@ def log_feature_grids(model, dataset, opt, iteration):
                     flatten=True, align_corners=True)
     transformed_points = model.transform(global_points)
 
-    transformed_points += 1
-    transformed_points *= 0.5 * torch.tensor(dataset.data.shape)
+    transformed_points += 1.0
+    transformed_points *= 0.5 * (torch.tensor(dataset.data.shape)-1)
     ids = torch.arange(transformed_points.shape[0])
     ids = ids.unsqueeze(1).unsqueeze(1)
     ids = ids.repeat([1, transformed_points.shape[1], 1])
@@ -178,7 +178,7 @@ def train( model, dataset, opt):
             "params": [model.grid_scales], "lr": opt["lr"]*1
             },
             {
-            "params": [model.grid_translations], "lr": opt["lr"]*1
+            "params": [model.grid_translations], "lr": opt["lr"]*0.1
             },
             {
             "params": [model.feature_grids], "lr": opt["lr"]
@@ -227,17 +227,25 @@ def train( model, dataset, opt):
             x, y = dataset.get_random_points(opt['points_per_iteration'],
                     device=opt['device'])
             
-            model_output = model(x)
-            loss = F.l1_loss(model_output, y)
-            loss.mean().backward()                   
             
-            if(iteration > 100):
-                density = model.feature_density_gaussian(x)            
-                density_loss = density * loss.detach()
-                density_loss = -1 * density_loss.mean()
-                density_loss.backward()
-            else:
-                density_loss = torch.tensor([0])
+            model_output = model(x)
+            loss = F.l1_loss(model_output, y, reduction='none')
+            loss.mean().backward()  
+            
+            
+            # the scalar on the right normalizes the density such that it
+            # sums to 1 for the points sampled, allowing it to be treated like
+            # a distribution if necessary
+            density = model.feature_density_gaussian(x) * (2**opt['n_dims']) / opt['n_grids'] / x.shape[0]    
+            # Calculates relative error such that relative_error = 1 is the average error.
+            # Idea is < than average error -> less density
+            # > than average error -> more density.
+            relative_error = torch.abs(loss) / torch.abs(loss).mean()
+
+            density_loss = 100 * F.mse_loss(density,
+                density.detach() * relative_error.detach(),
+                reduction='none')
+            density_loss.mean().backward()
 
             optimizer.step()
             scheduler.step()        
@@ -245,7 +253,8 @@ def train( model, dataset, opt):
             
             model.fix_params()
 
-            logging(writer, iteration, {"Fitting loss": loss.mean(), "Density loss": density_loss}, 
+            logging(writer, iteration, 
+                {"Fitting loss": loss.mean(), "Density loss": density_loss.mean()}, 
                 model, opt, dataset.data.shape[2:], dataset)
             
     writer.close()
