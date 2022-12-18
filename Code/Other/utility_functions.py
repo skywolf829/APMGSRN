@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 from torch.nn import functional as F
-from matplotlib.pyplot import cm
 from math import exp
 from typing import Optional
 import argparse
@@ -185,7 +184,7 @@ def toImg(data, renorm_channels = True):
             data[c] -= data[c].min()
             data[c] *= 1 / data[c].max()
     if(len(data.shape) == 3):
-        im =  cm.coolwarm(data[0])
+        #im =  cm.coolwarm(data[0])
         im *= 255
         im = im.astype(np.uint8)
     elif(len(data.shape) == 4):
