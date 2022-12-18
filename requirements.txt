@@ -20,7 +20,7 @@ numba
 numpy 
 oauthlib==3.2.2
 packaging
-pandas==1.5.1
+pandas
 Pillow==9.2.0
 ply==3.11
 protobuf==3.19.6
