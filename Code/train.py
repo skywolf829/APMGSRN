@@ -213,6 +213,7 @@ def train( model, dataset, opt):
             # a distribution if necessary
             density = model.feature_density_gaussian(x) #* (2**opt['n_dims']) / opt['n_grids'] / x.shape[0]       
             density /= density.sum().detach()
+            
             # Calculates relative error such that relative_error = 1 is the average error.
             # Idea is < than average error -> less density
             # > than average error -> more density.

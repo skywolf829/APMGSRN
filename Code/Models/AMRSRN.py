@@ -107,7 +107,7 @@ class AMRSRN(nn.Module):
         return transformed_points * (0.6)
 
     def inverse_transform(self, x):
-        transformed_points = torch.cat([x * (1.666), torch.ones(
+        transformed_points = torch.cat([x * (1/0.6), torch.ones(
             [x.shape[0], 1], 
             device=self.opt['device'],
             dtype=torch.float32)], 
