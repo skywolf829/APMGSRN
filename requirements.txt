@@ -52,7 +52,7 @@ torchvision==0.14.0
 tornado 
 typing_extensions==4.1.1
 urllib3 
-vtk===-PKG-VERSION
+vtk
 Werkzeug==2.2.2
 win-inet-pton
 win32-setctime
