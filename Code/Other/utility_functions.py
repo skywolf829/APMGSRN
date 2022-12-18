@@ -8,7 +8,6 @@ import os
 from netCDF4 import Dataset
 import pickle
 import h5py
-import numba as nb
   
 def reset_grads(model,require_grad):
     for p in model.parameters():
@@ -614,69 +613,6 @@ def spatial_gradient(data, channel, dimension):
 
     return output
 
-#Modified Code from Scipy-source
-#https://github.com/scipy/scipy/blob/master/scipy/spatial/_hausdorff.pyx
-#Copyright (C)  Tyler Reddy, Richard Gowers, and Max Linke, 2016
-#Copyright © 2001, 2002 Enthought, Inc.
-#All rights reserved.
-
-#Copyright © 2003-2013 SciPy Developers.
-#All rights reserved.
-
-#Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
-#Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-#Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following 
-#disclaimer in the documentation and/or other materials provided with the distribution.
-#Neither the name of Enthought nor the names of the SciPy Developers may be used to endorse or promote products derived 
-#from this software without specific prior written permission.
-
-#THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, 
-#BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
-#IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, 
-#OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; 
-#OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-#(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-@nb.njit()
-def directed_hausdorff_nb(ar1, ar2):
-    N1 = ar1.shape[0]
-    N2 = ar2.shape[0]
-
-    # Shuffling for very small arrays disbabled
-    # Enable it for larger arrays
-    #resort1 = np.arange(N1)
-    #resort2 = np.arange(N2)
-    #np.random.shuffle(resort1)
-    #np.random.shuffle(resort2)
-
-    #ar1 = ar1[resort1]
-    #ar2 = ar2[resort2]
-
-    d_max = 0
-    for i in range(N1):
-        d_min = np.inf
-        for j in range(N2):
-            # faster performance with square of distance
-            # avoid sqrt until very end
-            # Simplificaten (loop unrolling) for (n,2) arrays
-            if(ar1.shape[1] == 2):
-                d = (ar1[i, 0] - ar2[j, 0])**2+\
-                    (ar1[i, 1] - ar2[j, 1])**2
-            elif(ar1.shape[1] == 3):
-                d = (ar1[i, 0] - ar2[j, 0])**2+\
-                    (ar1[i, 1] - ar2[j, 1])**2+\
-                    (ar1[i, 2] - ar2[j, 2])**2
-            if d < d_min: # always true on first iteration of for-j loop
-                d_min = d
-                
-            if(d_min < d_max):
-                break
-
-        # always true on first iteration of for-j loop, after that only
-        # if d >= d_max
-        if d_min > d_max:
-            d_max = d_min
-
-    return np.sqrt(d_max)
 
 @torch.jit.script
 def RK4_advection(vf : torch.Tensor, seeds : torch.Tensor, 
