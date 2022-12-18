@@ -7,6 +7,7 @@ from Models.options import load_options
 from Datasets.datasets import Dataset
 import torch
 import numpy as np
+import torch.nn.functional as F
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
 project_folder_path = os.path.join(project_folder_path, "..")
@@ -17,7 +18,7 @@ save_folder = os.path.join(project_folder_path, "SavedModels")
 def model_reconstruction(model, dataset, opt):
     grid = list(dataset.data.shape[2:])
     with torch.no_grad():
-        result = sample_grid(model, grid, 10000)
+        result = sample_grid(model, grid, 1000000)
     result = result.to(opt['data_device'])
     result = result.permute(3, 0, 1, 2).unsqueeze(0)
     create_path(os.path.join(output_folder, "Reconstruction"))
@@ -31,7 +32,7 @@ def model_reconstruction(model, dataset, opt):
 def error_volume(model, dataset, opt):
     grid = list(dataset.data.shape[2:])
     with torch.no_grad():
-        result = sample_grid(model, grid, 10000)
+        result = sample_grid(model, grid, 1000000)
     result = result.to(opt['data_device'])
     result = result.permute(3, 0, 1, 2).unsqueeze(0)
     create_path(os.path.join(output_folder, "ErrorVolume"))
@@ -44,9 +45,10 @@ def error_volume(model, dataset, opt):
 
 def scale_distribution(model, opt):
     import matplotlib.pyplot as plt
-    x_scales = model.grid_scales[:,0].detach().cpu().numpy()
-    y_scales = model.grid_scales[:,1].detach().cpu().numpy()
-    z_scales = model.grid_scales[:,2].detach().cpu().numpy()
+    grid_scales = torch.diagonal(model.get_transformation_matrices()[:,], 0, 1, 2)[0:3]
+    x_scales = grid_scales[:,0].detach().cpu().numpy()
+    y_scales = grid_scales[:,1].detach().cpu().numpy()
+    z_scales = grid_scales[:,2].detach().cpu().numpy()
     plt.hist(x_scales, alpha=0.4, bins=20, label="X scales")
     plt.hist(y_scales, alpha=0.4, bins=20, label="Y scales")
     plt.hist(z_scales, alpha=0.4, bins=20, label="Z scales")
@@ -56,6 +58,9 @@ def scale_distribution(model, opt):
     plt.savefig(os.path.join(output_folder, "ScaleDistributions", opt['save_name']+'.png'))
 
 def feature_density(model, dataset, opt):
+    
+    create_path(os.path.join(output_folder, "FeatureDensity"))
+    
     data_shape = list(dataset.data.shape[2:])
     grid = make_coord_grid(data_shape, opt['device'], 
                            flatten=True, align_corners=True)
@@ -63,16 +68,28 @@ def feature_density(model, dataset, opt):
         print(grid.device)
         
         density = forward_maxpoints(model.feature_density_gaussian, grid, 
-                                    data_device=opt['data_device'], model_device=opt['device'])
+                                    data_device=opt['data_device'], model_device=opt['device'],
+                                    max_points=100000)
         density = density.reshape(data_shape)
         density = density.unsqueeze(0).unsqueeze(0)
-        density = density / ((2**opt['n_dims']) * torch.prod(torch.tensor(data_shape)))
-    
-    create_path(os.path.join(output_folder, "FeatureDensity"))
-    tensor_to_cdf(density, 
-        os.path.join(output_folder, 
-        "FeatureDensity", opt['save_name']+".nc"))
-    
+        density = density / density.sum()
+        
+        tensor_to_cdf(density, 
+            os.path.join(output_folder, 
+            "FeatureDensity", opt['save_name']+"_density.nc"))
+        
+        result = sample_grid(model, list(dataset.data.shape[2:]), 1000000)
+        result = result.to(opt['data_device'])
+        result = result.permute(3, 0, 1, 2).unsqueeze(0)
+        result -= dataset.data
+        result.abs_()
+        result *= density
+        result /= result.sum()    
+        tensor_to_cdf(result, 
+            os.path.join(output_folder, 
+            "FeatureDensity", opt['save_name']+"_targetdensity.nc"))
+        
+        
 def feature_locations(model, opt):
     if(opt['model'] == "afVSRN"):
         feat_locations = model.feature_locations.detach().cpu().numpy()

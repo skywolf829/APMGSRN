@@ -41,26 +41,6 @@ def log_to_writer(iteration, losses, writer, opt):
                 / (1024**3))
             writer.add_scalar('GPU memory (GB)', GBytes, iteration)
 
-def log_image(model, grid_to_sample, writer, iteration, dataset):
-    with torch.no_grad():
-        img = sample_grid_for_image(model, grid_to_sample)
-        writer.add_image('Reconstruction', img.clamp(0, 1), 
-            iteration, dataformats='HWC')
-
-def log_grad_image(model, grid_to_sample, writer, iteration):
-    grad_img = model.sample_grad_grid_for_image(grid_to_sample)
-    for output_index in range(len(grad_img)):
-        for input_index in range(grad_img[output_index].shape[-1]):
-            grad_img[output_index][...,input_index] -= \
-                grad_img[output_index][...,input_index].min()
-            grad_img[output_index][...,input_index] /= \
-                grad_img[output_index][...,input_index].max()
-
-            writer.add_image('Gradient_outputdim'+str(output_index)+\
-                "_wrt_inpudim_"+str(input_index), 
-                grad_img[output_index][...,input_index:input_index+1].clamp(0, 1), 
-                iteration, dataformats='HWC')
-
 def logging(writer, iteration, losses, model, opt, grid_to_sample, dataset):
     if(iteration % opt['log_every'] == 0):
         log_to_writer(iteration, losses, writer, opt)
@@ -88,8 +68,6 @@ def log_feature_density(model, dataset, opt):
     gaussian_densities = gaussian_densities.permute(3, 0, 1, 2).unsqueeze(0)
     tensor_to_cdf(gaussian_densities, os.path.join(output_folder, "FeatureLocations", 
         opt['save_name'], "gaussian_density.nc"))
-
-    
 
 def log_feature_points(model, dataset, opt, iteration):
     feat_grid_shape = opt['feature_grid_shape'].split(',')
@@ -175,10 +153,7 @@ def train( model, dataset, opt):
     if("AMRSRN" in opt['model']):
         optimizer = optim.Adam([
             {
-            "params": [model.grid_scales], "lr": opt["lr"]*1
-            },
-            {
-            "params": [model.grid_translations], "lr": opt["lr"]*0.1
+            "params": [model.grid_translations, model.grid_scales], "lr": opt["lr"]*0.1
             },
             {
             "params": [model.feature_grids], "lr": opt["lr"]
@@ -229,22 +204,24 @@ def train( model, dataset, opt):
             
             
             model_output = model(x)
-            loss = F.l1_loss(model_output, y, reduction='none')
+            loss = F.mse_loss(model_output, y, reduction='none')
             loss.mean().backward()  
             
             
             # the scalar on the right normalizes the density such that it
             # sums to 1 for the points sampled, allowing it to be treated like
             # a distribution if necessary
-            density = model.feature_density_gaussian(x) * (2**opt['n_dims']) / opt['n_grids'] / x.shape[0]    
+            density = model.feature_density_gaussian(x) #* (2**opt['n_dims']) / opt['n_grids'] / x.shape[0]       
+            density /= density.sum().detach()
             # Calculates relative error such that relative_error = 1 is the average error.
             # Idea is < than average error -> less density
             # > than average error -> more density.
-            relative_error = torch.abs(loss) / torch.abs(loss).mean()
-
-            density_loss = 100 * F.mse_loss(density,
-                density.detach() * relative_error.detach(),
-                reduction='none')
+            
+            target = torch.clamp_min(density.detach(),1e-2) * loss.detach()
+            target /= target.sum().detach()
+            density_loss = F.kl_div(torch.log(density+1e-8), 
+                                        target, 
+                                        reduction='none')
             density_loss.mean().backward()
 
             optimizer.step()
