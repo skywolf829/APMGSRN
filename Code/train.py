@@ -22,6 +22,7 @@ from Other.vis_io import get_vts, write_vts, write_pvd, write_vtm
 from vtk import vtkMultiBlockDataSet
 import glob
 import numpy as np
+from torch.utils.data import DataLoader
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
 project_folder_path = os.path.join(project_folder_path, "..")
@@ -144,7 +145,6 @@ def log_feature_grids_from_points(opt):
             vtm.SetBlock(j, vts)
         write_vtm(os.path.join(vtm_dir, f"grids_{i:03}.vtm", ), vtm)
 
-
 def train( model, dataset, opt):
       
     model = model.to(opt['device'])        
@@ -175,7 +175,12 @@ def train( model, dataset, opt):
         shutil.rmtree(os.path.join(output_folder, "FeatureLocations", opt['save_name']))
         
     writer = SummaryWriter(os.path.join('tensorboard',opt['save_name']))
-        
+    dataloader = DataLoader(dataset, 
+                            batch_size=None, 
+                            num_workers=0 if "cuda" in opt['data_device'] else 4,
+                            pin_memory=True if "cpu" in opt['data_device'] else False,
+                            pin_memory_device=opt['device'])
+    
     model.train(True)
 
     with torch.profiler.profile(
@@ -195,42 +200,30 @@ def train( model, dataset, opt):
         on_trace_ready=torch.profiler.tensorboard_trace_handler(
             os.path.join('tensorboard',opt['save_name'])),
     with_stack=True) as profiler:
-        for iteration in range(0, opt['iterations']):
+        for (iteration, batch) in enumerate(dataloader):
             opt['iteration_number'] = iteration
-            optimizer.zero_grad()
-            
-            x, y = dataset.get_random_points(opt['points_per_iteration'],
-                    device=opt['device'])
-            
+            optimizer.zero_grad()            
+            x, y = batch
+            x = x.to(opt['device'])
+            y = y.to(opt['device'])
             
             model_output = model(x)
             loss = F.mse_loss(model_output, y, reduction='none')
             loss.mean().backward()  
             
-            
-            # the scalar on the right normalizes the density such that it
-            # sums to 1 for the points sampled, allowing it to be treated like
-            # a distribution if necessary
-            density = model.feature_density_gaussian(x) #* (2**opt['n_dims']) / opt['n_grids'] / x.shape[0]       
+            density = model.feature_density_gaussian(x)       
             density /= density.sum().detach()
-            
-            # Calculates relative error such that relative_error = 1 is the average error.
-            # Idea is < than average error -> less density
-            # > than average error -> more density.
             
             target = torch.clamp_min(density.detach(),1e-2) * loss.detach()
             target /= target.sum().detach()
             density_loss = F.kl_div(torch.log(density+1e-8), 
-                                        target, 
-                                        reduction='none')
+                    target, reduction='none')
             density_loss.mean().backward()
 
             optimizer.step()
             scheduler.step()        
             profiler.step()
             
-            model.fix_params()
-
             logging(writer, iteration, 
                 {"Fitting loss": loss.mean(), "Density loss": density_loss.mean()}, 
                 model, opt, dataset.data.shape[2:], dataset)

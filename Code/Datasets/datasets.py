@@ -72,6 +72,8 @@ class Dataset(torch.utils.data.Dataset):
         print(vals.shape)
         return vals
 
+    
+    
     def total_points(self):
         t = 1
         for i in range(2, len(self.data.shape)):
@@ -84,8 +86,8 @@ class Dataset(torch.utils.data.Dataset):
                     self.opt['data_device'], flatten=True, 
                     align_corners=self.opt['align_corners'])
         return self.full_coord_grid
-
-    def get_random_points(self, n_points, device="cpu"):        
+        
+    def get_random_points(self, n_points):        
         
         x = torch.rand([1, 1, 1, n_points, self.opt['n_dims']], 
                 device=self.opt['data_device']) * 2 - 1
@@ -100,5 +102,12 @@ class Dataset(torch.utils.data.Dataset):
             y = y.unsqueeze(0)    
         
         y = y.permute(1,0)
-        
-        return x.to(device), y.to(device)
+        return x, y
+
+    def __len__(self):
+        return self.opt['iterations']
+    
+    def __getitem__(self, idx):
+        return self.get_random_points(
+            self.opt['points_per_iteration']
+            )
