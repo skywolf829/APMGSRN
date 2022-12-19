@@ -32,27 +32,42 @@ def build_commands(settings_path):
     command_names = []
     log_locations = []
     for i in range(len(data)):
-        run_name = str(i)
-        command_names.append(run_name)
+        
+        
         script_name = data[i][0]
         variables = data[i][1]
-        command = "python Code/" + str(script_name) + " "
-            
-        for var_name in variables.keys():
-            command = command + "--" + str(var_name) + " "
-            command = command + str(variables[var_name]) + " "
-        commands.append(command)
-        if("train" in script_name):
-            if(os.path.exists(os.path.join(save_folder, variables["save_name"], "train_log.txt"))):
-                os.remove(os.path.join(save_folder, variables["save_name"], "train_log.txt"))
-            log_locations.append(os.path.join(save_folder, variables["save_name"], "train_log.txt"))
-            create_path(os.path.join(save_folder, variables["save_name"]))
-        elif("test" in script_name):
-            log_locations.append(os.path.join(save_folder, variables['load_from'], "test_log.txt"))
-            create_path(os.path.join(save_folder, variables["load_from"]))
+        
+        if("test" in script_name and "all" in variables['load_from']):
+            all_saves = os.listdir(save_folder)
+            j = 0
+            for fold in all_saves:
+                run_name = str(j)
+                command_names.append(run_name)        
+                command_string = "python Code/" + str(script_name) + " --load_from" + fold + " "
+                commands.append(command_string)
+                j += 1
+        
         else:
-            log_locations.append(os.path.join(save_folder, variables["load_from"], "log.txt"))
-            create_path(os.path.join(save_folder, variables["load_from"]))
+            
+            run_name = str(i)
+            command_names.append(run_name)           
+            command = "python Code/" + str(script_name) + " "
+            
+            for var_name in variables.keys():
+                command = command + "--" + str(var_name) + " "
+                command = command + str(variables[var_name]) + " "
+            commands.append(command)
+            if("train" in script_name):
+                if(os.path.exists(os.path.join(save_folder, variables["save_name"], "train_log.txt"))):
+                    os.remove(os.path.join(save_folder, variables["save_name"], "train_log.txt"))
+                log_locations.append(os.path.join(save_folder, variables["save_name"], "train_log.txt"))
+                create_path(os.path.join(save_folder, variables["save_name"]))
+            elif("test" in script_name):
+                log_locations.append(os.path.join(save_folder, variables['load_from'], "test_log.txt"))
+                create_path(os.path.join(save_folder, variables["load_from"]))
+            else:
+                log_locations.append(os.path.join(save_folder, variables["load_from"], "log.txt"))
+                create_path(os.path.join(save_folder, variables["load_from"]))
     
     return command_names, commands, log_locations
 
