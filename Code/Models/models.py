@@ -62,67 +62,23 @@ def create_model(opt):
     elif(opt['model'] == "ExpNet"):
         return ExpNet(opt)
 
-def sample_grid(model, grid, max_points = 100000):
+def sample_grid(model, grid, device="cuda", data_device="cuda", max_points = 100000):
     coord_grid = make_coord_grid(grid, 
-        "cpu", flatten=False,
+        data_device, flatten=False,
         align_corners=model.opt['align_corners'])
     coord_grid_shape = list(coord_grid.shape)
     coord_grid = coord_grid.view(-1, coord_grid.shape[-1])
-    vals = forward_maxpoints(model, coord_grid, max_points = max_points)
-    coord_grid_shape[-1] = model.opt['n_outputs']
-    vals = vals.reshape(coord_grid_shape)
-    return vals
-
-def sample_grad_grid(model, grid, 
-    output_dim = 0, max_points=1000):
-    
-    coord_grid = make_coord_grid(grid, 
-        model.opt['device'], flatten=False,
-        align_corners=model.opt['align_corners'])
-    
-    coord_grid_shape = list(coord_grid.shape)
-    coord_grid = coord_grid.view(-1, coord_grid.shape[-1]).requires_grad_(True)       
-
-    output_shape = list(coord_grid.shape)
-    output_shape[-1] = model.opt['n_dims']
-    
-    output = torch.empty(output_shape, 
-        dtype=torch.float32, device=model.opt['device'], 
-        requires_grad=False)
-
-    for start in range(0, coord_grid.shape[0], max_points):
-        vals = model(
-            coord_grid[start:min(start+max_points, coord_grid.shape[0])])
-        grad = torch.autograd.grad(vals[:,output_dim], 
-            coord_grid, 
-            grad_outputs=torch.ones_like(vals[:,output_dim])
-            )[0][start:min(start+max_points, coord_grid.shape[0])]
-        
-        output[start:min(start+max_points, coord_grid.shape[0])] = grad
-
-    output = output.reshape(coord_grid_shape)
-    
-    return output
-
-def sample_grid_for_image(model, grid, 
-    boundary_scaling = 1.0):
-    coord_grid = make_coord_grid(grid, 
-        model.opt['device'], flatten=False,
-        align_corners=model.opt['align_corners'])
-    if(len(coord_grid.shape) == 4):
-        coord_grid = coord_grid[:,:,int(coord_grid.shape[2]/2),:]
-    
-    coord_grid *= boundary_scaling
-
-    coord_grid_shape = list(coord_grid.shape)
-    coord_grid = coord_grid.view(-1, coord_grid.shape[-1])
-    vals = forward_maxpoints(model, coord_grid)
+    vals = forward_maxpoints(model, coord_grid, 
+                             max_points = max_points,
+                             data_device=data_device,
+                             model_device=device
+                             )
     coord_grid_shape[-1] = model.opt['n_outputs']
     vals = vals.reshape(coord_grid_shape)
     return vals
 
 def forward_maxpoints(model, coords, out_dim=1, max_points=100000, 
-                      data_device="cuda", model_device="cuda"):
+                      data_device="cuda", device="cuda"):
     output_shape = list(coords.shape)
     output_shape[-1] = out_dim
     output = torch.empty(output_shape, 
@@ -131,6 +87,6 @@ def forward_maxpoints(model, coords, out_dim=1, max_points=100000,
     
     for start in range(0, coords.shape[0], max_points):
         output[start:min(start+max_points, coords.shape[0])] = \
-            model(coords[start:min(start+max_points, coords.shape[0])].to(model_device))
+            model(coords[start:min(start+max_points, coords.shape[0])].to(device))
     return output
 

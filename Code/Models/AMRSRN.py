@@ -206,7 +206,6 @@ class AMRSRN(nn.Module):
         return
 
     def forward(self, x):   
-        
         transformed_points = self.transform(x)       
         
         transformed_points = transformed_points.unsqueeze(1).unsqueeze(1)
