@@ -44,7 +44,6 @@ tensorboard
 tensorboard-data-server
 tensorboard-plugin-profile
 tensorboard-plugin-wit
-tinycudann
 toml
 torch==1.13.0
 torch-tb-profiler

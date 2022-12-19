@@ -43,8 +43,14 @@ def build_commands(settings_path):
             for fold in all_saves:
                 run_name = str(j)
                 command_names.append(run_name)        
-                command_string = "python Code/" + str(script_name) + " --load_from" + fold + " "
+                
+                command_string = "python Code/" + str(script_name) + " --load_from " + fold + " " + \
+                    "--tests " + variables['tests'] + " "
                 commands.append(command_string)
+                
+                log_locations.append(os.path.join(save_folder, fold, "test_log.txt"))
+                create_path(os.path.join(save_folder, fold))
+                
                 j += 1
         
         else:
@@ -68,6 +74,7 @@ def build_commands(settings_path):
             else:
                 log_locations.append(os.path.join(save_folder, variables["load_from"], "log.txt"))
                 create_path(os.path.join(save_folder, variables["load_from"]))
+    
     
     return command_names, commands, log_locations
 
