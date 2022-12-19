@@ -4,10 +4,6 @@ channels:
   - conda-forge
 dependencies:
   - python=3.9
-  - torchaudio
-  - pytorch-cuda=11.7
-  - torchvision
-  - pytorch
   - numba
   - netcdf4
   - matplotlib
