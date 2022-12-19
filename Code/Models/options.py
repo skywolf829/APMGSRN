@@ -42,6 +42,7 @@ class Options():
         opt['iteration_number']                     = 0
         opt['save_every']                           = 100
         opt['log_every']                            = 5
+        opt['log_features_every']                   = 0
         opt['log_image_every']                      = 100
         opt['log_image']                            = False
         opt['profile']                              = False

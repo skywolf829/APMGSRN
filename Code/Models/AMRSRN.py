@@ -213,7 +213,7 @@ class AMRSRN(nn.Module):
         feats = F.grid_sample(self.feature_grids,
                 transformed_points.detach(),
                 mode='bilinear', align_corners=True,
-                padding_mode="zeros")[:,:,0,0,:]
+                padding_mode="border")[:,:,0,0,:]
         
         y = feats.flatten(0,1).permute(1, 0)
                 

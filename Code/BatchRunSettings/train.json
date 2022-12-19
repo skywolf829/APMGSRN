@@ -16,7 +16,6 @@
             "points_per_iteration": 100000,
             "interpolate": true,
             "log_every": 5,
-            "log_image": false,
-            "log_image_every": 2000
+            "log_features_every": 50
     }]
 ]
