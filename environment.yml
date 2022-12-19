@@ -2,11 +2,17 @@ name: DistINR
 channels:
   - defaults
   - conda-forge
+  - pytorch
 dependencies:
   - python=3.9
   - numba
+  - pytorch
+  - pytorch-cuda=11.7
+  - torchaudio
+  - torchvision
   - netcdf4
   - matplotlib
   - h5py
   - pyevtk
   - vtk
+  - tensorboard
