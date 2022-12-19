@@ -6,16 +6,14 @@ import numpy as np
 from Other.utility_functions import make_coord_grid    
 from Models.layers import LReLULayer, SineLayer, SnakeAltLayer, PositionalEncoding
 import tinycudann as tcnn
+from math import log, exp
 
        
-class AMRSRN(nn.Module):
+class AMRSRN_TCNN(nn.Module):
     def __init__(self, opt):
         super().__init__()
         
         self.opt = opt
-
-        feat_grid_shape = opt['feature_grid_shape'].split(',')
-        feat_grid_shape = [eval(i) for i in feat_grid_shape]
         
         init_scales = torch.ones(
                 [self.opt['n_grids'], 3],
@@ -50,34 +48,51 @@ class AMRSRN(nn.Module):
                 torch.tensor([(2.0 * torch.pi) **(self.opt['n_dims']/2)]),
                 persistent=False)
         
-        self.feature_grids =  torch.nn.parameter.Parameter(
-            torch.ones(
-                [self.opt['n_grids'], self.opt['n_features'], 
-                feat_grid_shape[0], feat_grid_shape[1], feat_grid_shape[2]],
-                device = opt['device']
-            ).uniform_(-0.001, 0.001),
-            requires_grad=True
+        
+        self.max_resolution = opt['hash_max_resolution']
+        self.base_resolution = opt['hash_base_resolution']
+        self.n_grids = opt['n_grids']
+        self.table_size = 1 << opt['hash_log2_size']
+        self.feat_dim = opt['n_features']
+        per_level_scale = exp(
+            (log(self.max_resolution) - log(self.base_resolution))/(self.n_grids-1)
+        )  # growth 
+        self.resolution = torch.floor(
+            torch.tensor([self.base_resolution*per_level_scale**i for i in range(self.n_grids)])
+        ).long().tolist()
+        
+        self.feature_grids = []
+        for resolution in self.resolution:
+            grid = tcnn.Encoding(
+                n_input_dims=opt['n_dims'],
+                encoding_config={
+                    "otype": "Grid",
+                    "type": "Hash",
+                    "n_levels": 1,
+                    "n_features_per_level": self.feat_dim,
+                    "log2_hashmap_size": opt['hash_log2_size'],
+                    "base_resolution": resolution,
+                    "per_level_scale": per_level_scale,
+                }
+            )
+            self.feature_grids.append(grid)
+        self.feature_grids = nn.ModuleList(self.feature_grids)
+            
+        self.decoder_dim = opt['nodes_per_layer']
+        self.decoder_outdim = opt['n_outputs']
+        self.decoder_layers = opt['n_layers']
+        
+        self.decoder = tcnn.Network(
+            n_input_dims=self.feat_dim*self.n_grids,
+            n_output_dims=self.decoder_outdim,
+            network_config={
+                "otype": "FullyFusedMLP",
+                "activation": "ReLU",
+                "output_activation": "None",
+                "n_neurons": self.decoder_dim,
+                "n_hidden_layers": self.decoder_layers,
+            }
         )
-        
-        self.pe = PositionalEncoding(opt)
-        
-        self.decoder = nn.ModuleList()
-        
-        first_layer_input_size = opt['n_features']*opt['n_grids'] #+ opt['num_positional_encoding_terms']*opt['n_dims']*2
-                 
-        layer = LReLULayer(first_layer_input_size, 
-                            opt['nodes_per_layer'])
-        self.decoder.append(layer)
-        
-        for i in range(opt['n_layers']):
-            if i == opt['n_layers'] - 1:
-                layer = nn.Linear(opt['nodes_per_layer'], opt['n_outputs'])
-                nn.init.xavier_normal_(layer.weight)
-                self.decoder.append(layer)
-            else:
-                #layer = SnakeAltLayer(opt['nodes_per_layer'] + opt['n_features']*opt['n_grids'], opt['nodes_per_layer'])
-                layer = LReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
-                self.decoder.append(layer)
     
     def get_transformation_matrices(self):
         transformation_matrices = torch.zeros(
@@ -169,21 +184,12 @@ class AMRSRN(nn.Module):
         return
 
     def forward(self, x):   
-        
         transformed_points = self.transform(x)
-        transformed_points = transformed_points.unsqueeze(1).unsqueeze(1)
-        feats = F.grid_sample(self.feature_grids,
-                transformed_points.detach(),
-                mode='bilinear', align_corners=True,
-                padding_mode="zeros")[:,:,0,0,:]
-        
-        y = feats.flatten(0,1).permute(1, 0)
-                
-        i = 0
-        while i < len(self.decoder):
-            y = self.decoder[i](y)
-            i = i + 1
-        
+        feats = torch.cat(
+            [grid(points) for grid, points in zip(self.feature_grids, transformed_points)],
+            dim=-1,
+        )
+        y = self.decoder(feats).float()
         return y
 
         

@@ -1,0 +1,12 @@
+[
+    [ "test.py",
+        {        
+        "load_from": "Supernova_test_AMRSRN_TCNN_16grids_2feats_9",
+        "tests": "reconstruction"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_test_AMRSRN_TCNN_16grids_2feats_15",
+        "tests": "reconstruction"
+    }]
+]

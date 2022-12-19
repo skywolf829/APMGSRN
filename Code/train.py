@@ -45,10 +45,10 @@ def log_to_writer(iteration, losses, writer, opt):
 def logging(writer, iteration, losses, model, opt, grid_to_sample, dataset):
     if(iteration % opt['log_every'] == 0):
         log_to_writer(iteration, losses, writer, opt)
-    #if(iteration % 50 == 0 and ("AMRSRN" in opt['model'] \
-        #or "SigmoidNet" in opt['model'] \
-        #or "ExpNet" in opt['model'])):
-        #log_feature_points(model, dataset, opt, iteration)
+    if(iteration % 50 == 0 and ("AMRSRN" in opt['model'] \
+        or "SigmoidNet" in opt['model'] \
+        or "ExpNet" in opt['model'])):
+        log_feature_points(model, dataset, opt, iteration)
 
 def log_feature_density(model, dataset, opt):
     feat_density = model.feature_density_box(list(dataset.data.shape[2:]))
@@ -154,7 +154,7 @@ def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         
     model_output = model(x)
     loss = F.mse_loss(model_output, y, reduction='none')
-    loss.mean().backward()  
+    loss.mean().backward()
     
     density = model.feature_density_gaussian(x)       
     density /= density.sum().detach()
@@ -198,7 +198,7 @@ def train( model, dataset, opt):
     model = model.to(opt['device'])
     print("Training on %s" % (opt["device"]), 
         os.path.join(save_folder, opt["save_name"]))
-    if("AMRSRN" in opt['model']):
+    if("AMRSRN" == opt['model']):
         optimizer = optim.Adam([
             {
             "params": [model.grid_translations, model.grid_scales], "lr": opt["lr"]*0.1
@@ -209,7 +209,19 @@ def train( model, dataset, opt):
             {
             "params": model.decoder.parameters(), "lr": opt["lr"]
             }
-        ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15) 
+        ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
+    elif("AMRSRN_TCNN" == opt['model']):
+        optimizer = optim.Adam([
+            {
+            "params": [model.grid_translations, model.grid_scales], "lr": opt["lr"]*0.1
+            },
+            {
+            "params": model.feature_grids.parameters(), "lr": opt["lr"]
+            },
+            {
+            "params": model.decoder.parameters(), "lr": opt["lr"]
+            }
+        ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
     else:
         optimizer = optim.Adam(model.parameters(), lr=opt["lr"], 
         betas=[opt['beta_1'], opt['beta_2']]) 
@@ -383,8 +395,8 @@ if __name__ == '__main__':
     start_time = time.time()
     
     train(model, dataset, opt)
-    #if("AMRSRN" in opt['model'] and opt['log_every'] != 0):
-    #    log_feature_grids_from_points(opt)
+    if("AMRSRN" in opt['model'] and opt['log_every'] != 0):
+       log_feature_grids_from_points(opt)
         
     opt['iteration_number'] = 0
     save_model(model, opt)

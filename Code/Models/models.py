@@ -48,6 +48,9 @@ def create_model(opt):
         return afVSRN(opt)
     elif(opt['model'] == "AMRSRN"):
         return AMRSRN(opt)
+    elif(opt['model'] == "AMRSRN_TCNN"):
+        from Models.AMRSRN_TCNN import AMRSRN_TCNN
+        return AMRSRN_TCNN(opt)
     elif(opt['model'] == "NGP"):
         from Models.NGP import NGP
         return NGP(opt)
