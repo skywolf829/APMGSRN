@@ -1,12 +1,110 @@
 [
     [ "train.py",
         {        
-            "save_name": "Supernova_test_AMRSRN",
+            "save_name": "Supernova_test_AMRSRN_64x2",
             "model": "AMRSRN",
             "data": "Supernova_test.nc",
             "n_features": 2,
-            "n_grids": 32,
+            "n_grids": 64,
+            "n_layers": 2,
+            "nodes_per_layer": 64,
             "feature_grid_shape": "8,8,8",
-            "log_features_every": 50
+            "log_features_every": 0
+    }],
+    [ "train.py",
+        {        
+            "save_name": "Supernova_test_AMRSRN_64x3",
+            "model": "AMRSRN",
+            "data": "Supernova_test.nc",
+            "n_features": 2,
+            "n_grids": 64,
+            "n_layers": 3,
+            "nodes_per_layer": 64,
+            "feature_grid_shape": "8,8,8",
+            "log_features_every": 0
+    }],
+    [ "train.py",
+        {        
+            "save_name": "Supernova_test_AMRSRN_64x4",
+            "model": "AMRSRN",
+            "data": "Supernova_test.nc",
+            "n_features": 2,
+            "n_grids": 64,
+            "n_layers": 4,
+            "nodes_per_layer": 64,
+            "feature_grid_shape": "8,8,8",
+            "log_features_every": 0
+    }],
+    [ "train.py",
+        {        
+            "save_name": "Supernova_test_AMRSRN_32x2",
+            "model": "AMRSRN",
+            "data": "Supernova_test.nc",
+            "n_features": 2,
+            "n_grids": 64,
+            "n_layers": 2,
+            "nodes_per_layer": 32,
+            "feature_grid_shape": "8,8,8",
+            "log_features_every": 0
+    }],
+    [ "train.py",
+        {        
+            "save_name": "Supernova_test_AMRSRN_32x3",
+            "model": "AMRSRN",
+            "data": "Supernova_test.nc",
+            "n_features": 2,
+            "n_grids": 64,
+            "n_layers": 3,
+            "nodes_per_layer": 32,
+            "feature_grid_shape": "8,8,8",
+            "log_features_every": 0
+    }],
+    [ "train.py",
+        {        
+            "save_name": "Supernova_test_AMRSRN_32x4",
+            "model": "AMRSRN",
+            "data": "Supernova_test.nc",
+            "n_features": 2,
+            "n_grids": 64,
+            "n_layers": 4,
+            "nodes_per_layer": 32,
+            "feature_grid_shape": "8,8,8",
+            "log_features_every": 0
+    }],
+    [ "train.py",
+        {        
+            "save_name": "Supernova_test_AMRSRN_128x2",
+            "model": "AMRSRN",
+            "data": "Supernova_test.nc",
+            "n_features": 2,
+            "n_grids": 128,
+            "n_layers": 2,
+            "nodes_per_layer": 32,
+            "feature_grid_shape": "8,8,8",
+            "log_features_every": 0
+    }],
+    [ "train.py",
+        {        
+            "save_name": "Supernova_test_AMRSRN_128x3",
+            "model": "AMRSRN",
+            "data": "Supernova_test.nc",
+            "n_features": 2,
+            "n_grids": 128,
+            "n_layers": 3,
+            "nodes_per_layer": 32,
+            "feature_grid_shape": "8,8,8",
+            "log_features_every": 0
+    }],
+    [ "train.py",
+        {        
+            "save_name": "Supernova_test_AMRSRN_128x4",
+            "model": "AMRSRN",
+            "data": "Supernova_test.nc",
+            "n_features": 2,
+            "n_grids": 128,
+            "n_layers": 4,
+            "nodes_per_layer": 32,
+            "feature_grid_shape": "8,8,8",
+            "log_features_every": 0
     }]
 ]
