@@ -152,7 +152,8 @@ if __name__ == '__main__':
     opt = load_options(os.path.join(save_folder, args['load_from']))
     opt['device'] = args['device']
     opt['data_device'] = args['data_device']
-    model = load_model(opt, args['device']).to(args['device'])
+    model = load_model(opt, args['device']).to(opt['device'])
+    print(f"Moved model to {opt['device']}.")
     model.train(False)
     model.eval()
     
