@@ -77,9 +77,9 @@
             "model": "AMRSRN",
             "data": "Supernova_test.nc",
             "n_features": 2,
-            "n_grids": 128,
+            "n_grids": 64,
             "n_layers": 2,
-            "nodes_per_layer": 32,
+            "nodes_per_layer": 128,
             "feature_grid_shape": "8,8,8",
             "log_features_every": 0
     }],
@@ -89,9 +89,9 @@
             "model": "AMRSRN",
             "data": "Supernova_test.nc",
             "n_features": 2,
-            "n_grids": 128,
+            "n_grids": 64,
             "n_layers": 3,
-            "nodes_per_layer": 32,
+            "nodes_per_layer": 128,
             "feature_grid_shape": "8,8,8",
             "log_features_every": 0
     }],
@@ -101,9 +101,9 @@
             "model": "AMRSRN",
             "data": "Supernova_test.nc",
             "n_features": 2,
-            "n_grids": 128,
+            "n_grids": 64,
             "n_layers": 4,
-            "nodes_per_layer": 32,
+            "nodes_per_layer": 128,
             "feature_grid_shape": "8,8,8",
             "log_features_every": 0
     }]
