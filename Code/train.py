@@ -22,6 +22,7 @@ from Other.vis_io import get_vts, write_vts, write_pvd, write_vtm
 from vtk import vtkMultiBlockDataSet
 import glob
 import numpy as np
+from torch.utils.data import DataLoader
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
 project_folder_path = os.path.join(project_folder_path, "..")
@@ -40,26 +41,6 @@ def log_to_writer(iteration, losses, writer, opt):
             GBytes = (torch.cuda.max_memory_allocated(device=opt['device']) \
                 / (1024**3))
             writer.add_scalar('GPU memory (GB)', GBytes, iteration)
-
-def log_image(model, grid_to_sample, writer, iteration, dataset):
-    with torch.no_grad():
-        img = sample_grid_for_image(model, grid_to_sample)
-        writer.add_image('Reconstruction', img.clamp(0, 1), 
-            iteration, dataformats='HWC')
-
-def log_grad_image(model, grid_to_sample, writer, iteration):
-    grad_img = model.sample_grad_grid_for_image(grid_to_sample)
-    for output_index in range(len(grad_img)):
-        for input_index in range(grad_img[output_index].shape[-1]):
-            grad_img[output_index][...,input_index] -= \
-                grad_img[output_index][...,input_index].min()
-            grad_img[output_index][...,input_index] /= \
-                grad_img[output_index][...,input_index].max()
-
-            writer.add_image('Gradient_outputdim'+str(output_index)+\
-                "_wrt_inpudim_"+str(input_index), 
-                grad_img[output_index][...,input_index:input_index+1].clamp(0, 1), 
-                iteration, dataformats='HWC')
 
 def logging(writer, iteration, losses, model, opt, grid_to_sample, dataset):
     if(iteration % opt['log_every'] == 0):
@@ -89,8 +70,6 @@ def log_feature_density(model, dataset, opt):
     tensor_to_cdf(gaussian_densities, os.path.join(output_folder, "FeatureLocations", 
         opt['save_name'], "gaussian_density.nc"))
 
-    
-
 def log_feature_points(model, dataset, opt, iteration):
     feat_grid_shape = opt['feature_grid_shape'].split(',')
     feat_grid_shape = [eval(i) for i in feat_grid_shape]
@@ -99,8 +78,8 @@ def log_feature_points(model, dataset, opt, iteration):
                     flatten=True, align_corners=True)
     transformed_points = model.inverse_transform(global_points)
 
-    transformed_points += 1
-    transformed_points *= 0.5 * torch.tensor(list(dataset.data.shape[2:]))
+    transformed_points += 1.0
+    transformed_points *= 0.5 * (torch.tensor(list(dataset.data.shape[2:]))-1)
     transformed_points = transformed_points.detach().cpu()
 
     ids = torch.arange(transformed_points.shape[0])
@@ -122,8 +101,8 @@ def log_feature_grids(model, dataset, opt, iteration):
                     flatten=True, align_corners=True)
     transformed_points = model.transform(global_points)
 
-    transformed_points += 1
-    transformed_points *= 0.5 * torch.tensor(dataset.data.shape)
+    transformed_points += 1.0
+    transformed_points *= 0.5 * (torch.tensor(dataset.data.shape)-1)
     ids = torch.arange(transformed_points.shape[0])
     ids = ids.unsqueeze(1).unsqueeze(1)
     ids = ids.repeat([1, transformed_points.shape[1], 1])
@@ -166,43 +145,44 @@ def log_feature_grids_from_points(opt):
             vtm.SetBlock(j, vts)
         write_vtm(os.path.join(vtm_dir, f"grids_{i:03}.vtm", ), vtm)
 
-def train_step_AMRSRN(opt, iteration, dataset, model, optimizer, scheduler, profiler, writer):
+def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
     opt['iteration_number'] = iteration
-    optimizer.zero_grad()
-    
-    x, y = dataset.get_random_points(opt['points_per_iteration'],
-            device=opt['device'])
+    optimizer.zero_grad()            
+    x, y = batch
+    x = x.to(opt['device'])
+    y = y.to(opt['device'])
     
     model_output = model(x)
-    loss = F.l1_loss(model_output, y)
-    loss.mean().backward()                   
+    loss = F.mse_loss(model_output, y, reduction='none')
+    loss.mean().backward()  
     
-    if(iteration > 100):
-        density = model.feature_density_gaussian(x)            
-        density_loss = density * loss.detach()
-        density_loss = -1 * density_loss.mean()
-        density_loss.backward()
-    else:
-        density_loss = torch.tensor([0])
+    density = model.feature_density_gaussian(x)       
+    density /= density.sum().detach()
+    
+    target = torch.clamp_min(density.detach(),1e-2) * loss.detach()
+    target /= target.sum().detach()
+    density_loss = F.kl_div(torch.log(density+1e-8), 
+            target, reduction='none')
+    density_loss.mean().backward()
 
     optimizer.step()
     scheduler.step()        
     profiler.step()
     
-    model.fix_params()
-    
-    logging(writer, iteration, {"Fitting loss": loss.mean(), "Density loss": density_loss}, 
+    logging(writer, iteration, 
+        {"Fitting loss": loss.mean(), "Density loss": density_loss.mean()}, 
         model, opt, dataset.data.shape[2:], dataset)
 
-def train_step_vanilla(opt, iteration, dataset, model, optimizer, scheduler, profiler, writer):
+def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
     opt['iteration_number'] = iteration
     optimizer.zero_grad()
-    
-    x, y = dataset.get_random_points(opt['points_per_iteration'],
-            device=opt['device'])
+       
+    x, y = batch
+    x = x.to(opt['device'])
+    y = y.to(opt['device'])
     
     model_output = model(x)
-    loss = F.l1_loss(model_output, y)
+    loss = F.l1_loss(model_output, y, reduction='none')
     loss.mean().backward()                   
 
     optimizer.step()
@@ -219,10 +199,7 @@ def train( model, dataset, opt):
     if("AMRSRN" in opt['model']):
         optimizer = optim.Adam([
             {
-            "params": [model.grid_scales], "lr": opt["lr"]*1
-            },
-            {
-            "params": [model.grid_translations], "lr": opt["lr"]*1
+            "params": [model.grid_translations, model.grid_scales], "lr": opt["lr"]*0.1
             },
             {
             "params": [model.feature_grids], "lr": opt["lr"]
@@ -244,7 +221,12 @@ def train( model, dataset, opt):
         shutil.rmtree(os.path.join(output_folder, "FeatureLocations", opt['save_name']))
         
     writer = SummaryWriter(os.path.join('tensorboard',opt['save_name']))
-        
+    dataloader = DataLoader(dataset, 
+                            batch_size=None, 
+                            num_workers=0 if "cuda" in opt['data_device'] else 4,
+                            pin_memory=True if "cpu" in opt['data_device'] else False,
+                            pin_memory_device=opt['device'])
+    
     model.train(True)
 
     # choose the specific training iteration function based on the model
@@ -269,7 +251,7 @@ def train( model, dataset, opt):
         on_trace_ready=torch.profiler.tensorboard_trace_handler(
             os.path.join('tensorboard',opt['save_name'])),
     with_stack=True) as profiler:
-        for iteration in range(0, opt['iterations']):
+        for (iteration, batch) in enumerate(dataloader):
             train_step(opt,
                        iteration,
                        dataset,

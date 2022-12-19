@@ -1,7 +1,7 @@
 [
     [ "test.py",
         {        
-        "load_from": "Supernova_test_AMRSRN_2feats_32grids_8x8x8",
-        "tests": "reconstruction,scale_distribution"
+        "load_from": "Supernova_test_AMRSRN",
+        "tests": "reconstruction,scale_distribution,error_volume,feature_density"
     }]
 ]
