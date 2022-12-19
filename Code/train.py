@@ -1,22 +1,17 @@
 from __future__ import absolute_import, division, print_function
 import argparse
-from random import gauss
 from Datasets.datasets import Dataset
 import datetime
 from Other.utility_functions import str2bool
 from Models.models import load_model, create_model, save_model
 import torch
 import torch.optim as optim
-import torch.distributed as dist
-from torch.nn.parallel import DistributedDataParallel as DDP
 import time
 import os
 from Models.options import *
 from torch.utils.tensorboard import SummaryWriter
-import torch.multiprocessing as mp
 from Models.losses import *
 import shutil
-from Models.models import sample_grid_for_image
 from Other.utility_functions import make_coord_grid, create_path, tensor_to_cdf
 from Other.vis_io import get_vts, write_vts, write_pvd, write_vtm
 from vtk import vtkMultiBlockDataSet
@@ -43,12 +38,10 @@ def log_to_writer(iteration, losses, writer, opt):
             writer.add_scalar('GPU memory (GB)', GBytes, iteration)
 
 def logging(writer, iteration, losses, model, opt, grid_to_sample, dataset):
-    if(iteration % opt['log_every'] == 0):
+    if(opt['log_every'] > 0 and iteration % opt['log_every'] == 0):
         log_to_writer(iteration, losses, writer, opt)
-    # if(iteration % 50 == 0 and ("AMRSRN" in opt['model'] \
-    #     or "SigmoidNet" in opt['model'] \
-    #     or "ExpNet" in opt['model'])):
-    #     log_feature_points(model, dataset, opt, iteration)
+    if(opt['log_features_every'] > 0 and iteration % opt['log_features_every'] == 0):
+        log_feature_points(model, dataset, opt, iteration)
 
 def log_feature_density(model, dataset, opt):
     feat_density = model.feature_density_box(list(dataset.data.shape[2:]))
@@ -351,6 +344,8 @@ if __name__ == '__main__':
         help='How often to save the model')
     parser.add_argument('--log_every',default=None, type=int,
         help='How often to log the loss')
+    parser.add_argument('--log_features_every',default=None, type=int,
+        help='How often to log the feature positions')
     parser.add_argument('--log_image_every',default=None, type=int,
         help='How often to log the image')
     parser.add_argument('--load_from',default=None, type=str,
@@ -395,8 +390,8 @@ if __name__ == '__main__':
     start_time = time.time()
     
     train(model, dataset, opt)
-    # if("AMRSRN" in opt['model'] and opt['log_every'] != 0):
-    #    log_feature_grids_from_points(opt)
+    if(opt['log_features_every'] > 0):
+       log_feature_grids_from_points(opt)
         
     opt['iteration_number'] = 0
     save_model(model, opt)

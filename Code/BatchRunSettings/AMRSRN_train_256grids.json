@@ -2,83 +2,83 @@
     
     [ "train.py",
         {        
-            "save_name": "Supernova_test_AMRSRN_64grids_2feats_4x4x4",
+            "save_name": "Supernova_test_AMRSRN_256grids_2feats_2x2x2",
             "model": "AMRSRN",
             "data": "Supernova_test.nc",
             "n_features": 2,
-            "n_grids": 64,
+            "n_grids": 256,
+            "feature_grid_shape": "2,2,2"
+    }],
+    [ "train.py",
+        {        
+            "save_name": "Supernova_test_AMRSRN_256grids_4feats_2x2x2",
+            "model": "AMRSRN",
+            "data": "Supernova_test.nc",
+            "n_features": 4,
+            "n_grids": 256,
+            "feature_grid_shape": "2,2,2"
+    }],
+    [ "train.py",
+        {        
+            "save_name": "Supernova_test_AMRSRN_256grids_8feats_2x2x2",
+            "model": "AMRSRN",
+            "data": "Supernova_test.nc",
+            "n_features": 8,
+            "n_grids": 256,
+            "feature_grid_shape": "2,2,2"
+    }],
+    [ "train.py",
+        {        
+            "save_name": "Supernova_test_AMRSRN_256grids_2feats_4x4x4",
+            "model": "AMRSRN",
+            "data": "Supernova_test.nc",
+            "n_features": 2,
+            "n_grids": 256,
             "feature_grid_shape": "4,4,4"
     }],
     [ "train.py",
         {        
-            "save_name": "Supernova_test_AMRSRN_64grids_4feats_4x4x4",
+            "save_name": "Supernova_test_AMRSRN_256grids_4feats_4x4x4",
             "model": "AMRSRN",
             "data": "Supernova_test.nc",
             "n_features": 4,
-            "n_grids": 64,
+            "n_grids": 256,
             "feature_grid_shape": "4,4,4"
     }],
     [ "train.py",
         {        
-            "save_name": "Supernova_test_AMRSRN_64grids_8feats_4x4x4",
+            "save_name": "Supernova_test_AMRSRN_256grids_8feats_4x4x4",
             "model": "AMRSRN",
             "data": "Supernova_test.nc",
             "n_features": 8,
-            "n_grids": 64,
+            "n_grids": 256,
             "feature_grid_shape": "4,4,4"
     }],
     [ "train.py",
         {        
-            "save_name": "Supernova_test_AMRSRN_64grids_2feats_8x8x8",
+            "save_name": "Supernova_test_AMRSRN_256grids_2feats_8x8x8",
             "model": "AMRSRN",
             "data": "Supernova_test.nc",
             "n_features": 2,
-            "n_grids": 64,
+            "n_grids": 256,
             "feature_grid_shape": "8,8,8"
     }],
     [ "train.py",
         {        
-            "save_name": "Supernova_test_AMRSRN_64grids_4feats_8x8x8",
+            "save_name": "Supernova_test_AMRSRN_256grids_4feats_8x8x8",
             "model": "AMRSRN",
             "data": "Supernova_test.nc",
             "n_features": 4,
-            "n_grids": 64,
+            "n_grids": 256,
             "feature_grid_shape": "8,8,8"
     }],
     [ "train.py",
         {        
-            "save_name": "Supernova_test_AMRSRN_64grids_8feats_8x8x8",
+            "save_name": "Supernova_test_AMRSRN_256grids_8feats_8x8x8",
             "model": "AMRSRN",
             "data": "Supernova_test.nc",
             "n_features": 8,
-            "n_grids": 64,
+            "n_grids": 256,
             "feature_grid_shape": "8,8,8"
-    }],
-    [ "train.py",
-        {        
-            "save_name": "Supernova_test_AMRSRN_64grids_2feats_32x32x32",
-            "model": "AMRSRN",
-            "data": "Supernova_test.nc",
-            "n_features": 2,
-            "n_grids": 64,
-            "feature_grid_shape": "32,32,32"
-    }],
-    [ "train.py",
-        {        
-            "save_name": "Supernova_test_AMRSRN_64grids_4feats_32x32x32",
-            "model": "AMRSRN",
-            "data": "Supernova_test.nc",
-            "n_features": 4,
-            "n_grids": 64,
-            "feature_grid_shape": "32,32,32"
-    }],
-    [ "train.py",
-        {        
-            "save_name": "Supernova_test_AMRSRN_64grids_8feats_32x32x32",
-            "model": "AMRSRN",
-            "data": "Supernova_test.nc",
-            "n_features": 8,
-            "n_grids": 64,
-            "feature_grid_shape": "32,32,32"
     }]
 ]

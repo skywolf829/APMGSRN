@@ -64,7 +64,7 @@ class AMRSRN(nn.Module):
         
         self.decoder = nn.ModuleList()
         
-        first_layer_input_size = opt['n_features']*opt['n_grids'] #+ opt['num_positional_encoding_terms']*opt['n_dims']*2
+        first_layer_input_size = opt['n_features']*opt['n_grids']# + opt['num_positional_encoding_terms']*opt['n_dims']*2
                  
         layer = LReLULayer(first_layer_input_size, 
                             opt['nodes_per_layer'])
@@ -76,7 +76,6 @@ class AMRSRN(nn.Module):
                 nn.init.xavier_normal_(layer.weight)
                 self.decoder.append(layer)
             else:
-                #layer = SnakeAltLayer(opt['nodes_per_layer'] + opt['n_features']*opt['n_grids'], opt['nodes_per_layer'])
                 layer = LReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
                 self.decoder.append(layer)
     
@@ -92,6 +91,16 @@ class AMRSRN(nn.Module):
         transformation_matrices[:,-1,-1] = 1
         return transformation_matrices
 
+    '''
+    Transforms global coordinates x to local coordinates within
+    each feature grid, where feature grids are assumed to be on
+    the boundary of [-1, 1]^3 in their local coordinate system.
+    Scales the grid by a factor to match the gaussian shape
+    (see feature_density_gaussian())
+    
+    x: Input coordinates with shape [batch, 3]
+    returns: local coordinates in a shape [batch, n_grids, 3]
+    '''
     def transform(self, x):
         transformed_points = torch.cat([x, torch.ones([x.shape[0], 1], 
             device=self.opt['device'],
@@ -106,6 +115,16 @@ class AMRSRN(nn.Module):
         transformed_points = transformed_points[...,0:3]
         return transformed_points * (0.6)
 
+    '''
+    Transforms local coordinates within each feature grid x to 
+    global coordinates. Scales local coordinates by a factor
+    so as to be consistent with the transform() method, which
+    attempts to align feature grids with the guassian density 
+    calculated in feature_density_gaussian()
+    
+    x: Input coordinates with shape [batch, 3]
+    returns: local coordinates in a shape [batch, n_grids, 3]
+    '''
     def inverse_transform(self, x):
         transformed_points = torch.cat([x * (1/0.6), torch.ones(
             [x.shape[0], 1], 
@@ -114,7 +133,17 @@ class AMRSRN(nn.Module):
             dim=1)
         transformed_points = transformed_points.unsqueeze(0).expand(
             self.opt['n_grids'], transformed_points.shape[0], transformed_points.shape[1])
-        local_to_global_matrices = torch.inverse(self.get_transformation_matrices())
+        # Slow
+        #local_to_global_matrices = torch.inverse(self.get_transformation_matrices())
+        # fast        
+        local_to_global_matrices = torch.zeros([self.opt['n_grids'], 4, 4],
+                                               device=self.opt['device'],
+                                               dtype=torch.float32)
+        local_to_global_matrices[:,0,0] = 1/self.grid_scales[:,0]
+        local_to_global_matrices[:,1,1] = 1/self.grid_scales[:,1]
+        local_to_global_matrices[:,2,2] = 1/self.grid_scales[:,2]
+        local_to_global_matrices[:,0:3,-1] = -self.grid_translations/self.grid_scales
+        local_to_global_matrices[:,-1,-1] = 1
         
         transformed_points = torch.bmm(local_to_global_matrices,
                                     transformed_points.transpose(-1,-2)).transpose(-1, -2)
@@ -124,9 +153,15 @@ class AMRSRN(nn.Module):
     def feature_density_gaussian(self, x):
        
         x = x.unsqueeze(1).repeat(1,self.opt['n_grids'],1).detach()
-        local_to_globals = torch.inverse(self.get_transformation_matrices())
-        grid_centers = local_to_globals[:,0:3,-1]
-        grid_stds = torch.diagonal(local_to_globals, 0, 1, 2)[:,0:3]
+        
+        # The expensive (but general) way
+        #local_to_globals = torch.inverse(self.get_transformation_matrices())
+        #grid_centers = local_to_globals[:,0:3,-1]
+        #grid_stds = torch.diagonal(local_to_globals, 0, 1, 2)[:,0:3]
+        
+        # The cheap way if only a translation/scale
+        grid_stds = 1/self.grid_scales
+        grid_centers = -self.grid_translations*grid_stds
         
         coeffs = 1 / \
         (torch.prod(grid_stds, dim=-1).unsqueeze(0) * \
@@ -170,7 +205,6 @@ class AMRSRN(nn.Module):
         return
 
     def forward(self, x):   
-        
         transformed_points = self.transform(x)       
         
         transformed_points = transformed_points.unsqueeze(1).unsqueeze(1)
@@ -178,9 +212,10 @@ class AMRSRN(nn.Module):
                 transformed_points.detach(),
                 mode='bilinear', align_corners=True,
                 padding_mode="zeros")[:,:,0,0,:]
+        feats = feats.flatten(0,1).permute(1, 0)
         
-        y = feats.flatten(0,1).permute(1, 0)
-                
+        
+        y = feats
         i = 0
         while i < len(self.decoder):
             y = self.decoder[i](y)

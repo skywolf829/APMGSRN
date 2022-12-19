@@ -6,11 +6,11 @@ class Options():
         opt = {}
 
         # For descriptions of all variables, see train.py
-        opt['model']                                = 'fVSRN'
+        opt['model']                                = 'AMRSRN'
         opt['n_dims']                               = 3       
-        opt['n_outputs']                            = 2
+        opt['n_outputs']                            = 1
         opt['feature_grid_shape']                   = "8,8,8"   
-        opt['n_features']                           = 6      
+        opt['n_features']                           = 2      
         opt['n_grids']                              = 64
         opt['num_positional_encoding_terms']        = 6
         opt['extents']                              = None
@@ -23,9 +23,9 @@ class Options():
         opt['save_name']                            = 'tornado'
         opt['full_shape']                           = None
         opt['align_corners']                        = True
-        opt['n_layers']                             = 4       
-        opt['nodes_per_layer']                      = 128
-        opt['interpolate']                          = False
+        opt['n_layers']                             = 2       
+        opt['nodes_per_layer']                      = 64
+        opt['interpolate']                          = True
         
         opt['iters_to_train_new_layer']             = 1000
         opt['iters_since_new_layer']                = 0
@@ -33,16 +33,17 @@ class Options():
         opt['device']                               = 'cuda:0'
         opt['data_device']                          = 'cuda:0'
 
-        opt['iterations']                           = 20000
-        opt['points_per_iteration']                 = 200000   
+        opt['iterations']                           = 10000
+        opt['points_per_iteration']                 = 100000   
         opt['lr']                                   = 0.01
         opt['beta_1']                               = 0.9
         opt['beta_2']                               = 0.99
 
         opt['iteration_number']                     = 0
-        opt['save_every']                           = 100
-        opt['log_every']                            = 5
-        opt['log_image_every']                      = 100
+        opt['save_every']                           = 1000
+        opt['log_every']                            = 10
+        opt['log_features_every']                   = 0
+        opt['log_image_every']                      = 0
         opt['log_image']                            = False
         opt['profile']                              = False
 

@@ -18,7 +18,9 @@ save_folder = os.path.join(project_folder_path, "SavedModels")
 def model_reconstruction(model, dataset, opt):
     grid = list(dataset.data.shape[2:])
     with torch.no_grad():
-        result = sample_grid(model, grid, 1000000)
+        result = sample_grid(model, grid, max_points=1000000,
+                             device=opt['device'],
+                             data_device=opt['data_device'])
     result = result.to(opt['data_device'])
     result = result.permute(3, 0, 1, 2).unsqueeze(0)
     create_path(os.path.join(output_folder, "Reconstruction"))
@@ -32,7 +34,9 @@ def model_reconstruction(model, dataset, opt):
 def error_volume(model, dataset, opt):
     grid = list(dataset.data.shape[2:])
     with torch.no_grad():
-        result = sample_grid(model, grid, 1000000)
+        result = sample_grid(model, grid, max_points=1000000,
+                             device=opt['device'],
+                             data_device=opt['data_device'])
     result = result.to(opt['data_device'])
     result = result.permute(3, 0, 1, 2).unsqueeze(0)
     create_path(os.path.join(output_folder, "ErrorVolume"))
@@ -68,7 +72,8 @@ def feature_density(model, dataset, opt):
         print(grid.device)
         
         density = forward_maxpoints(model.feature_density_gaussian, grid, 
-                                    data_device=opt['data_device'], model_device=opt['device'],
+                                    data_device=opt['data_device'], 
+                                    device=opt['device'],
                                     max_points=100000)
         density = density.reshape(data_shape)
         density = density.unsqueeze(0).unsqueeze(0)
@@ -78,17 +83,19 @@ def feature_density(model, dataset, opt):
             os.path.join(output_folder, 
             "FeatureDensity", opt['save_name']+"_density.nc"))
         
-        result = sample_grid(model, list(dataset.data.shape[2:]), 1000000)
+        result = sample_grid(model, list(dataset.data.shape[2:]), 
+                             max_points=1000000,
+                             device=opt['device'],
+                             data_device=opt['data_device'])
         result = result.to(opt['data_device'])
         result = result.permute(3, 0, 1, 2).unsqueeze(0)
         result -= dataset.data
         result.abs_()
-        result *= density
+        result *= torch.clamp_min(density,1e-2)
         result /= result.sum()    
         tensor_to_cdf(result, 
             os.path.join(output_folder, 
-            "FeatureDensity", opt['save_name']+"_targetdensity.nc"))
-        
+            "FeatureDensity", opt['save_name']+"_targetdensity.nc"))     
         
 def feature_locations(model, opt):
     if(opt['model'] == "afVSRN"):
@@ -152,7 +159,8 @@ if __name__ == '__main__':
     opt = load_options(os.path.join(save_folder, args['load_from']))
     opt['device'] = args['device']
     opt['data_device'] = args['data_device']
-    model = load_model(opt, args['device']).to(args['device'])
+    model = load_model(opt, args['device']).to(opt['device'])
+    print(f"Moved model to {opt['device']}.")
     model.train(False)
     model.eval()
     

@@ -24,6 +24,7 @@ class Dataset(torch.utils.data.Dataset):
         t1 = time.time()
         d, full_shape = nc_to_tensor(folder_to_load, opt)
         d = d.to(self.opt['data_device'])
+        print(f"Moved data to {opt['data_device']}.")
         t2 = time.time()
         print(f"IO time loading data: {t2-t1 : 0.04f}")
         self.data = d
