@@ -71,7 +71,7 @@ def sample_grid(model, grid, device="cuda", data_device="cuda", max_points = 100
     vals = forward_maxpoints(model, coord_grid, 
                              max_points = max_points,
                              data_device=data_device,
-                             model_device=device
+                             device=device
                              )
     coord_grid_shape[-1] = model.opt['n_outputs']
     vals = vals.reshape(coord_grid_shape)
