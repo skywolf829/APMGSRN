@@ -1,12 +1,22 @@
 [
     [ "test.py",
         {        
-        "load_from": "Supernova_test_AMRSRN_4feats_64grids_4x4x4_4-32",
+        "load_from": "Supernova_test_AMRSRN_4feats_64grids_4x4x4_2-32",
         "tests": "reconstruction,scale_distribution"
     }],
     [ "test.py",
         {        
         "load_from": "Supernova_test_AMRSRN_4feats_64grids_4x4x4_3-32",
+        "tests": "reconstruction,scale_distribution"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_test_AMRSRN_4feats_64grids_4x4x4_4-32",
+        "tests": "reconstruction,scale_distribution"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_test_AMRSRN_4feats_64grids_4x4x4_5-32",
         "tests": "reconstruction,scale_distribution"
     }],
     [ "test.py",
@@ -17,6 +27,16 @@
     [ "test.py",
         {        
         "load_from": "Supernova_test_AMRSRN_4feats_64grids_4x4x4_3-64",
+        "tests": "reconstruction,scale_distribution"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_test_AMRSRN_4feats_64grids_4x4x4_4-64",
+        "tests": "reconstruction,scale_distribution"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_test_AMRSRN_4feats_64grids_4x4x4_5-64",
         "tests": "reconstruction,scale_distribution"
     }]
 ]

@@ -180,4 +180,5 @@ class NGP_TCNN(nn.Module):
         )
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = (x + 1) / 2 # rescale [-1, 1] to [0, 1]
         return self.model(x)

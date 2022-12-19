@@ -45,10 +45,10 @@ def log_to_writer(iteration, losses, writer, opt):
 def logging(writer, iteration, losses, model, opt, grid_to_sample, dataset):
     if(iteration % opt['log_every'] == 0):
         log_to_writer(iteration, losses, writer, opt)
-    if(iteration % 50 == 0 and ("AMRSRN" in opt['model'] \
-        or "SigmoidNet" in opt['model'] \
-        or "ExpNet" in opt['model'])):
-        log_feature_points(model, dataset, opt, iteration)
+    # if(iteration % 50 == 0 and ("AMRSRN" in opt['model'] \
+    #     or "SigmoidNet" in opt['model'] \
+    #     or "ExpNet" in opt['model'])):
+    #     log_feature_points(model, dataset, opt, iteration)
 
 def log_feature_density(model, dataset, opt):
     feat_density = model.feature_density_box(list(dataset.data.shape[2:]))
@@ -395,8 +395,8 @@ if __name__ == '__main__':
     start_time = time.time()
     
     train(model, dataset, opt)
-    if("AMRSRN" in opt['model'] and opt['log_every'] != 0):
-       log_feature_grids_from_points(opt)
+    # if("AMRSRN" in opt['model'] and opt['log_every'] != 0):
+    #    log_feature_grids_from_points(opt)
         
     opt['iteration_number'] = 0
     save_model(model, opt)
