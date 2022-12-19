@@ -151,7 +151,7 @@ def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     x, y = batch
     x = x.to(opt['device'])
     y = y.to(opt['device'])
-    
+        
     model_output = model(x)
     loss = F.mse_loss(model_output, y, reduction='none')
     loss.mean().backward()  
@@ -172,6 +172,7 @@ def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     logging(writer, iteration, 
         {"Fitting loss": loss.mean(), "Density loss": density_loss.mean()}, 
         model, opt, dataset.data.shape[2:], dataset)
+
 
 def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
     opt['iteration_number'] = iteration
