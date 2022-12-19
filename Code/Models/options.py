@@ -23,8 +23,8 @@ class Options():
         opt['save_name']                            = 'tornado'
         opt['full_shape']                           = None
         opt['align_corners']                        = True
-        opt['n_layers']                             = 4       
-        opt['nodes_per_layer']                      = 32
+        opt['n_layers']                             = 2       
+        opt['nodes_per_layer']                      = 64
         opt['interpolate']                          = True
         
         opt['iters_to_train_new_layer']             = 1000
