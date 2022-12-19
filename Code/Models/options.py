@@ -8,7 +8,7 @@ class Options():
         # For descriptions of all variables, see train.py
         opt['model']                                = 'AMRSRN'
         opt['n_dims']                               = 3       
-        opt['n_outputs']                            = 2
+        opt['n_outputs']                            = 1
         opt['feature_grid_shape']                   = "8,8,8"   
         opt['n_features']                           = 2      
         opt['n_grids']                              = 64
