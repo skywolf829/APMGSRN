@@ -64,7 +64,7 @@ class AMRSRN(nn.Module):
         
         self.decoder = nn.ModuleList()
         
-        first_layer_input_size = opt['n_features']*opt['n_grids'] #+ opt['num_positional_encoding_terms']*opt['n_dims']*2
+        first_layer_input_size = opt['n_features']*opt['n_grids'] + opt['num_positional_encoding_terms']*opt['n_dims']*2
                  
         layer = LReLULayer(first_layer_input_size, 
                             opt['nodes_per_layer'])
@@ -72,12 +72,11 @@ class AMRSRN(nn.Module):
         
         for i in range(opt['n_layers']):
             if i == opt['n_layers'] - 1:
-                layer = nn.Linear(opt['nodes_per_layer']+opt['n_features']*opt['n_grids'], opt['n_outputs'])
+                layer = nn.Linear(opt['nodes_per_layer'], opt['n_outputs'])
                 nn.init.xavier_normal_(layer.weight)
                 self.decoder.append(layer)
             else:
-                #layer = SnakeAltLayer(opt['nodes_per_layer'] + opt['n_features']*opt['n_grids'], opt['nodes_per_layer'])
-                layer = LReLULayer(opt['nodes_per_layer']+opt['n_features']*opt['n_grids'], opt['nodes_per_layer'])
+                layer = LReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
                 self.decoder.append(layer)
     
     def get_transformation_matrices(self):
@@ -214,14 +213,12 @@ class AMRSRN(nn.Module):
                 mode='bilinear', align_corners=True,
                 padding_mode="zeros")[:,:,0,0,:]
         feats = feats.flatten(0,1).permute(1, 0)
+        pe_feats = self.pe(x)
         y = feats
-                
+        y = torch.cat([y, pe_feats], dim=1) 
         i = 0
         while i < len(self.decoder):
-            if(i == 0):
-                y = self.decoder[i](y)
-            else:
-                y = self.decoder[i](torch.cat([y, feats], dim=1))
+            y = self.decoder[i](y)
             i = i + 1
         
         return y
