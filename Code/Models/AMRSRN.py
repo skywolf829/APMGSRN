@@ -92,6 +92,14 @@ class AMRSRN(nn.Module):
         transformation_matrices[:,-1,-1] = 1
         return transformation_matrices
 
+    '''
+    Transforms global coordinates x to local coordinates within
+    each feature grid, where feature grids are assumed to be on
+    the boundary of [-1, 1]^3 in their local coordinate system.
+    
+    x: Input coordinates with shape [batch, 3]
+    returns: local coordinates in a shape [batch, n_grids, 3]
+    '''
     def transform(self, x):
         transformed_points = torch.cat([x, torch.ones([x.shape[0], 1], 
             device=self.opt['device'],
