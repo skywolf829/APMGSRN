@@ -12,8 +12,6 @@ llvmlite
 Markdown
 MarkupSafe
 matplotlib
-mkl-fft
-mkl-service
 munkres
 netCDF4
 numba
