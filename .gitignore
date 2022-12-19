@@ -142,3 +142,7 @@ fplog.ipynb
 *.vtr
 *.vti
 *.vtp
+
+# SLURM job scripts and outputs
+osc.sh
+*.out

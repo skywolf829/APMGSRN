@@ -145,9 +145,56 @@ def log_feature_grids_from_points(opt):
             vtm.SetBlock(j, vts)
         write_vtm(os.path.join(vtm_dir, f"grids_{i:03}.vtm", ), vtm)
 
+def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
+    opt['iteration_number'] = iteration
+    optimizer.zero_grad()            
+    x, y = batch
+    x = x.to(opt['device'])
+    y = y.to(opt['device'])
+        
+    model_output = model(x)
+    loss = F.mse_loss(model_output, y, reduction='none')
+    loss.mean().backward()  
+    
+    density = model.feature_density_gaussian(x)       
+    density /= density.sum().detach()
+    
+    target = torch.clamp_min(density.detach(),1e-2) * loss.detach()
+    target /= target.sum().detach()
+    density_loss = F.kl_div(torch.log(density+1e-8), 
+            target, reduction='none')
+    density_loss.mean().backward()
+
+    optimizer.step()
+    scheduler.step()        
+    profiler.step()
+    
+    logging(writer, iteration, 
+        {"Fitting loss": loss.mean(), "Density loss": density_loss.mean()}, 
+        model, opt, dataset.data.shape[2:], dataset)
+
+
+def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
+    opt['iteration_number'] = iteration
+    optimizer.zero_grad()
+       
+    x, y = batch
+    x = x.to(opt['device'])
+    y = y.to(opt['device'])
+    
+    model_output = model(x)
+    loss = F.l1_loss(model_output, y, reduction='none')
+    loss.mean().backward()                   
+
+    optimizer.step()
+    scheduler.step()        
+    profiler.step()
+    
+    logging(writer, iteration, {"Fitting loss": loss.mean()}, 
+        model, opt, dataset.data.shape[2:], dataset)
+
 def train( model, dataset, opt):
-      
-    model = model.to(opt['device'])        
+    model = model.to(opt['device'])
     print("Training on %s" % (opt["device"]), 
         os.path.join(save_folder, opt["save_name"]))
     if("AMRSRN" in opt['model']):
@@ -183,6 +230,11 @@ def train( model, dataset, opt):
     
     model.train(True)
 
+    # choose the specific training iteration function based on the model
+    train_step = train_step_vanilla
+    if 'AMRSRN' in opt['model']:
+        train_step = train_step_AMRSRN
+    
     with torch.profiler.profile(
         activities=[
             torch.profiler.ProfilerActivity.CPU,
@@ -201,33 +253,15 @@ def train( model, dataset, opt):
             os.path.join('tensorboard',opt['save_name'])),
     with_stack=True) as profiler:
         for (iteration, batch) in enumerate(dataloader):
-            opt['iteration_number'] = iteration
-            optimizer.zero_grad()            
-            x, y = batch
-            x = x.to(opt['device'])
-            y = y.to(opt['device'])
-            
-                
-            model_output = model(x)
-            loss = F.mse_loss(model_output, y, reduction='none')
-            loss.mean().backward()  
-            
-            density = model.feature_density_gaussian(x)       
-            density /= density.sum().detach()
-            
-            target = torch.clamp_min(density.detach(),1e-2) * loss.detach()
-            target /= target.sum().detach()
-            density_loss = F.kl_div(torch.log(density+1e-8), 
-                    target, reduction='none')
-            density_loss.mean().backward()
-
-            optimizer.step()
-            scheduler.step()        
-            profiler.step()
-            
-            logging(writer, iteration, 
-                {"Fitting loss": loss.mean(), "Density loss": density_loss.mean()}, 
-                model, opt, dataset.data.shape[2:], dataset)
+            train_step(opt,
+                       iteration,
+                       batch,
+                       dataset,
+                       model,
+                       optimizer,
+                       scheduler,
+                       profiler,
+                       writer)
             
     writer.close()
     save_model(model, opt)
@@ -250,7 +284,15 @@ if __name__ == '__main__':
     parser.add_argument('--extents',default=None,type=str,
         help='Spatial extents to use for this model from the data')   
     parser.add_argument('--use_global_position',default=None,type=str2bool,
-        help='For the fourier featuers, whether to use the global position or local.')   
+        help='For the fourier featuers, whether to use the global position or local.')
+    
+    # Hash Grid (NGP model) hyperparameters
+    parser.add_argument('--hash_log2_size',default=None,type=int,
+        help='Size of hash table')
+    parser.add_argument('--hash_base_resolution',default=None,type=int,
+        help='Minimum resolution of a single dimension')
+    parser.add_argument('--hash_max_resolution',default=None,type=int,
+        help='Maximum resolution of a single dimension') 
     
 
     parser.add_argument('--data',default=None,type=str,
@@ -340,8 +382,8 @@ if __name__ == '__main__':
     start_time = time.time()
     
     train(model, dataset, opt)
-    #log_feature_density(model, dataset, opt)
-    log_feature_grids_from_points(opt)
+    if("AMRSRN" in opt['model']):
+        log_feature_grids_from_points(opt)
         
     opt['iteration_number'] = 0
     save_model(model, opt)
