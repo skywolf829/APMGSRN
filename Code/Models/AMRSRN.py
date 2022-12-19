@@ -96,6 +96,8 @@ class AMRSRN(nn.Module):
     Transforms global coordinates x to local coordinates within
     each feature grid, where feature grids are assumed to be on
     the boundary of [-1, 1]^3 in their local coordinate system.
+    Scales the grid by a factor to match the gaussian shape
+    (see feature_density_gaussian())
     
     x: Input coordinates with shape [batch, 3]
     returns: local coordinates in a shape [batch, n_grids, 3]
@@ -114,6 +116,16 @@ class AMRSRN(nn.Module):
         transformed_points = transformed_points[...,0:3]
         return transformed_points * (0.6)
 
+    '''
+    Transforms local coordinates within each feature grid x to 
+    global coordinates. Scales local coordinates by a factor
+    so as to be consistent with the transform() method, which
+    attempts to align feature grids with the guassian density 
+    calculated in feature_density_gaussian()
+    
+    x: Input coordinates with shape [batch, 3]
+    returns: local coordinates in a shape [batch, n_grids, 3]
+    '''
     def inverse_transform(self, x):
         transformed_points = torch.cat([x * (1/0.6), torch.ones(
             [x.shape[0], 1], 
