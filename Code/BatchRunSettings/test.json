@@ -1,47 +1,7 @@
 [
     [ "test.py",
         {        
-        "load_from": "Supernova_test_AMRSRN_128x4",
-        "tests": "reconstruction"
-    }],
-    [ "test.py",
-        {        
-        "load_from": "Supernova_test_AMRSRN_128x3",
-        "tests": "reconstruction"
-    }],
-    [ "test.py",
-        {        
-        "load_from": "Supernova_test_AMRSRN_128x2",
-        "tests": "reconstruction"
-    }],
-    [ "test.py",
-        {        
-        "load_from": "Supernova_test_AMRSRN_64x4",
-        "tests": "reconstruction"
-    }],
-    [ "test.py",
-        {        
-        "load_from": "Supernova_test_AMRSRN_64x3",
-        "tests": "reconstruction"
-    }],
-    [ "test.py",
-        {        
-        "load_from": "Supernova_test_AMRSRN_64x2",
-        "tests": "reconstruction"
-    }],
-    [ "test.py",
-        {        
-        "load_from": "Supernova_test_AMRSRN_32x4",
-        "tests": "reconstruction"
-    }],
-    [ "test.py",
-        {        
-        "load_from": "Supernova_test_AMRSRN_32x3",
-        "tests": "reconstruction"
-    }],
-    [ "test.py",
-        {        
-        "load_from": "Supernova_test_AMRSRN_32x2",
-        "tests": "reconstruction"
+        "load_from": "Supernova_test_AMRSRN",
+        "tests": "reconstruction,feature_density"
     }]
 ]

@@ -91,7 +91,7 @@ def feature_density(model, dataset, opt):
         result = result.permute(3, 0, 1, 2).unsqueeze(0)
         result -= dataset.data
         result.abs_()
-        result *= density
+        result *= torch.clamp_min(density,1e-2)
         result /= result.sum()    
         tensor_to_cdf(result, 
             os.path.join(output_folder, 
