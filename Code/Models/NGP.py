@@ -31,7 +31,7 @@ class FeatureGrid(nn.Module):
                               mode='bilinear', align_corners=True)
         return feats
 
-# TODO: for grid size < table size, use FeatureGrid to avoid inefficient hasing + interpolation implemnentaion -ty
+# TODO: for grid size < table size, use FeatureGrid to avoid inefficient hashing + interpolation implemnentaion -ty
 class MultiHashGrid(nn.Module):
     def __init__(self, opt) -> None:
         super().__init__()
@@ -137,8 +137,6 @@ class NGP(nn.Module):
             *[LinearLayer(self.decoder_dim, self.decoder_dim) for i in range(self.decoder_layers-1)],
             nn.Linear(self.decoder_dim, self.decoder_outdim)
         )
-    def fix_params(self): # emtpy function in case train.py calling
-        return
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.decoder(self.hash_grid(x))
@@ -155,7 +153,7 @@ class NGP_TCNN(nn.Module):
         self.feat_dim = opt['n_features']
         per_level_scale = exp(
             (log(self.max_resolution) - log(self.base_resolution))/(self.n_grids-1)
-        )  # growt
+        )  # growth factor
         
         self.decoder_dim = opt['nodes_per_layer']
         self.decoder_outdim = opt['n_outputs']
@@ -180,28 +178,6 @@ class NGP_TCNN(nn.Module):
                 "n_hidden_layers": self.decoder_layers,
             },
         )
-    def fix_params(self): # emtpy function in case train.py calling
-        return
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
-
-# class NGP_TCNN(nn.Module):
-#     def __init__(self, opt) -> None:
-#         super().__init__()
-#         self.opt = opt
-        
-#         self.decoder_indim = self.hash_grid.feat_dim * self.hash_grid.n_grids
-#         self.decoder_dim = opt['nodes_per_layer']
-#         self.decoder_outdim = opt['n_outputs']
-#         self.decoder_layers = opt['n_layers']
-        
-#         self.hash_grid = HashGrid(opt)
-#         self.decoder = nn.Sequential(
-#             nn.Linear(self.decoder_indim, self.decoder_dim),
-#             *[nn.Linear(self.decoder_dim, self.decoder_dim) for i in range(self.decoder_layers-1)],
-#             nn.Linear(self.decoder_dim, self.decoder_outdim)
-#         )
-
-#     def forward(self, x: torch.Tensor) -> torch.Tensor:
-#         return self.decoder(self.hash_grid(x))

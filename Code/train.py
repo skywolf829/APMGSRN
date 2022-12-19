@@ -190,7 +190,8 @@ def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, schedul
     scheduler.step()        
     profiler.step()
     
-    logging(writer, iteration, {"Fitting loss": loss.mean()}, 
+    logging(writer, iteration, 
+        {"Fitting loss": loss.mean()}, 
         model, opt, dataset.data.shape[2:], dataset)
 
 def train( model, dataset, opt):

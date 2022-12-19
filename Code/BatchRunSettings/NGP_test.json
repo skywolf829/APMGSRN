@@ -1,7 +1,8 @@
 [
     [ "test.py",
-        {        
-        "load_from": "Supernova_test_TCNN_2feats_16grids_9_4-128",
-        "tests": "reconstruction,error_volume"
-    }]
+        {
+            "load_from": "Supernova_test_TCNN_2feats_16grids_10_4-256",
+            "tests": "reconstruction"
+        }
+    ]
 ]
