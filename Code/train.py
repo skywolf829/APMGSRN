@@ -173,7 +173,6 @@ def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         {"Fitting loss": loss.mean(), "Density loss": density_loss.mean()}, 
         model, opt, dataset.data.shape[2:], dataset)
 
-
 def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
     opt['iteration_number'] = iteration
     optimizer.zero_grad()
