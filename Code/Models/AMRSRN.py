@@ -114,7 +114,17 @@ class AMRSRN(nn.Module):
             dim=1)
         transformed_points = transformed_points.unsqueeze(0).expand(
             self.opt['n_grids'], transformed_points.shape[0], transformed_points.shape[1])
-        local_to_global_matrices = torch.inverse(self.get_transformation_matrices())
+        # Slow
+        #local_to_global_matrices = torch.inverse(self.get_transformation_matrices())
+        # fast        
+        local_to_global_matrices = torch.zeros([self.opt['n_grids'], 4, 4],
+                                               device=self.opt['device'],
+                                               dtype=torch.float32)
+        local_to_global_matrices[:,0,0] = 1/self.grid_scales[:,0]
+        local_to_global_matrices[:,1,1] = 1/self.grid_scales[:,1]
+        local_to_global_matrices[:,2,2] = 1/self.grid_scales[:,2]
+        local_to_global_matrices[:,0:3,-1] = -self.grid_translations/self.grid_scales
+        local_to_global_matrices[:,-1,-1] = 1
         
         transformed_points = torch.bmm(local_to_global_matrices,
                                     transformed_points.transpose(-1,-2)).transpose(-1, -2)
@@ -124,9 +134,15 @@ class AMRSRN(nn.Module):
     def feature_density_gaussian(self, x):
        
         x = x.unsqueeze(1).repeat(1,self.opt['n_grids'],1).detach()
-        local_to_globals = torch.inverse(self.get_transformation_matrices())
-        grid_centers = local_to_globals[:,0:3,-1]
-        grid_stds = torch.diagonal(local_to_globals, 0, 1, 2)[:,0:3]
+        
+        # The expensive (but general) way
+        #local_to_globals = torch.inverse(self.get_transformation_matrices())
+        #grid_centers = local_to_globals[:,0:3,-1]
+        #grid_stds = torch.diagonal(local_to_globals, 0, 1, 2)[:,0:3]
+        
+        # The cheap way if only a translation/scale
+        grid_stds = 1/self.grid_scales
+        grid_centers = -self.grid_translations*grid_stds
         
         coeffs = 1 / \
         (torch.prod(grid_stds, dim=-1).unsqueeze(0) * \
