@@ -157,8 +157,6 @@ class NGP_TCNN(nn.Module):
             (log(self.max_resolution) - log(self.base_resolution))/(self.n_grids-1)
         )  # growt
         
-        self.hash_grid = HashGrid(opt)
-        
         self.decoder_dim = opt['nodes_per_layer']
         self.decoder_outdim = opt['n_outputs']
         self.decoder_layers = opt['n_layers']

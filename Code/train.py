@@ -254,6 +254,7 @@ def train( model, dataset, opt):
         for (iteration, batch) in enumerate(dataloader):
             train_step(opt,
                        iteration,
+                       batch,
                        dataset,
                        model,
                        optimizer,
