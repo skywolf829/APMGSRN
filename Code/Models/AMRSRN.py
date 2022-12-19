@@ -64,7 +64,7 @@ class AMRSRN(nn.Module):
         
         self.decoder = nn.ModuleList()
         
-        first_layer_input_size = opt['n_features']*opt['n_grids'] + opt['num_positional_encoding_terms']*opt['n_dims']*2
+        first_layer_input_size = opt['n_features']*opt['n_grids']# + opt['num_positional_encoding_terms']*opt['n_dims']*2
                  
         layer = LReLULayer(first_layer_input_size, 
                             opt['nodes_per_layer'])
@@ -213,9 +213,9 @@ class AMRSRN(nn.Module):
                 mode='bilinear', align_corners=True,
                 padding_mode="zeros")[:,:,0,0,:]
         feats = feats.flatten(0,1).permute(1, 0)
-        pe_feats = self.pe(x)
+        
+        
         y = feats
-        y = torch.cat([y, pe_feats], dim=1) 
         i = 0
         while i < len(self.decoder):
             y = self.decoder[i](y)
