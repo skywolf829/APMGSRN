@@ -207,6 +207,7 @@ def train( model, dataset, opt):
             x = x.to(opt['device'])
             y = y.to(opt['device'])
             
+                
             model_output = model(x)
             loss = F.mse_loss(model_output, y, reduction='none')
             loss.mean().backward()  

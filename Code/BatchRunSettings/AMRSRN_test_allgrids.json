@@ -1,0 +1,7 @@
+[
+    [ "test.py",
+        {        
+        "load_from": "all",
+        "tests": "reconstruction,error_volume,feature_density"
+    }]
+]
