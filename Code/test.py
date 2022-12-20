@@ -90,9 +90,10 @@ def feature_density(model, dataset, opt):
         result = result.to(opt['data_device'])
         result = result.permute(3, 0, 1, 2).unsqueeze(0)
         result -= dataset.data
-        result.abs_()
-        result *= torch.clamp_min(density,1e-2)
-        result /= result.sum()    
+        result **= 2
+        result /= result.mean()
+        result = density - torch.exp(result)
+        result /= result.sum()
         tensor_to_cdf(result, 
             os.path.join(output_folder, 
             "FeatureDensity", opt['save_name']+"_targetdensity.nc"))     
