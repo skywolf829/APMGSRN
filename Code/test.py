@@ -92,11 +92,19 @@ def feature_density(model, dataset, opt):
         result -= dataset.data
         result **= 2
         result /= result.mean()
-        result = density - torch.exp(result)
+        result = torch.exp(torch.log(density+1e-16) / torch.exp(result))
         result /= result.sum()
         tensor_to_cdf(result, 
             os.path.join(output_folder, 
             "FeatureDensity", opt['save_name']+"_targetdensity.nc"))     
+        
+        result = F.kl_div(torch.log(density+1e-16), 
+                          torch.log(result+1e-16), 
+                               reduction="none", 
+                               log_target=True)           
+        tensor_to_cdf(result, 
+            os.path.join(output_folder, 
+            "FeatureDensity", opt['save_name']+"_kl.nc"))    
         
 def feature_locations(model, opt):
     if(opt['model'] == "afVSRN"):
