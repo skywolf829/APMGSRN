@@ -147,19 +147,22 @@ def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         
     model_output = model(x)
     loss = F.mse_loss(model_output, y, reduction='none')
+    loss = loss.sum(dim=1, keepdim=True)
     loss.mean().backward()
     
     density = model.feature_density_gaussian(x)       
     density /= density.sum().detach()
     
     target = torch.exp(torch.log(density.detach()+1e-16)/\
-        (loss.detach()/loss.detach().mean()))
+        (loss.detach()/loss.mean().detach()))
+    #target = density.detach() * (loss.detach() / loss.mean().detach())**0.5
     target /= target.sum()
-    density_loss = F.kl_div(
-        torch.log(density+1e-16), 
-            torch.log(target+1e-16), 
-            reduction='none', 
-            log_target=True)
+    #density_loss = F.kl_div(
+    #    torch.log(density+1e-16), 
+    #        torch.log(target+1e-16), 
+    #        reduction='none', 
+    #        log_target=True)
+    density_loss = F.mse_loss(density, target, reduction='none')
     density_loss.mean().backward()
 
     optimizer.step()

@@ -1,11 +1,11 @@
 [
     [ "train.py",
         {        
-            "save_name": "Supernova_AMRSRN",
+            "save_name": "Supernova_test_AMRSRN",
             "model": "AMRSRN",
-            "data": "Supernova.nc",
+            "data": "Supernova_test.nc",
             "n_features": 4,
-            "n_grids": 8,
+            "n_grids": 16,
             "feature_grid_shape": "8,8,8",
             "n_layers": 4,
             "nodes_per_layer": 64,
