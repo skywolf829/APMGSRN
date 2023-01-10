@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from Other.utility_functions import make_coord_grid    
-from Models.layers import LReLULayer, SineLayer, SnakeAltLayer, PositionalEncoding
+from Models.layers import LReLULayer, ReLULayer, SineLayer, SnakeAltLayer, PositionalEncoding
 
        
        
@@ -66,7 +66,7 @@ class AMRSRN(nn.Module):
         
         first_layer_input_size = opt['n_features']*opt['n_grids']# + opt['num_positional_encoding_terms']*opt['n_dims']*2
                  
-        layer = LReLULayer(first_layer_input_size, 
+        layer = ReLULayer(first_layer_input_size, 
                             opt['nodes_per_layer'])
         self.decoder.append(layer)
         
@@ -76,7 +76,7 @@ class AMRSRN(nn.Module):
                 nn.init.xavier_normal_(layer.weight)
                 self.decoder.append(layer)
             else:
-                layer = LReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
+                layer = ReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
                 self.decoder.append(layer)
     
     def get_transformation_matrices(self):

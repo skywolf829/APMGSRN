@@ -135,20 +135,20 @@ def alg(target_density, n_gaussians=1, dims=3):
             current_cumsum = torch.cumsum(current_cumsum, dim=j)
         tensor_to_cdf(current_cumsum.unsqueeze(0).unsqueeze(0), "cumsum.nc")
         
-
-
-    
-
 if __name__ == '__main__':
 
     dims=3
-    target_density, mean_target, cov_target = create_random_sum_of_gaussians(15,dims=dims)
+    #target_density, mean_target, cov_target = create_random_sum_of_gaussians(15,dims=dims)
     #target_density /= target_density.sum()
 
     torch.manual_seed(987654321)
     
     #training(target_density=target_density)
-    alg(target_density=target_density)
+    #alg(target_density=target_density)
 
+    d,_ = nc_to_tensor(os.path.join(data_folder, "supernova_test.nc"))
+    a = d[:,:,216:,0:216,0:216]
+    d[:,:,0:216,216:,216:] = a
+    tensor_to_cdf(d, os.path.join(data_folder, "supernova_test2.nc"))
     
     quit()

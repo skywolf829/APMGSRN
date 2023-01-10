@@ -157,12 +157,12 @@ def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         (loss.detach()/loss.mean().detach()))
     #target = density.detach() * (loss.detach() / loss.mean().detach())**0.5
     target /= target.sum()
-    #density_loss = F.kl_div(
-    #    torch.log(density+1e-16), 
-    #        torch.log(target+1e-16), 
-    #        reduction='none', 
-    #        log_target=True)
-    density_loss = F.mse_loss(density, target, reduction='none')
+    density_loss = F.kl_div(
+        torch.log(density+1e-16), 
+            torch.log(target+1e-16), 
+            reduction='none', 
+            log_target=True)
+    #density_loss = F.mse_loss(density, target, reduction='none')
     density_loss.mean().backward()
 
     optimizer.step()
@@ -226,7 +226,7 @@ def train( model, dataset, opt):
         optimizer = optim.Adam(model.parameters(), lr=opt["lr"], 
         betas=[opt['beta_1'], opt['beta_2']]) 
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 
-        step_size=(opt['iterations']*3)//4, gamma=0.1)
+        step_size=(opt['iterations']*9)//10, gamma=0.1)
 
     if(os.path.exists(os.path.join(project_folder_path, "tensorboard", opt['save_name']))):
         shutil.rmtree(os.path.join(project_folder_path, "tensorboard", opt['save_name']))

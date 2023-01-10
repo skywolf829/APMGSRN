@@ -1,9 +1,9 @@
 [
     [ "train.py",
         {        
-            "save_name": "Supernova_test_AMRSRN",
+            "save_name": "Supernova_test2_AMRSRN",
             "model": "AMRSRN",
-            "data": "Supernova_test.nc",
+            "data": "Supernova_test2.nc",
             "n_features": 4,
             "n_grids": 16,
             "feature_grid_shape": "8,8,8",
