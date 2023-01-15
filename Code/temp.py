@@ -15,46 +15,140 @@ data_folder = os.path.join(project_folder_path, "Data")
 output_folder = os.path.join(project_folder_path, "Output")
 save_folder = os.path.join(project_folder_path, "SavedModels")
 
-def gaussian_test(x):
-    n_grids = 1
-    transformation_matrices = torch.tensor(
-        [[10, 0, 0, 0],
-         [0, 10, 0, 0],
-         [0, 0, 10, 0],
-         [0, 0, 0, 1]], dtype=torch.float64, device='cuda'
-    ).unsqueeze(0).repeat(n_grids, 1, 1)
-    
-    x = x.unsqueeze(1).repeat(1,n_grids,1)
-
-    local_to_globals = torch.inverse(transformation_matrices)
-
-    grid_centers = local_to_globals[:,0:-1,-1]
-    grid_stds = torch.diagonal(local_to_globals, 0, 1, 2)[:,0:-1]
-
-
-    
+def gaussian(x, u, sig, p=1):
+    x = x.unsqueeze(1).repeat(1, u.shape[0], 1)
     coeffs = 1 / \
-        (torch.prod(grid_stds, dim=-1).unsqueeze(0) * \
-            ((2 * torch.pi)**(grid_centers.shape[-1]/2.0)))
+        (torch.prod(sig, dim=-1).unsqueeze(0) * \
+            (2*torch.pi)**(x.shape[1]/2))
         
-    exps = torch.exp(-0.5 * \
-        torch.sum(((x - grid_centers.unsqueeze(0))**2) / \
-        ((grid_stds.unsqueeze(0)**2)), dim=-1))
+    exps = torch.exp(-1 * \
+        torch.sum(
+            (((x - u.unsqueeze(0))) / \
+            (2**0.5 * sig.unsqueeze(0)))**(2*p), 
+        dim=-1))
     
-    
-    return torch.sum(coeffs * exps, dim=-1)
-    
-if __name__ == '__main__':
-    size = 500
-    x = make_coord_grid([size,size,size], device='cuda', 
-                        flatten=True, align_corners=True)
-    gaussian_densities = gaussian_test(x)
-    gaussian_densities = gaussian_densities.reshape(size, size, size, 1)
-    gaussian_densities = gaussian_densities.permute(3, 0, 1, 2).unsqueeze(0)
+    return torch.sum(coeffs * exps, dim=-1, keepdim=True)
 
-    gaussian_densities /= (1/8)*size*size*size
-    tensor_to_cdf(gaussian_densities, "guassian_test.nc")
-    print(gaussian_densities.sum())
+def create_random_sum_of_gaussians(num_gaussians,dims=3):
+    torch.manual_seed(123456789)
+
+    means = torch.rand([num_gaussians, dims])*2 - 1
+    covs = 0.05+torch.rand([num_gaussians, dims])*0.1
+
+    grid = make_coord_grid([100]*dims, "cpu",
+        flatten=True, align_corners=True)
+
+    resulting_sum = torch.zeros([grid.shape[0], 1])
+    resulting_sum = gaussian(grid, means, covs).reshape([100]*dims)
+    return resulting_sum, means, covs
     
+def create_set_of_gaussians(num_gaussians,dims=3):
+    means = torch.rand([num_gaussians, dims])*2 - 1
+    covs = torch.rand([num_gaussians, dims])
+
+    return means, covs
+    
+def generate_image(current_density, target_density):
+    import matplotlib.pyplot as plt
+    x = make_coord_grid([100], "cpu", 
+        flatten=True, align_corners=True)
+    
+    fig = plt.figure()
+
+    plt.plot(x, current_density, color='blue', label='current')
+    plt.plot(x, target_density, color='red', label='target')
+    plt.legend()
+
+    fig.canvas.draw()
+    data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+    w, h = fig.canvas.get_width_height()
+    im = data.reshape((int(h)*2, int(w)*2, -1))[:,:,0:3]
+    plt.close()
+    return im[::2,::2,:]
+
+def training(target_density, dims=1):
+    means, covs = create_set_of_gaussians(10,dims=dims)
+
+    means = torch.nn.Parameter(means, requires_grad=True)
+    covs = torch.nn.Parameter(covs, requires_grad=True)
+    optim = torch.optim.Adam([means, covs], lr = 0.01, betas=[0.9, 0.99])
+    #optim = torch.optim.SGD([means, covs], lr = 1, momentum=0)
+    scheduler = torch.optim.lr_scheduler.StepLR(optim, 200, 0.1)
+    imgs = []
+
+    x = make_coord_grid([100]*dims, "cpu",
+            flatten=True, align_corners=True)
+    for iteration in range(250):
+        optim.zero_grad()
+
+        current_density = gaussian(x, means, covs, p=1)
+        current_density /= (current_density.detach().sum()+1e-14)
+        
+        #error = current_density * torch.log((current_density/target_density)+1e-14)
+        #error = torch.abs(current_density-target_density)
+        #error = (current_density - target_density)**2
+        error = -torch.log((((current_density+1e-24)*(target_density+1e-14))**0.5).sum()+1e-14)
+        
+        error = error.mean()
+        #error = error.mean()**0.5
+        error.backward()
+
+        optim.step()
+        scheduler.step()
+        #with torch.no_grad():
+        #    covs.clamp_(0.01, 2)
+        print(f"Step {iteration} error: {error.item() : 0.08f}")
+
+        flat_top = gaussian(x, means, covs, p=10).detach().numpy()
+        flat_top /= flat_top.sum()
+        imgs.append(
+            generate_image(
+                flat_top,
+                #current_density.detach().numpy(), 
+                target_density.detach().numpy()
+                )
+            )
+
+    result = gaussian(x, means, covs)
+    result /= result.sum()
+
+    import imageio
+
+    imageio.mimwrite("save.gif", imgs)
+
+def alg(target_density, n_gaussians=1, dims=3):
+    target_density /= target_density.sum()
+    #target_density *= (4**dims)/(2**dims)
+    #target_density *= n_gaussians
+    #x = make_coord_grid([100]*dims, "cpu",
+    #        flatten=True, align_corners=True)
+    lefts = torch.zeros([n_gaussians, dims])-1
+    rights = torch.zeros([n_gaussians, dims])+1
+    
+    current_density = target_density.clone()
+    
+    tensor_to_cdf(current_density.unsqueeze(0).unsqueeze(0), "targetdensity.nc")
+
+    for i in range(1):
+        current_cumsum = current_density.clone()
+        for j in range(dims):
+            current_cumsum = torch.cumsum(current_cumsum, dim=j)
+        tensor_to_cdf(current_cumsum.unsqueeze(0).unsqueeze(0), "cumsum.nc")
+        
+if __name__ == '__main__':
+
+    dims=3
+    #target_density, mean_target, cov_target = create_random_sum_of_gaussians(15,dims=dims)
+    #target_density /= target_density.sum()
+
+    torch.manual_seed(987654321)
+    
+    #training(target_density=target_density)
+    #alg(target_density=target_density)
+
+    d,_ = nc_to_tensor(os.path.join(data_folder, "supernova_test.nc"))
+    a = d[:,:,216:,0:216,0:216]
+    d[:,:,0:216,216:,216:] = a
+    tensor_to_cdf(d, os.path.join(data_folder, "supernova_test2.nc"))
     
     quit()

@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from Other.utility_functions import make_coord_grid    
-from Models.layers import LReLULayer, SineLayer, SnakeAltLayer, PositionalEncoding
+from Models.layers import LReLULayer, ReLULayer, SineLayer, SnakeAltLayer, PositionalEncoding
 
        
        
@@ -66,7 +66,7 @@ class AMRSRN(nn.Module):
         
         first_layer_input_size = opt['n_features']*opt['n_grids']# + opt['num_positional_encoding_terms']*opt['n_dims']*2
                  
-        layer = LReLULayer(first_layer_input_size, 
+        layer = ReLULayer(first_layer_input_size, 
                             opt['nodes_per_layer'])
         self.decoder.append(layer)
         
@@ -76,7 +76,7 @@ class AMRSRN(nn.Module):
                 nn.init.xavier_normal_(layer.weight)
                 self.decoder.append(layer)
             else:
-                layer = LReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
+                layer = ReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
                 self.decoder.append(layer)
     
     def get_transformation_matrices(self):
@@ -113,7 +113,7 @@ class AMRSRN(nn.Module):
         transformed_points = torch.bmm(transformation_matrices, 
                             transformed_points.transpose(-1, -2)).transpose(-1, -2)
         transformed_points = transformed_points[...,0:3]
-        return transformed_points * (0.6)
+        return transformed_points * (1/1.48)
 
     '''
     Transforms local coordinates within each feature grid x to 
@@ -126,7 +126,7 @@ class AMRSRN(nn.Module):
     returns: local coordinates in a shape [batch, n_grids, 3]
     '''
     def inverse_transform(self, x):
-        transformed_points = torch.cat([x * (1/0.6), torch.ones(
+        transformed_points = torch.cat([x * 1.48, torch.ones(
             [x.shape[0], 1], 
             device=self.opt['device'],
             dtype=torch.float32)], 

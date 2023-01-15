@@ -15,6 +15,23 @@ class LinearLayer(nn.Module):
   def forward(self, x):
     return self.layer(x)
 
+class ReLULayer(nn.Module):
+    def __init__(self, in_features, out_features, bias=True):
+        super().__init__()
+        
+        self.in_features = in_features
+        self.linear = nn.Linear(in_features, out_features, 
+            bias=bias)
+        
+        self.init_weights()
+    
+    def init_weights(self):
+        with torch.no_grad():
+            nn.init.kaiming_uniform_(self.linear.weight)
+
+    def forward(self, input):
+        return F.relu(self.linear(input))
+    
 class LReLULayer(nn.Module):
     def __init__(self, in_features, out_features, bias=True):
         super().__init__()
