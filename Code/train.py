@@ -28,9 +28,10 @@ save_folder = os.path.join(project_folder_path, "SavedModels")
 def log_to_writer(iteration, losses, writer, opt):
     with torch.no_grad():   
         print_str = f"Iteration {iteration}/{opt['iterations']}, "
-        for key in losses.keys():    
-            print_str = print_str + str(key) + f": {losses[key].item() : 0.05f} " 
-            writer.add_scalar(str(key), losses[key].item(), iteration)
+        for key in losses.keys():
+            if(losses[key] is not None):    
+                print_str = print_str + str(key) + f": {losses[key].mean().item() : 0.07f} " 
+                writer.add_scalar(str(key), losses[key].mean().item(), iteration)
         print(print_str)
         if("cuda" in opt['device']):
             GBytes = (torch.cuda.max_memory_allocated(device=opt['device']) \
@@ -140,7 +141,9 @@ def log_feature_grids_from_points(opt):
 
 def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
     opt['iteration_number'] = iteration
-    optimizer.zero_grad()            
+    optimizer[0].zero_grad() 
+    optimizer[1].zero_grad() 
+                 
     x, y = batch
     x = x.to(opt['device'])
     y = y.to(opt['device'])
@@ -150,28 +153,32 @@ def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     loss = loss.sum(dim=1, keepdim=True)
     loss.mean().backward()
     
-    density = model.feature_density_gaussian(x)       
-    density /= density.sum().detach()
     
-    target = torch.exp(torch.log(density.detach()+1e-16)/\
-        (loss.detach()/loss.mean().detach()))
-    #target = density.detach() * (loss.detach() / loss.mean().detach())**0.5
-    target /= target.sum()
-    density_loss = F.kl_div(
-        torch.log(density+1e-16), 
-            torch.log(target+1e-16), 
-            reduction='none', 
-            log_target=True)
-    #density_loss = F.mse_loss(density, target, reduction='none')
-    density_loss.mean().backward()
-
-    optimizer.step()
-    scheduler.step()        
+    if(iteration < opt['iterations']//10 * 8):
+        density = model.feature_density_gaussian(x)       
+        density /= density.sum().detach()     
+        
+        target = torch.exp(torch.log(density+1e-16) / \
+            (loss/loss.mean()))
+        target /= target.sum()
+            
+        density_loss = F.kl_div(
+            torch.log(density+1e-16), 
+                torch.log(target.detach()+1e-16), 
+                reduction='none', 
+                log_target=True)
+        density_loss.mean().backward()
+    
+    
+    optimizer[0].step()
+    optimizer[1].step()
+    scheduler[0].step()   
+    scheduler[1].step()        
     profiler.step()
     
     if(opt['log_every'] != 0):
         logging(writer, iteration, 
-            {"Fitting loss": loss.mean(), "Density loss": density_loss.mean()}, 
+            {"Fitting loss": loss, "Density loss": None}, 
             model, opt, dataset.data.shape[2:], dataset)
 
 def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
@@ -198,35 +205,28 @@ def train( model, dataset, opt):
     model = model.to(opt['device'])
     print("Training on %s" % (opt["device"]), 
         os.path.join(save_folder, opt["save_name"]))
-    if("AMRSRN" == opt['model']):
-        optimizer = optim.Adam([
-            {
-            "params": [model.grid_translations, model.grid_scales], "lr": opt["lr"]*0.1
-            },
-            {
-            "params": [model.feature_grids], "lr": opt["lr"]
-            },
-            {
-            "params": model.decoder.parameters(), "lr": opt["lr"]
-            }
+    if("AMRSRN" in opt['model']):
+        optimizer = [optim.Adam([
+            {"params": [model.feature_grids], "lr": opt["lr"]},
+            {"params": model.decoder.parameters(), "lr": opt["lr"]}
+        ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
+            optim.Adam([
+            {"params": [model.grid_translations, model.grid_scales], "lr": opt["lr"] * 0.1}
         ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
-    elif("AMRSRN_TCNN" == opt['model']):
-        optimizer = optim.Adam([
-            {
-            "params": [model.grid_translations, model.grid_scales], "lr": opt["lr"]*0.1
-            },
-            {
-            "params": model.feature_grids.parameters(), "lr": opt["lr"]
-            },
-            {
-            "params": model.decoder.parameters(), "lr": opt["lr"]
-            }
-        ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
+        ]        
+        scheduler = [
+            torch.optim.lr_scheduler.StepLR(optimizer[0], 
+                step_size=(opt['iterations']*9)//10, gamma=0.1),
+            torch.optim.lr_scheduler.StepLR(optimizer[1], 
+                step_size=(opt['iterations']*9)//10, gamma=0.1)
+        ]
+        
     else:
         optimizer = optim.Adam(model.parameters(), lr=opt["lr"], 
-        betas=[opt['beta_1'], opt['beta_2']]) 
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 
-        step_size=(opt['iterations']*9)//10, gamma=0.1)
+            betas=[opt['beta_1'], opt['beta_2']]) 
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
+            [opt['iterations']*(2/5), opt['iterations']*(3/5), opt['iterations']*(4/5)],
+            gamma=0.33)
 
     if(os.path.exists(os.path.join(project_folder_path, "tensorboard", opt['save_name']))):
         shutil.rmtree(os.path.join(project_folder_path, "tensorboard", opt['save_name']))

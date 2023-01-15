@@ -5,9 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 from Other.utility_functions import make_coord_grid    
 from Models.layers import LReLULayer, ReLULayer, SineLayer, SnakeAltLayer, PositionalEncoding
-
-       
-       
+   
        
 class AMRSRN(nn.Module):
     def __init__(self, opt):
@@ -21,7 +19,7 @@ class AMRSRN(nn.Module):
         init_scales = torch.ones(
                 [self.opt['n_grids'], 3],
                 device = opt['device']
-            ).uniform_(1,2)
+            ).uniform_(1.5,2.5)
             #.uniform_(1.9,2.1)
 
         init_translations = torch.zeros(
