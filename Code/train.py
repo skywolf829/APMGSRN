@@ -218,7 +218,7 @@ def train( model, dataset, opt):
             torch.optim.lr_scheduler.StepLR(optimizer[0], 
                 step_size=(opt['iterations']*9)//10, gamma=0.1),
             torch.optim.lr_scheduler.StepLR(optimizer[1], 
-                step_size=(opt['iterations']*9)//10, gamma=0.1)
+                step_size=(opt['iterations']*4)//10, gamma=0.1)
         ]
         
     else:
