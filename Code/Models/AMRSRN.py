@@ -61,6 +61,7 @@ class AMRSRN(nn.Module):
         
         self.pe = PositionalEncoding(opt)
         
+        '''
         try:
             import tinycudann as tcnn 
             print(f"Using TinyCUDANN (tcnn) since it is installed for performance gains.")
@@ -76,24 +77,24 @@ class AMRSRN(nn.Module):
                 }
             )
         except ImportError:
-            
-            self.decoder = nn.ModuleList()
-            
-            first_layer_input_size = opt['n_features']*opt['n_grids']# + opt['num_positional_encoding_terms']*opt['n_dims']*2
-                    
-            layer = ReLULayer(first_layer_input_size, 
-                                opt['nodes_per_layer'])
-            self.decoder.append(layer)
-            
-            for i in range(opt['n_layers']):
-                if i == opt['n_layers'] - 1:
-                    layer = nn.Linear(opt['nodes_per_layer'], opt['n_outputs'])
-                    nn.init.xavier_normal_(layer.weight)
-                    self.decoder.append(layer)
-                else:
-                    layer = ReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
-                    self.decoder.append(layer)
-            self.decoder = torch.nn.Sequential(*self.decoder)
+        '''   
+        self.decoder = nn.ModuleList()
+        
+        first_layer_input_size = opt['n_features']*opt['n_grids']# + opt['num_positional_encoding_terms']*opt['n_dims']*2
+                
+        layer = ReLULayer(first_layer_input_size, 
+                            opt['nodes_per_layer'])
+        self.decoder.append(layer)
+        
+        for i in range(opt['n_layers']):
+            if i == opt['n_layers'] - 1:
+                layer = nn.Linear(opt['nodes_per_layer'], opt['n_outputs'])
+                nn.init.xavier_normal_(layer.weight)
+                self.decoder.append(layer)
+            else:
+                layer = ReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
+                self.decoder.append(layer)
+        self.decoder = torch.nn.Sequential(*self.decoder)
     
     def get_transformation_matrices(self):
         transformation_matrices = torch.zeros(
