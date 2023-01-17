@@ -1,19 +1,12 @@
-name: DistINR
+name: agINR
 channels:
   - defaults
   - conda-forge
-  - pytorch
-  - nvidia
 dependencies:
   - python=3.9
   - numba
-  - pytorch
-  - pytorch-cuda=11.7
-  - torchaudio
-  - torchvision
   - netcdf4
   - matplotlib
   - h5py
-  - pyevtk
   - vtk
   - tensorboard
