@@ -92,6 +92,7 @@ class AMRSRN(nn.Module):
                 else:
                     layer = ReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
                     self.decoder.append(layer)
+            self.decoder = torch.nn.Sequential(*self.decoder)
     
     def get_transformation_matrices(self):
         transformation_matrices = torch.zeros(
@@ -228,12 +229,7 @@ class AMRSRN(nn.Module):
                 padding_mode="zeros")[:,:,0,0,:]
         feats = feats.flatten(0,1).permute(1, 0)
         
-        
-        y = feats
-        i = 0
-        while i < len(self.decoder):
-            y = self.decoder[i](y)
-            i = i + 1
+        y = self.decoder(feats)
         
         return y
 
