@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 from Other.utility_functions import make_coord_grid    
 from Models.layers import LReLULayer, ReLULayer, SineLayer, SnakeAltLayer, PositionalEncoding
-   
+  
        
 class AMRSRN(nn.Module):
     def __init__(self, opt):
@@ -60,22 +60,38 @@ class AMRSRN(nn.Module):
         
         self.pe = PositionalEncoding(opt)
         
-        self.decoder = nn.ModuleList()
-        
-        first_layer_input_size = opt['n_features']*opt['n_grids']# + opt['num_positional_encoding_terms']*opt['n_dims']*2
-                 
-        layer = ReLULayer(first_layer_input_size, 
-                            opt['nodes_per_layer'])
-        self.decoder.append(layer)
-        
-        for i in range(opt['n_layers']):
-            if i == opt['n_layers'] - 1:
-                layer = nn.Linear(opt['nodes_per_layer'], opt['n_outputs'])
-                nn.init.xavier_normal_(layer.weight)
-                self.decoder.append(layer)
-            else:
-                layer = ReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
-                self.decoder.append(layer)
+        try:
+            import tinycudann as tcnn 
+            print(f"Using TinyCUDANN (tcnn) since it is installed for performance gains.")
+            self.decoder = tcnn.Network(
+                n_input_dims=self.feat_dim*self.n_grids,
+                n_output_dims=self.decoder_outdim,
+                network_config={
+                    "otype": "FullyFusedMLP",
+                    "activation": "ReLU",
+                    "output_activation": "None",
+                    "n_neurons": opt['nodes_per_layer'],
+                    "n_hidden_layers": opt['n_layers'],
+                }
+            )
+        except ImportError:
+            
+            self.decoder = nn.ModuleList()
+            
+            first_layer_input_size = opt['n_features']*opt['n_grids']# + opt['num_positional_encoding_terms']*opt['n_dims']*2
+                    
+            layer = ReLULayer(first_layer_input_size, 
+                                opt['nodes_per_layer'])
+            self.decoder.append(layer)
+            
+            for i in range(opt['n_layers']):
+                if i == opt['n_layers'] - 1:
+                    layer = nn.Linear(opt['nodes_per_layer'], opt['n_outputs'])
+                    nn.init.xavier_normal_(layer.weight)
+                    self.decoder.append(layer)
+                else:
+                    layer = ReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
+                    self.decoder.append(layer)
     
     def get_transformation_matrices(self):
         transformation_matrices = torch.zeros(
