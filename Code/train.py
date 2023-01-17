@@ -153,6 +153,7 @@ def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     loss = loss.sum(dim=1, keepdim=True)
     loss.mean().backward()
     
+    density_loss = None
     if(iteration < opt['iterations']/2):
         density = model.feature_density_gaussian(x)       
         density /= density.sum().detach()     
