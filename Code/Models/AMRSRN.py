@@ -49,6 +49,7 @@ class AMRSRN(nn.Module):
                 torch.tensor([(2.0 * torch.pi) **(self.opt['n_dims']/2)]),
                 persistent=False)
         
+        
         self.feature_grids =  torch.nn.parameter.Parameter(
             torch.ones(
                 [self.opt['n_grids'], self.opt['n_features'], 
@@ -64,8 +65,8 @@ class AMRSRN(nn.Module):
             import tinycudann as tcnn 
             print(f"Using TinyCUDANN (tcnn) since it is installed for performance gains.")
             self.decoder = tcnn.Network(
-                n_input_dims=self.feat_dim*self.n_grids,
-                n_output_dims=self.decoder_outdim,
+                n_input_dims=opt['n_features']*opt['n_grids'],
+                n_output_dims=opt['n_outputs'],
                 network_config={
                     "otype": "FullyFusedMLP",
                     "activation": "ReLU",
