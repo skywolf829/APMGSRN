@@ -230,7 +230,7 @@ class AMRSRN(nn.Module):
                 padding_mode="zeros")[:,:,0,0,:]
         feats = feats.flatten(0,1).permute(1, 0)
         
-        y = self.decoder(feats)
+        y = self.decoder(feats).float()
         
         return y
 
