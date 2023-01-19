@@ -25,7 +25,7 @@ data_folder = os.path.join(project_folder_path, "Data")
 output_folder = os.path.join(project_folder_path, "Output")
 save_folder = os.path.join(project_folder_path, "SavedModels")
 
-def log_to_writer(iteration, losses, writer, opt):
+def log_to_writer(iteration, losses, writer, opt, preconditioning=None):
     with torch.no_grad():   
         print_str = f"Iteration {iteration}/{opt['iterations']}, "
         for key in losses.keys():
@@ -36,12 +36,20 @@ def log_to_writer(iteration, losses, writer, opt):
         if("cuda" in opt['device']):
             GBytes = (torch.cuda.max_memory_allocated(device=opt['device']) \
                 / (1024**3))
-            writer.add_scalar('GPU memory (GB)', GBytes, iteration)
+            if preconditioning is None:
+                writer.add_scalar('GPU memory (GB)', GBytes, iteration)
+            elif "model" in preconditioning:
+                writer.add_scalar('Preconditioning model GPU memory (GB)', GBytes, iteration)
+            elif "grid" in preconditioning:
+                writer.add_scalar('Preconditioning grid GPU memory (GB)', GBytes, iteration)
 
-def logging(writer, iteration, losses, model, opt, grid_to_sample, dataset):
+def logging(writer, iteration, losses, model, opt, grid_to_sample, dataset, 
+            preconditioning=None):
     if(opt['log_every'] > 0 and iteration % opt['log_every'] == 0):
-        log_to_writer(iteration, losses, writer, opt)
-    if(opt['log_features_every'] > 0 and iteration % opt['log_features_every'] == 0):
+        log_to_writer(iteration, losses, writer, opt, preconditioning)
+    if(opt['log_features_every'] > 0 and \
+        iteration % opt['log_features_every'] == 0 and \
+        preconditioning is not None and "grid" in preconditioning):
         log_feature_points(model, dataset, opt, iteration)
 
 def log_feature_density(model, dataset, opt):
@@ -141,8 +149,7 @@ def log_feature_grids_from_points(opt):
 
 def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
     opt['iteration_number'] = iteration
-    optimizer[0].zero_grad() 
-    optimizer[1].zero_grad() 
+    optimizer.zero_grad() 
                  
     x, y = batch
     x = x.to(opt['device'])
@@ -153,7 +160,7 @@ def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     loss = loss.sum(dim=1, keepdim=True)
     loss.mean().backward()
     
-    density_loss = None
+    '''
     if(iteration < opt['iterations']/2):
         density = model.feature_density_gaussian(x)       
         density /= density.sum().detach()     
@@ -170,14 +177,14 @@ def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         density_loss.mean().backward()
         optimizer[1].step()
         scheduler[1].step()   
-    
-    optimizer[0].step()
-    scheduler[0].step()        
+    '''
+    optimizer.step()
+    scheduler.step()        
     profiler.step()
     
     if(opt['log_every'] != 0):
         logging(writer, iteration, 
-            {"Fitting loss": loss, "Density loss": density_loss}, 
+            {"Fitting loss": loss}, 
             model, opt, dataset.data.shape[2:], dataset)
 
 def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
@@ -202,30 +209,10 @@ def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, schedul
 
 def train( model, dataset, opt):
     model = model.to(opt['device'])
+    print(model)
     print("Training on %s" % (opt["device"]), 
         os.path.join(save_folder, opt["save_name"]))
-    if("AMRSRN" in opt['model']):
-        optimizer = [optim.Adam([
-            {"params": [model.feature_grids], "lr": opt["lr"]},
-            {"params": model.decoder.parameters(), "lr": opt["lr"]}
-        ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
-            optim.Adam([
-            {"params": [model.grid_translations, model.grid_scales], "lr": opt["lr"] * 0.1}
-        ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
-        ]        
-        scheduler = [
-            torch.optim.lr_scheduler.StepLR(optimizer[0], 
-                step_size=(opt['iterations']*9)//10, gamma=0.1),
-            torch.optim.lr_scheduler.StepLR(optimizer[1], 
-                step_size=(opt['iterations']*4)//10, gamma=0.1)
-        ]
-        
-    else:
-        optimizer = optim.Adam(model.parameters(), lr=opt["lr"], 
-            betas=[opt['beta_1'], opt['beta_2']]) 
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
-            [opt['iterations']*(2/5), opt['iterations']*(3/5), opt['iterations']*(4/5)],
-            gamma=0.33)
+    
 
     if(os.path.exists(os.path.join(project_folder_path, "tensorboard", opt['save_name']))):
         shutil.rmtree(os.path.join(project_folder_path, "tensorboard", opt['save_name']))
@@ -246,7 +233,49 @@ def train( model, dataset, opt):
     train_step = train_step_vanilla
     if 'AMRSRN' in opt['model']:
         train_step = train_step_AMRSRN
+        model.precodition_grids(dataset, writer, logging)
+        model.zero_grad()
+        
+        # Finally, reset the parameters necessary, and keep the grids
+        model.reset_parameters()
+        model.feature_grids.requires_grad_(True)
+        model.decoder.requires_grad_(True)
+        model.grid_scales.requires_grad_(False)
+        model.grid_translations.requires_grad_(False)
     
+    if("AMRSRN" in opt['model']):
+        optimizer = optim.Adam([
+            {"params": [model.feature_grids], "lr": opt["lr"]},
+            {"params": model.decoder.parameters(), "lr": opt["lr"]}
+        ],betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15) 
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 
+                step_size=(opt['iterations']*9)//10, gamma=0.1)
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
+            [opt['iterations']*(2/5), opt['iterations']*(3/5), opt['iterations']*(4/5)],
+            gamma=0.33)
+        '''
+        optimizer = [optim.Adam([
+            {"params": [model.feature_grids], "lr": opt["lr"]},
+            {"params": model.decoder.parameters(), "lr": opt["lr"]}
+        ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
+            optim.Adam([
+            {"params": [model.grid_translations, model.grid_scales], "lr": opt["lr"] * 0.1}
+        ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
+        ]        
+        scheduler = [
+            torch.optim.lr_scheduler.StepLR(optimizer[0], 
+                step_size=(opt['iterations']*9)//10, gamma=0.1),
+            torch.optim.lr_scheduler.StepLR(optimizer[1], 
+                step_size=(opt['iterations']*4)//10, gamma=0.1)
+        ]
+        '''        
+    else:
+        optimizer = optim.Adam(model.parameters(), lr=opt["lr"], 
+            betas=[opt['beta_1'], opt['beta_2']]) 
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
+            [opt['iterations']*(2/5), opt['iterations']*(3/5), opt['iterations']*(4/5)],
+            gamma=0.33)
+        
     with torch.profiler.profile(
         activities=[
             torch.profiler.ProfilerActivity.CPU,

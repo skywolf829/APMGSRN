@@ -5,8 +5,17 @@ import torch.nn.functional as F
 import numpy as np
 from Other.utility_functions import make_coord_grid    
 from Models.layers import LReLULayer, ReLULayer, SineLayer, SnakeAltLayer, PositionalEncoding
-  
-       
+from Models.models import sample_grid
+ 
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.lower().find('linear') != -1:
+        print(f"Found {classname}, initializing to xavier normal")
+        nn.init.xavier_normal_(m.weight)
+        torch.nn.init.zeros_(m.bias)
+    else:
+        print(f"Found {classname}, not initializing")     
+             
 class AMRSRN(nn.Module):
     def __init__(self, opt):
         super().__init__()
@@ -16,16 +25,34 @@ class AMRSRN(nn.Module):
         feat_grid_shape = opt['feature_grid_shape'].split(',')
         feat_grid_shape = [eval(i) for i in feat_grid_shape]
         
+        self.register_buffer("ROOT_TWO", 
+                torch.tensor([2.0 ** 0.5]),
+                persistent=False)            
+        self.register_buffer("FLAT_TOP_GAUSSIAN_EXP", 
+                torch.tensor([2.0 * 10.0]),
+                persistent=False)
+        self.register_buffer("DIM_COEFF", 
+                torch.tensor([(2.0 * torch.pi) **(self.opt['n_dims']/2)]),
+                persistent=False)
+        self.register_buffer("GRID_SCALING", 
+                torch.tensor([1.48]),
+                persistent=False)
+        self.register_buffer("INV_GRID_SCALING", 
+                torch.tensor([1/1.48]),
+                persistent=False)
+        
         init_scales = torch.ones(
                 [self.opt['n_grids'], 3],
                 device = opt['device']
-            ).uniform_(1.5,2.5)
+            ) * (1/1.48)
+            #.uniform_(1.5,2.5)
             #.uniform_(1.9,2.1)
 
         init_translations = torch.zeros(
                 [self.opt['n_grids'], 3],
                 device = opt['device']
-            ).uniform_(-1, 1) * (init_scales-1)
+            )
+            #.uniform_(-1, 1) * (init_scales-1)
             #.uniform_(0.85, 1) * (init_scales-1)
         #init_translations[:,-1].uniform_(-1, -0.85) 
         #init_translations[:,-1] *= (init_scales[:,-1]-1)
@@ -39,23 +66,13 @@ class AMRSRN(nn.Module):
             requires_grad=True
         )
         
-        self.register_buffer("ROOT_TWO", 
-                torch.tensor([2.0 ** 0.5]),
-                persistent=False)            
-        self.register_buffer("FLAT_TOP_GAUSSIAN_EXP", 
-                torch.tensor([2.0 * 10.0]),
-                persistent=False)
-        self.register_buffer("DIM_COEFF", 
-                torch.tensor([(2.0 * torch.pi) **(self.opt['n_dims']/2)]),
-                persistent=False)
-        
         
         self.feature_grids =  torch.nn.parameter.Parameter(
             torch.ones(
                 [self.opt['n_grids'], self.opt['n_features'], 
                 feat_grid_shape[0], feat_grid_shape[1], feat_grid_shape[2]],
                 device = opt['device']
-            ).uniform_(-0.001, 0.001),
+            ).uniform_(-0.0001, 0.0001),
             requires_grad=True
         )
         
@@ -89,13 +106,46 @@ class AMRSRN(nn.Module):
         for i in range(opt['n_layers']):
             if i == opt['n_layers'] - 1:
                 layer = nn.Linear(opt['nodes_per_layer'], opt['n_outputs'])
-                nn.init.xavier_normal_(layer.weight)
                 self.decoder.append(layer)
             else:
                 layer = ReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
                 self.decoder.append(layer)
         self.decoder = torch.nn.Sequential(*self.decoder)
+        self.reset_parameters()
     
+    def randomize_grids(self):
+        init_scales = torch.ones(
+                [self.opt['n_grids'], 3],
+                device = self.opt['device']
+            ).uniform_(1.0,1.25) * self.GRID_SCALING
+        init_translations = torch.zeros(
+                [self.opt['n_grids'], 3],
+                device = self.opt['device']
+            ).uniform_(-1, 1) * (init_scales-1)
+        with torch.no_grad():
+            self.grid_scales = torch.nn.Parameter(
+                init_scales,
+                requires_grad=True
+            )
+            self.grid_translations = torch.nn.Parameter(
+                init_translations,
+                requires_grad=True
+            )
+        
+    def reset_parameters(self):
+        with torch.no_grad():
+            feat_grid_shape = self.opt['feature_grid_shape'].split(',')
+            feat_grid_shape = [eval(i) for i in feat_grid_shape]
+            self.feature_grids =  torch.nn.parameter.Parameter(
+                torch.ones(
+                    [self.opt['n_grids'], self.opt['n_features'], 
+                    feat_grid_shape[0], feat_grid_shape[1], feat_grid_shape[2]],
+                    device = self.opt['device']
+                ).uniform_(-0.0001, 0.0001),
+                requires_grad=True
+            )
+            self.decoder.apply(weights_init)   
+            
     def get_transformation_matrices(self):
         transformation_matrices = torch.zeros(
                 [self.opt['n_grids'], 4, 4],
@@ -130,7 +180,7 @@ class AMRSRN(nn.Module):
         transformed_points = torch.bmm(transformation_matrices, 
                             transformed_points.transpose(-1, -2)).transpose(-1, -2)
         transformed_points = transformed_points[...,0:3]
-        return transformed_points * (1/1.48)
+        return transformed_points * self.INV_GRID_SCALING
 
     '''
     Transforms local coordinates within each feature grid x to 
@@ -143,10 +193,12 @@ class AMRSRN(nn.Module):
     returns: local coordinates in a shape [batch, n_grids, 3]
     '''
     def inverse_transform(self, x):
-        transformed_points = torch.cat([x * 1.48, torch.ones(
-            [x.shape[0], 1], 
-            device=self.opt['device'],
-            dtype=torch.float32)], 
+        transformed_points = torch.cat([x * self.GRID_SCALING, 
+            torch.ones(
+                [x.shape[0], 1], 
+                device=self.opt['device'],
+                dtype=torch.float32
+                )],
             dim=1)
         transformed_points = transformed_points.unsqueeze(0).expand(
             self.opt['n_grids'], transformed_points.shape[0], transformed_points.shape[1])
@@ -214,14 +266,104 @@ class AMRSRN(nn.Module):
 
         return feat_density.permute(2,1,0)
 
-    def fix_params(self):
-        #with torch.no_grad():            
-            #self.grid_scales.clamp_(1, 32)
-            #max_deviation = self.grid_scales-1
-            #self.grid_translations.clamp_(-max_deviation, max_deviation)
-        return
+    def precodition_grids(self, dataset, writer, logging):
+        
+        # First, train the params with fixed grids
+        self.feature_grids.requires_grad_(True)
+        self.decoder.requires_grad_(True)
+        self.grid_scales.requires_grad_(False)
+        self.grid_translations.requires_grad_(False)
+        param_optimizer = torch.optim.Adam([
+            {"params": [self.feature_grids], "lr": self.opt["lr"]},
+            {"params": self.decoder.parameters(), "lr": self.opt["lr"]}
+        ], betas=[self.opt['beta_1'], self.opt['beta_2']], eps = 10e-15)        
+        param_scheduler = torch.optim.lr_scheduler.StepLR(param_optimizer, 
+                step_size=5000, gamma=0.1)
+        for iteration in range(10000):
+            param_optimizer.zero_grad()
+            
+            x,y = dataset.get_random_points(self.opt['points_per_iteration'])
+            x = x.to(self.opt['device'])
+            y = y.to(self.opt['device'])
+            
+            model_output = self(x)
+            loss = F.mse_loss(model_output, y, reduction='none')
+            loss = loss.sum(dim=1, keepdim=True)
+            loss.mean().backward()
+            
+            param_optimizer.step()
+            param_scheduler.step()                 
+            if(self.opt['log_every'] != 0):
+                logging(writer, iteration, 
+                    {"Preconditioning loss": loss}, 
+                    self, self.opt, dataset.data.shape[2:], dataset, 
+                    preconditioning="model")
 
-    def forward(self, x):   
+        # Second, train the density to match the current error
+        # First, create map of current error
+        with torch.no_grad():
+            grid = list(dataset.data.shape[2:])
+            error = sample_grid(self, grid, max_points=1000000,
+                                device=self.opt['device'],
+                                data_device=self.opt['data_device'])
+            error = error.to(self.opt['data_device'])
+            error = error.permute(3, 0, 1, 2).unsqueeze(0)
+            error -= dataset.data
+            # Use squared error
+            error **= 2
+            # Add all dims together
+            error = torch.sum(error, dim=1, keepdim=True)      
+            
+            # Normalize by sum
+            error /= error.sum() 
+            
+        self.randomize_grids()
+        self.feature_grids.requires_grad_(False)
+        self.decoder.requires_grad_(False)
+        self.grid_scales.requires_grad_(True)
+        self.grid_translations.requires_grad_(True)
+        grid_optimizer = torch.optim.Adam([
+            {"params": [self.grid_translations, self.grid_scales], "lr": self.opt["lr"] * 0.1}
+        ], betas=[self.opt['beta_1'], self.opt['beta_2']], eps = 10e-15)        
+        grid_scheduler = torch.optim.lr_scheduler.StepLR(grid_optimizer, 
+                step_size=5000, gamma=0.1)
+        for iteration in range(10000):
+            grid_optimizer.zero_grad()
+            
+            x = torch.rand([1, 1, 1, 10000, self.opt['n_dims']], 
+                device=self.opt['data_device']) * 2 - 1            
+            y = F.grid_sample(error,
+                x, mode='bilinear', 
+                align_corners=self.opt['align_corners'])
+            x = x.squeeze()
+            y = y.squeeze()
+            if(len(y.shape) == 1):
+                y = y.unsqueeze(0)                
+            y = y.permute(1,0)
+            
+            density = self.feature_density_gaussian(x)       
+            density /= density.sum().detach()     
+            
+            target = torch.exp(torch.log(density+1e-16) / \
+                (y/y.mean()))
+            target /= target.sum()
+                
+            density_loss = F.kl_div(
+                torch.log(density+1e-16), 
+                    torch.log(target.detach()+1e-16), 
+                    reduction='none', 
+                    log_target=True)
+            density_loss.mean().backward()
+            
+            grid_optimizer.step()
+            grid_scheduler.step()                 
+            if(self.opt['log_every'] != 0):
+                logging(writer, iteration, 
+                    {"Grid fitting loss": density_loss}, 
+                    self, self.opt, dataset.data.shape[2:], dataset, 
+                    preconditioning="grid")
+                   
+    def forward(self, x):
         transformed_points = self.transform(x)       
         
         transformed_points = transformed_points.unsqueeze(1).unsqueeze(1)
