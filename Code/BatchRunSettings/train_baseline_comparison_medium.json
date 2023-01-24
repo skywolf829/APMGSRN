@@ -10,7 +10,7 @@
             "n_layers": 2,
             "nodes_per_layer": 64,
             "precondition": false,
-            "log_features_every": 100,
+            "log_features_every": 0,
             "lr": 0.01
     }],
     [ "train.py",
@@ -24,7 +24,7 @@
             "n_layers": 2,
             "nodes_per_layer": 64,
             "precondition": false,
-            "log_features_every": 100,
+            "log_features_every": 0,
             "lr": 0.01
     }],
     [ "train.py",
@@ -38,7 +38,7 @@
             "n_layers": 2,
             "nodes_per_layer": 64,
             "precondition": false,
-            "log_features_every": 100,
+            "log_features_every": 0,
             "lr": 0.01
     }],
     [ "train.py",
@@ -52,7 +52,7 @@
             "n_layers": 2,
             "nodes_per_layer": 64,
             "precondition": false,
-            "log_features_every": 100,
+            "log_features_every": 0,
             "lr": 0.01
     }],    
     [ "train.py",
@@ -160,7 +160,7 @@
             "feature_grid_shape": "64,64,64",
             "n_layers": 2,
             "nodes_per_layer": 64,
-            "log_features_every": 100,
+            "log_features_every": 0,
             "lr": 0.01
     }],
     [ "train.py",
@@ -172,7 +172,7 @@
             "feature_grid_shape": "64,64,64",
             "n_layers": 2,
             "nodes_per_layer": 64,
-            "log_features_every": 100,
+            "log_features_every": 0,
             "lr": 0.01
     }],
     [ "train.py",
@@ -184,7 +184,7 @@
             "feature_grid_shape": "64,64,64",
             "n_layers": 2,
             "nodes_per_layer": 64,
-            "log_features_every": 100,
+            "log_features_every": 0,
             "lr": 0.01
     }],
     [ "train.py",
@@ -196,7 +196,7 @@
             "feature_grid_shape": "64,64,64",
             "n_layers": 2,
             "nodes_per_layer": 64,
-            "log_features_every": 100,
+            "log_features_every": 0,
             "lr": 0.01
     }],
     [ "train.py",
@@ -210,7 +210,7 @@
             "n_layers": 2,
             "nodes_per_layer": 64,
             "precondition": false,
-            "log_features_every": 100,
+            "log_features_every": 0,
             "lr": 0.01
     }],
     [ "train.py",
@@ -246,7 +246,7 @@
             "feature_grid_shape": "64,64,64",
             "n_layers": 2,
             "nodes_per_layer": 64,
-            "log_features_every": 100,
+            "log_features_every": 0,
             "lr": 0.01
     }]
 ]
