@@ -1,7 +1,7 @@
 [
     [ "train.py",
         {        
-            "save_name": "Supernova_test_AMRSRN",
+            "save_name": "Supernova_test_AMRSRN_small",
             "model": "AMRSRN",
             "data": "Supernova_test.nc",
             "n_features": 1,
@@ -15,7 +15,7 @@
     }],
     [ "train.py",
         {        
-            "save_name": "Nyx_AMRSRN",
+            "save_name": "Nyx_AMRSRN_small",
             "model": "AMRSRN",
             "data": "Nyx.nc",
             "n_features": 1,
@@ -29,7 +29,7 @@
     }],
     [ "train.py",
         {        
-            "save_name": "Supernova_AMRSRN",
+            "save_name": "Supernova_AMRSRN_small",
             "model": "AMRSRN",
             "data": "Supernova.nc",
             "n_features": 1,
@@ -43,7 +43,7 @@
     }],
     [ "train.py",
         {        
-            "save_name": "Plume_AMRSRN",
+            "save_name": "Plume_AMRSRN_small",
             "model": "AMRSRN",
             "data": "Plume.nc",
             "n_features": 1,
@@ -57,7 +57,7 @@
     }],    
     [ "train.py",
         {        
-            "save_name": "Supernova_test_NGP",
+            "save_name": "Supernova_test_NGP_small",
             "model": "NGP_TCNN",
             "data": "Supernova_test.nc",
 
@@ -81,7 +81,7 @@
     }],    
     [ "train.py",
         {        
-            "save_name": "Supernova_NGP",
+            "save_name": "Supernova_NGP_small",
             "model": "NGP_TCNN",
             "data": "Supernova.nc",
 
@@ -105,7 +105,7 @@
     }],    
     [ "train.py",
         {        
-            "save_name": "Nyx_NGP",
+            "save_name": "Nyx_NGP_small",
             "model": "NGP_TCNN",
             "data": "Nyx.nc",
 
@@ -129,7 +129,7 @@
     }],    
     [ "train.py",
         {        
-            "save_name": "Plume_NGP",
+            "save_name": "Plume_NGP_small",
             "model": "NGP_TCNN",
             "data": "Plume.nc",
 
@@ -153,7 +153,7 @@
     }],
     [ "train.py",
         {        
-            "save_name": "Supernova_test_fVSRN",
+            "save_name": "Supernova_test_fVSRN_small",
             "model": "fVSRN",
             "data": "Supernova_test.nc",
             "n_features": 2,
@@ -165,7 +165,7 @@
     }],
     [ "train.py",
         {        
-            "save_name": "Supernova_fVSRN",
+            "save_name": "Supernova_fVSRN_small",
             "model": "fVSRN",
             "data": "Supernova.nc",
             "n_features": 2,
@@ -177,7 +177,7 @@
     }],
     [ "train.py",
         {        
-            "save_name": "Nyx_fVSRN",
+            "save_name": "Nyx_fVSRN_small",
             "model": "fVSRN",
             "data": "Nyx.nc",
             "n_features": 2,
@@ -189,7 +189,7 @@
     }],
     [ "train.py",
         {        
-            "save_name": "Plume_fVSRN",
+            "save_name": "Plume_fVSRN_small",
             "model": "fVSRN",
             "data": "Plume.nc",
             "n_features": 2,
@@ -201,7 +201,7 @@
     }],
     [ "train.py",
         {        
-            "save_name": "Isotropic_AMRSRN",
+            "save_name": "Isotropic_AMRSRN_small",
             "model": "AMRSRN",
             "data": "Isotropic.nc",
             "n_features": 1,
@@ -215,7 +215,7 @@
     }],
     [ "train.py",
         {        
-            "save_name": "Isotropic_NGP",
+            "save_name": "Isotropic_NGP_small",
             "model": "NGP_TCNN",
             "data": "Isotropic.nc",
 
@@ -239,7 +239,7 @@
     }],    
     [ "train.py",
         {        
-            "save_name": "Isotropic_fVSRN",
+            "save_name": "Isotropic_fVSRN_small",
             "model": "fVSRN",
             "data": "Isotropic.nc",
             "n_features": 2,
