@@ -9,20 +9,48 @@ import os
 from math import log2
 
 #plt.style.use('Solarize_Light2')
-#plt.style.use('fivethirtyeight')
-plt.style.use('ggplot')
+plt.style.use('fivethirtyeight')
+#plt.style.use('ggplot')
 #plt.style.use('seaborn')
 #plt.style.use('seaborn-paper')
 font = {#'font.family' : 'normal',
     #'font.weight' : 'bold',
-    'font.size'   : 20,
-    'lines.linewidth' : 3}
+    'font.size'   : 16,
+    'lines.linewidth' : 2}
 plt.rcParams.update(font)
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
 project_folder_path = os.path.join(project_folder_path, "..",)
 save_folder = os.path.join(project_folder_path, "Output", "Charts")
-           
+   
+
+def data_to_figure(data, name):
+    markers = ['o', 'v', 's']
+    idx = 0
+    for method in data.keys():
+        method_data = data[method]        
+        label = method
+        x = []
+        x_labels = []
+        y = []
+        for model_size in method_data.keys():
+            x.append(float(model_size))
+            x_labels.append("2^"+str(int(log2(model_size))))
+            y.append(float(method_data[model_size]))
+        plt.plot(x, y, label=label, marker=markers[idx])
+        idx += 1
+    plt.xscale('log')
+    plt.minorticks_off()
+    plt.xticks(x, labels=x_labels)
+    plt.legend()
+    plt.xlabel("# parameters")
+    plt.ylabel("PSNR")
+    plt.title(name + " Model Performance")
+    plt.savefig(os.path.join(save_folder, name + ".png"),
+                bbox_inches='tight',
+                dpi=200)
+    plt.clf()
+    
 def model_size_performance_chart():
     supernova_results = {
         "Ours": {
@@ -114,30 +142,11 @@ def model_size_performance_chart():
         }
     }
 
-    for method in supernova_results.keys():
-        method_data = supernova_results[method]
-        
-        label = method
-        x = []
-        x_labels = []
-        y = []
-        for model_size in method_data.keys():
-            x.append(float(model_size))
-            x_labels.append("2^"+str(int(log2(model_size))))
-            y.append(float(method_data[model_size]))
-            
-        plt.plot(x, y, label=label)
-    plt.xscale('log')
-    plt.minorticks_off()
-    plt.xticks(x, labels=x_labels)
-    plt.legend()
-    plt.xlabel("# parameters")
-    plt.ylabel("PSNR")
-    plt.title("Model performance")
-    plt.savefig(os.path.join(save_folder, "Supernova.png"),
-                bbox_inches='tight',
-                dpi=200)
-    plt.clf()
+    data_to_figure(supernova_results, "Supernova")    
+    data_to_figure(supernova_test_results, "Supernova Test")    
+    data_to_figure(plume_results, "Plume")    
+    data_to_figure(isotropic_results, "Isotropic")    
+    data_to_figure(nyx_results, "Nyx")
 
 
 if __name__ == '__main__':
