@@ -12,7 +12,7 @@ def weights_init(m):
     if classname.lower().find('linear') != -1:
         print(f"Found {classname}, initializing to xavier normal")
         nn.init.xavier_normal_(m.weight)
-        torch.nn.init.zeros_(m.bias)
+        torch.nn.init.normal_(m.bias, 0, 0.001)
     else:
         print(f"Found {classname}, not initializing")     
              
@@ -41,31 +41,7 @@ class AMRSRN(nn.Module):
                 torch.tensor([1/1.48]),
                 persistent=False)
         
-        init_scales = torch.ones(
-                [self.opt['n_grids'], 3],
-                device = opt['device']
-            ) * (1/1.48)
-            #.uniform_(1.5,2.5)
-            #.uniform_(1.9,2.1)
-
-        init_translations = torch.zeros(
-                [self.opt['n_grids'], 3],
-                device = opt['device']
-            )
-            #.uniform_(-1, 1) * (init_scales-1)
-            #.uniform_(0.85, 1) * (init_scales-1)
-        #init_translations[:,-1].uniform_(-1, -0.85) 
-        #init_translations[:,-1] *= (init_scales[:,-1]-1)
-    
-        self.grid_scales = torch.nn.Parameter(
-            init_scales,
-            requires_grad=True
-        )
-        self.grid_translations = torch.nn.Parameter(
-            init_translations,
-            requires_grad=True
-        )
-        
+        self.randomize_grids()        
         
         self.feature_grids =  torch.nn.parameter.Parameter(
             torch.ones(
@@ -78,10 +54,11 @@ class AMRSRN(nn.Module):
         
         self.pe = PositionalEncoding(opt)
         
-        '''
+        
         try:
             import tinycudann as tcnn 
             print(f"Using TinyCUDANN (tcnn) since it is installed for performance gains.")
+            print(f"WARNING: This model will be incompatible with non-tcnn compatible systems")
             self.decoder = tcnn.Network(
                 n_input_dims=opt['n_features']*opt['n_grids'],
                 n_output_dims=opt['n_outputs'],
@@ -94,30 +71,51 @@ class AMRSRN(nn.Module):
                 }
             )
         except ImportError:
-        '''   
-        self.decoder = nn.ModuleList()
-        
-        first_layer_input_size = opt['n_features']*opt['n_grids']# + opt['num_positional_encoding_terms']*opt['n_dims']*2
-                
-        layer = ReLULayer(first_layer_input_size, 
-                            opt['nodes_per_layer'])
-        self.decoder.append(layer)
-        
-        for i in range(opt['n_layers']):
-            if i == opt['n_layers'] - 1:
-                layer = nn.Linear(opt['nodes_per_layer'], opt['n_outputs'])
-                self.decoder.append(layer)
-            else:
-                layer = ReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
-                self.decoder.append(layer)
-        self.decoder = torch.nn.Sequential(*self.decoder)
+            print(f"TinyCUDANN (tcnn) not installed: falling back to normal PyTorch")
+            self.decoder = nn.ModuleList()
+            
+            first_layer_input_size = opt['n_features']*opt['n_grids']# + opt['num_positional_encoding_terms']*opt['n_dims']*2
+                    
+            layer = LReLULayer(first_layer_input_size, 
+                                opt['nodes_per_layer'])
+            self.decoder.append(layer)
+            
+            for i in range(opt['n_layers']):
+                if i == opt['n_layers'] - 1:
+                    layer = nn.Linear(opt['nodes_per_layer'], opt['n_outputs'])
+                    self.decoder.append(layer)
+                else:
+                    layer = LReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
+                    self.decoder.append(layer)
+            self.decoder = torch.nn.Sequential(*self.decoder)
+            
         self.reset_parameters()
+
+    def uniform_grids(self):
+        init_scales = torch.ones(
+                [self.opt['n_grids'], 3],
+                device = self.opt['device']
+            ) * (1.48)
+
+        init_translations = torch.zeros(
+                [self.opt['n_grids'], 3],
+                device = self.opt['device']
+            )
+    
+        self.grid_scales = torch.nn.Parameter(
+            init_scales,
+            requires_grad=True
+        )
+        self.grid_translations = torch.nn.Parameter(
+            init_translations,
+            requires_grad=True
+        )
     
     def randomize_grids(self):
         init_scales = torch.ones(
                 [self.opt['n_grids'], 3],
                 device = self.opt['device']
-            ).uniform_(1.0,1.25) * self.GRID_SCALING
+            ).uniform_(1.0,1.25) * 1.48
         init_translations = torch.zeros(
                 [self.opt['n_grids'], 3],
                 device = self.opt['device']
@@ -269,13 +267,14 @@ class AMRSRN(nn.Module):
     def precodition_grids(self, dataset, writer, logging):
         
         # First, train the params with fixed grids
+        self.uniform_grids()
         self.feature_grids.requires_grad_(True)
         self.decoder.requires_grad_(True)
         self.grid_scales.requires_grad_(False)
         self.grid_translations.requires_grad_(False)
         param_optimizer = torch.optim.Adam([
-            {"params": [self.feature_grids], "lr": self.opt["lr"]},
-            {"params": self.decoder.parameters(), "lr": self.opt["lr"]}
+            {"params": [self.feature_grids], "lr": 0.03},
+            {"params": self.decoder.parameters(), "lr": 0.03}
         ], betas=[self.opt['beta_1'], self.opt['beta_2']], eps = 10e-15)        
         param_scheduler = torch.optim.lr_scheduler.StepLR(param_optimizer, 
                 step_size=5000, gamma=0.1)
@@ -323,10 +322,10 @@ class AMRSRN(nn.Module):
         self.grid_scales.requires_grad_(True)
         self.grid_translations.requires_grad_(True)
         grid_optimizer = torch.optim.Adam([
-            {"params": [self.grid_translations, self.grid_scales], "lr": self.opt["lr"] * 0.1}
+            {"params": [self.grid_translations, self.grid_scales], "lr": 0.001}
         ], betas=[self.opt['beta_1'], self.opt['beta_2']], eps = 10e-15)        
         grid_scheduler = torch.optim.lr_scheduler.StepLR(grid_optimizer, 
-                step_size=5000, gamma=0.1)
+                step_size=9000, gamma=0.1)
         for iteration in range(10000):
             grid_optimizer.zero_grad()
             

@@ -4,12 +4,13 @@
             "save_name": "Supernova_test_AMRSRN",
             "model": "AMRSRN",
             "data": "Supernova_test.nc",
-            "n_features": 2,
-            "n_grids": 64,
-            "feature_grid_shape": "8,8,8",
+            "n_features": 1,
+            "n_grids": 16,
+            "feature_grid_shape": "16,16,16",
             "n_layers": 2,
             "nodes_per_layer": 64,
+            "precondition": true,
             "log_features_every": 100,
-            "lr":0.01
+            "lr": 0.01
     }]
 ]

@@ -147,7 +147,7 @@ def log_feature_grids_from_points(opt):
             vtm.SetBlock(j, vts)
         write_vtm(os.path.join(vtm_dir, f"grids_{i:03}.vtm", ), vtm)
 
-def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
+def train_step_AMRSRN_precondition(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
     opt['iteration_number'] = iteration
     optimizer.zero_grad() 
                  
@@ -159,25 +159,7 @@ def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     loss = F.mse_loss(model_output, y, reduction='none')
     loss = loss.sum(dim=1, keepdim=True)
     loss.mean().backward()
-    
-    '''
-    if(iteration < opt['iterations']/2):
-        density = model.feature_density_gaussian(x)       
-        density /= density.sum().detach()     
-        
-        target = torch.exp(torch.log(density+1e-16) / \
-            (loss/loss.mean()))
-        target /= target.sum()
-            
-        density_loss = F.kl_div(
-            torch.log(density+1e-16), 
-                torch.log(target.detach()+1e-16), 
-                reduction='none', 
-                log_target=True)
-        density_loss.mean().backward()
-        optimizer[1].step()
-        scheduler[1].step()   
-    '''
+
     optimizer.step()
     scheduler.step()        
     profiler.step()
@@ -186,6 +168,46 @@ def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         logging(writer, iteration, 
             {"Fitting loss": loss}, 
             model, opt, dataset.data.shape[2:], dataset)
+
+def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
+    opt['iteration_number'] = iteration
+    optimizer[0].zero_grad() 
+    optimizer[1].zero_grad() 
+                 
+    x, y = batch
+    x = x.to(opt['device'])
+    y = y.to(opt['device'])
+        
+    model_output = model(x)
+    loss = F.mse_loss(model_output, y, reduction='none')
+    loss = loss.sum(dim=1, keepdim=True)
+    loss.mean().backward()
+    
+    density = model.feature_density_gaussian(x)       
+    density /= density.sum().detach()     
+    
+    target = torch.exp(torch.log(density+1e-16) / \
+        (loss/loss.mean()))
+    target /= target.sum()
+        
+    density_loss = F.kl_div(
+        torch.log(density+1e-16), 
+            torch.log(target.detach()+1e-16), 
+            reduction='none', 
+            log_target=True)
+    density_loss.mean().backward()
+    
+    optimizer[0].step()
+    optimizer[1].step()
+    scheduler[0].step()   
+    scheduler[1].step()   
+         
+    profiler.step()
+    
+    if(opt['log_every'] != 0):
+        logging(writer, iteration, 
+            {"Fitting loss": loss}, 
+            model, opt, dataset.data.shape[2:], dataset, preconditioning='grid')
 
 def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
     opt['iteration_number'] = iteration
@@ -232,43 +254,44 @@ def train( model, dataset, opt):
     # choose the specific training iteration function based on the model
     train_step = train_step_vanilla
     if 'AMRSRN' in opt['model']:
-        train_step = train_step_AMRSRN
-        model.precodition_grids(dataset, writer, logging)
-        model.zero_grad()
-        
-        # Finally, reset the parameters necessary, and keep the grids
-        model.reset_parameters()
-        model.feature_grids.requires_grad_(True)
-        model.decoder.requires_grad_(True)
-        model.grid_scales.requires_grad_(False)
-        model.grid_translations.requires_grad_(False)
+        if(opt['precondition']):
+            train_step = train_step_AMRSRN_precondition
+            model.precodition_grids(dataset, writer, logging)
+            model.zero_grad()            
+            # Finally, reset the parameters necessary, and keep the grids
+            model.reset_parameters()
+            model.feature_grids.requires_grad_(True)
+            model.decoder.requires_grad_(True)
+            model.grid_scales.requires_grad_(False)
+            model.grid_translations.requires_grad_(False)
+        else:
+            train_step = train_step_AMRSRN
+            
     
     if("AMRSRN" in opt['model']):
-        optimizer = optim.Adam([
-            {"params": [model.feature_grids], "lr": opt["lr"]},
-            {"params": model.decoder.parameters(), "lr": opt["lr"]}
-        ],betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15) 
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 
-                step_size=(opt['iterations']*9)//10, gamma=0.1)
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
-            [opt['iterations']*(2/5), opt['iterations']*(3/5), opt['iterations']*(4/5)],
-            gamma=0.33)
-        '''
-        optimizer = [optim.Adam([
-            {"params": [model.feature_grids], "lr": opt["lr"]},
-            {"params": model.decoder.parameters(), "lr": opt["lr"]}
-        ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
-            optim.Adam([
-            {"params": [model.grid_translations, model.grid_scales], "lr": opt["lr"] * 0.1}
-        ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
-        ]        
-        scheduler = [
-            torch.optim.lr_scheduler.StepLR(optimizer[0], 
-                step_size=(opt['iterations']*9)//10, gamma=0.1),
-            torch.optim.lr_scheduler.StepLR(optimizer[1], 
-                step_size=(opt['iterations']*4)//10, gamma=0.1)
-        ]
-        '''        
+        if(opt['precondition']):
+            optimizer = optim.Adam([
+                {"params": [model.feature_grids], "lr": opt["lr"]},
+                {"params": model.decoder.parameters(), "lr": opt["lr"]}
+            ],betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15) 
+            scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
+                [opt['iterations']*(2/5), opt['iterations']*(4/5)],
+                gamma=0.1)
+        else:
+            optimizer = [optim.Adam([
+                {"params": [model.feature_grids], "lr": opt["lr"]},
+                {"params": model.decoder.parameters(), "lr": opt["lr"]}
+            ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
+                optim.Adam([
+                {"params": [model.grid_translations, model.grid_scales], "lr": opt["lr"] * 0.1}
+            ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
+            ]        
+            scheduler = [
+                torch.optim.lr_scheduler.StepLR(optimizer[0], 
+                    step_size=(opt['iterations']*9)//10, gamma=0.1),
+                torch.optim.lr_scheduler.StepLR(optimizer[1], 
+                    step_size=(opt['iterations']*4)//10, gamma=0.1)
+            ]      
     else:
         optimizer = optim.Adam(model.parameters(), lr=opt["lr"], 
             betas=[opt['beta_1'], opt['beta_2']]) 
@@ -344,6 +367,8 @@ if __name__ == '__main__':
         help='Save name for the model')
     parser.add_argument('--align_corners',default=None,type=str2bool,
         help='Aligns corners in implicit model.')    
+    parser.add_argument('--precondition',default=None,type=str2bool,
+        help='Preconditions the grid transformations.')    
     parser.add_argument('--n_layers',default=None,type=int,
         help='Number of layers in the model')
     parser.add_argument('--nodes_per_layer',default=None,type=int,

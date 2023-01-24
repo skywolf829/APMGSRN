@@ -1,0 +1,77 @@
+[
+    [ "test.py",
+        {        
+        "load_from": "Supernova_test_fVSRN",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_test_NGP",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_test_AMRSRN",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_NGP",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_fVSRN",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_AMRSRN",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Nyx_NGP",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Nyx_fVSRN",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Nyx_AMRSRN",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Plume_NGP",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Plume_fVSRN",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Plume_AMRSRN",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Isotropic_NGP",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Isotropic_fVSRN",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Isotropic_AMRSRN",
+        "tests": "reconstruction,error_volume"
+    }]
+]
