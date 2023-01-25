@@ -148,7 +148,7 @@
         "precondition": false,
         "log_features_every": 0,
         "lr": 0.01
-}],
+    }],
     [ "train.py",
         {        
             "save_name": "Isotropic_AMRSRN_large",
