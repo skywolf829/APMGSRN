@@ -123,7 +123,7 @@ project_folder_path = os.path.join(project_folder_path, "..", "..")
 data_folder = os.path.join(project_folder_path, "Data")
 save_folder = os.path.join(data_folder)
 
-name = "isotropic1024coarse"
+name = "channel5200"
 t0 = time.time()
 count = 0
 startts = 1
@@ -132,9 +132,9 @@ ts_skip = 10
 frames = []
 for i in range(startts, endts, ts_skip):
     print("TS %i/%i" % (i, endts))
-    f = get_full_frame_parallel(0,1024, 1,#x
-    0, 1024, 1, #y
-    0, 1024, 1, #z
+    f = get_full_frame_parallel(0,10240, 1,#x
+    0, 1536, 1, #y
+    0, 7680, 1, #z
     name, i, 
     "u", 3, 
     16)    
