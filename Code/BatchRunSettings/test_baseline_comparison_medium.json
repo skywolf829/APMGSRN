@@ -1,21 +1,6 @@
 [
     [ "test.py",
         {        
-        "load_from": "Supernova_test_fVSRN_medium",
-        "tests": "reconstruction,error_volume"
-    }],
-    [ "test.py",
-        {        
-        "load_from": "Supernova_test_NGP_medium",
-        "tests": "reconstruction,error_volume"
-    }],
-    [ "test.py",
-        {        
-        "load_from": "Supernova_test_AMRSRN_medium",
-        "tests": "reconstruction,error_volume"
-    }],
-    [ "test.py",
-        {        
         "load_from": "Supernova_NGP_medium",
         "tests": "reconstruction,error_volume"
     }],

@@ -35,7 +35,9 @@ def data_to_figure(data, name):
         y = []
         for model_size in method_data.keys():
             x.append(float(model_size))
-            x_labels.append("2^"+str(int(log2(model_size))))
+            x_label = "2^{"+str(int(log2(model_size)))+"}"
+            x_label = rf'${x_label}$'
+            x_labels.append(x_label)
             y.append(float(method_data[model_size]))
         plt.plot(x, y, label=label, marker=markers[idx])
         idx += 1
