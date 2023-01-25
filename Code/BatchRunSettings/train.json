@@ -1,16 +1,26 @@
 [
     [ "train.py",
         {        
-            "save_name": "Supernova_test_AMRSRN",
-            "model": "AMRSRN",
-            "data": "Supernova_test.nc",
-            "n_features": 1,
-            "n_grids": 16,
-            "feature_grid_shape": "16,16,16",
+            "save_name": "Supernova_NGP_large",
+            "model": "NGP_TCNN",
+            "data": "Supernova.nc",
+
+            "n_dims": 3,
+            "n_features": 2,
+            "n_grids": 17,
+            "hash_log2_size": 20,
+            "hash_base_resolution": 16,
+            "hash_max_resolution": 256,
             "n_layers": 2,
             "nodes_per_layer": 64,
-            "precondition": true,
-            "log_features_every": 100,
-            "lr": 0.01
+            "n_outputs": 1,
+
+            "lr": 0.01,
+            "iterations": 10000,
+            "points_per_iteration": 100000,
+            "interpolate": true,
+            "log_every": 25,
+            "log_image": false,
+            "log_image_every": 2000
     }]
 ]

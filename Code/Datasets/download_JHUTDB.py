@@ -132,7 +132,7 @@ for i in range(startts, endts, ts_skip):
     0, 7680, 1, #z
     name, i, 
     "u", 3, 
-    16)    
+    64)    
     print(f.shape)
     mags = np.linalg.norm(f, axis=3)
     f *= (1/mags.max())

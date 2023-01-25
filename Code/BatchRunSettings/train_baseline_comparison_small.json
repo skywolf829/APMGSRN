@@ -21,7 +21,7 @@
 
             "n_dims": 3,
             "n_features": 2,
-            "n_grids": 16,
+            "n_grids": 17,
             "hash_log2_size": 11,
             "hash_base_resolution": 8,
             "hash_max_resolution": 256,
@@ -45,7 +45,7 @@
 
             "n_dims": 3,
             "n_features": 2,
-            "n_grids": 16,
+            "n_grids": 17,
             "hash_log2_size": 11,
             "hash_base_resolution": 8,
             "hash_max_resolution": 256,
@@ -69,7 +69,7 @@
 
             "n_dims": 3,
             "n_features": 2,
-            "n_grids": 16,
+            "n_grids": 17,
             "hash_log2_size": 11,
             "hash_base_resolution": 8,
             "hash_max_resolution": 256,
@@ -93,7 +93,7 @@
 
             "n_dims": 3,
             "n_features": 2,
-            "n_grids": 16,
+            "n_grids": 17,
             "hash_log2_size": 11,
             "hash_base_resolution": 8,
             "hash_max_resolution": 256,
@@ -179,7 +179,7 @@
 
             "n_dims": 3,
             "n_features": 2,
-            "n_grids": 16,
+            "n_grids": 17,
             "hash_log2_size": 11,
             "hash_base_resolution": 8,
             "hash_max_resolution": 256,
