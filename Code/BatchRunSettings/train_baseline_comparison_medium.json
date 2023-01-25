@@ -15,30 +15,6 @@
     }],    
     [ "train.py",
         {        
-            "save_name": "Supernova_test_NGP_medium",
-            "model": "NGP_TCNN",
-            "data": "Supernova_test.nc",
-
-            "n_dims": 3,
-            "n_features": 2,
-            "n_grids": 18,
-            "hash_log2_size": 15,
-            "hash_base_resolution": 16,
-            "hash_max_resolution": 512,
-            "n_layers": 2,
-            "nodes_per_layer": 64,
-            "n_outputs": 1,
-
-            "lr": 0.01,
-            "iterations": 10000,
-            "points_per_iteration": 100000,
-            "interpolate": true,
-            "log_every": 25,
-            "log_image": false,
-            "log_image_every": 2000
-    }],    
-    [ "train.py",
-        {        
             "save_name": "Supernova_NGP_medium",
             "model": "NGP_TCNN",
             "data": "Supernova.nc",
@@ -108,18 +84,6 @@
             "log_every": 25,
             "log_image": false,
             "log_image_every": 2000
-    }],
-    [ "train.py",
-        {        
-            "save_name": "Supernova_test_fVSRN_medium",
-            "model": "fVSRN",
-            "data": "Supernova_test.nc",
-            "n_features": 4,
-            "feature_grid_shape": "64,64,64",
-            "n_layers": 2,
-            "nodes_per_layer": 64,
-            "log_features_every": 0,
-            "lr": 0.01
     }],
     [ "train.py",
         {        
