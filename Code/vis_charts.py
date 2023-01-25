@@ -56,13 +56,13 @@ def data_to_figure(data, name):
 def model_size_performance_chart():
     supernova_results = {
         "Ours": {
-            2**16 : 41.22,
-            2**20 : 44.66,
-            2**24 : 47.255
+            2**16 : 41.218,
+            2**20 : 44.696,
+            2**24 : 46.667 #can improve to 47.something with dif params
         },
         "NGP": {
             2**16 : 37.682,
-            2**20 : 43.403,
+            2**20 : 40.444,
             2**24 : 47.915
         },
         "fVSRN": {

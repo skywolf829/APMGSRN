@@ -11,7 +11,8 @@
             "nodes_per_layer": 64,
             "precondition": false,
             "log_features_every": 0,
-            "lr": 0.01
+            "lr": 0.01,
+            "iterations": 50000
     }],    
     [ "train.py",
         {        
@@ -30,7 +31,7 @@
             "n_outputs": 1,
 
             "lr": 0.01,
-            "iterations": 10000,
+            "iterations": 50000,
             "points_per_iteration": 100000,
             "interpolate": true,
             "log_every": 25,
@@ -54,7 +55,7 @@
             "n_outputs": 1,
 
             "lr": 0.01,
-            "iterations": 10000,
+            "iterations": 50000,
             "points_per_iteration": 100000,
             "interpolate": true,
             "log_every": 25,
@@ -78,7 +79,7 @@
             "n_outputs": 1,
 
             "lr": 0.01,
-            "iterations": 10000,
+            "iterations": 50000,
             "points_per_iteration": 100000,
             "interpolate": true,
             "log_every": 25,
@@ -95,7 +96,8 @@
             "n_layers": 2,
             "nodes_per_layer": 64,
             "log_features_every": 0,
-            "lr": 0.01
+            "lr": 0.01,
+            "iterations": 50000
     }],
     [ "train.py",
         {        
@@ -107,7 +109,8 @@
             "n_layers": 2,
             "nodes_per_layer": 64,
             "log_features_every": 0,
-            "lr": 0.01
+            "lr": 0.01,
+            "iterations": 50000
     }],
     [ "train.py",
         {        
@@ -119,7 +122,8 @@
             "n_layers": 2,
             "nodes_per_layer": 64,
             "log_features_every": 0,
-            "lr": 0.01
+            "lr": 0.01,
+            "iterations": 50000
     }],
     [ "train.py",
         {        
@@ -133,7 +137,8 @@
             "nodes_per_layer": 64,
             "precondition": false,
             "log_features_every": 0,
-            "lr": 0.01
+            "lr": 0.01,
+            "iterations": 50000
     }],    
     [ "train.py",
         {        
@@ -147,7 +152,8 @@
             "nodes_per_layer": 64,
             "precondition": false,
             "log_features_every": 0,
-            "lr": 0.01
+            "lr": 0.01,
+            "iterations": 50000
     }],
     [ "train.py",
         {        
@@ -161,7 +167,8 @@
             "nodes_per_layer": 64,
             "precondition": false,
             "log_features_every": 0,
-            "lr": 0.01
+            "lr": 0.01,
+            "iterations": 50000
     }],
     [ "train.py",
         {        
@@ -180,7 +187,7 @@
             "n_outputs": 1,
 
             "lr": 0.01,
-            "iterations": 10000,
+            "iterations": 50000,
             "points_per_iteration": 100000,
             "interpolate": true,
             "log_every": 25,
@@ -197,6 +204,7 @@
             "n_layers": 2,
             "nodes_per_layer": 64,
             "log_features_every": 0,
-            "lr": 0.01
+            "lr": 0.01,
+            "iterations": 50000
     }]
 ]
