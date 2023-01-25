@@ -134,6 +134,34 @@
             "precondition": false,
             "log_features_every": 0,
             "lr": 0.01
+    }],    
+    [ "train.py",
+        {        
+            "save_name": "Supernova_AMRSRN_medium",
+            "model": "AMRSRN",
+            "data": "Supernova.nc",
+            "n_features": 2,
+            "n_grids": 16,
+            "feature_grid_shape": "32,32,32",
+            "n_layers": 2,
+            "nodes_per_layer": 64,
+            "precondition": false,
+            "log_features_every": 0,
+            "lr": 0.01
+    }],
+    [ "train.py",
+        {        
+            "save_name": "Nyx_AMRSRN_medium",
+            "model": "AMRSRN",
+            "data": "Nyx.nc",
+            "n_features": 2,
+            "n_grids": 16,
+            "feature_grid_shape": "32,32,32",
+            "n_layers": 2,
+            "nodes_per_layer": 64,
+            "precondition": false,
+            "log_features_every": 0,
+            "lr": 0.01
     }],
     [ "train.py",
         {        
