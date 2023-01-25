@@ -1,13 +1,8 @@
 import os
-import imageio
-import argparse
-from typing import Union, Tuple
 import numpy as np
 import zeep
 import struct
-import base64
 import time
-import h5py
 import torch
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -132,7 +127,7 @@ ts_skip = 10
 frames = []
 for i in range(startts, endts, ts_skip):
     print("TS %i/%i" % (i, endts))
-    f = get_full_frame_parallel(0,10240, 1,#x
+    f = get_full_frame_parallel(0,5120, 1,#x
     0, 1536, 1, #y
     0, 7680, 1, #z
     name, i, 
