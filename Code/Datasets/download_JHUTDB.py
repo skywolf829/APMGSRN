@@ -110,7 +110,7 @@ sim_name, timestep, field, num_components, num_workers):
            full[x1:x2,y1:y2,z1:z2,:] = r.astype(np.float32)
            del r
            done += 1
-           #print("Done: %i/%i" % (done, len(threads)))
+           print("Done: %i/%i" % (done, len(threads)))
     return full
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
