@@ -79,9 +79,9 @@ sim_name, timestep, field, num_components, num_workers):
     int((z_end-z_start)/z_step), num_components), dtype=np.float32)
     with ThreadPoolExecutor(max_workers=num_workers) as executor:
         done = 0
-        x_len = 512
-        y_len = 512
-        z_len = 512
+        x_len = 256
+        y_len = 256
+        z_len = 256
         for k in range(x_start, x_end, x_len):
             for i in range(y_start, y_end, y_len):
                 for j in range(z_start, z_end, z_len):
