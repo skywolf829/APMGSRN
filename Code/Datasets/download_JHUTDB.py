@@ -163,7 +163,7 @@ def download_with_buffer(x_start, x_end, x_step,
                     request_no += 1
 
 def old_version(name, ts):
-    f = get_full_frame_parallel(0,5120, 1,#x
+    f = get_full_frame_parallel(0,10240, 1,#x
         0, 1536, 1, #y
         0, 7680, 1, #z
         name, ts, 
@@ -198,7 +198,7 @@ if __name__ == '__main__':
     for i in range(startts, endts, ts_skip):
         print("TS %i/%i" % (i, endts))
         
-        download_with_buffer(0, 5120, 1, #x
+        download_with_buffer(0, 10240, 1, #x
             0, 1536, 1, #y
             0, 7680, 1, #z
             name, i, 
