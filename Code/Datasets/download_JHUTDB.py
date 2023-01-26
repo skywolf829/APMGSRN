@@ -14,6 +14,11 @@ SpatialInterpolation = client.get_type('ns0:SpatialInterpolation')
 TemporalInterpolation = client.get_type('ns0:TemporalInterpolation')
 token="edu.osu.buckeyemail.wurster.18-92fb557b" #replace with your own token
 
+project_folder_path = os.path.dirname(os.path.abspath(__file__))
+project_folder_path = os.path.join(project_folder_path, "..", "..")
+data_folder = os.path.join(project_folder_path, "Data")
+save_folder = os.path.join(data_folder)
+
 def tensor_to_cdf(t, location, channel_names=None):
     # Assumes t is a tensor with shape (1, c, d, h[, w])
     from netCDF4 import Dataset
@@ -113,26 +118,53 @@ sim_name, timestep, field, num_components, num_workers):
            print("Done: %i/%i" % (done, len(threads)))
     return full
 
-project_folder_path = os.path.dirname(os.path.abspath(__file__))
-project_folder_path = os.path.join(project_folder_path, "..", "..")
-data_folder = os.path.join(project_folder_path, "Data")
-save_folder = os.path.join(data_folder)
+def download_with_buffer(x_start, x_end, x_step,
+    y_start, y_end, y_step, 
+    z_start, z_end, z_step,
+    sim_name, timestep, field, num_components):
+    
+    with open('test.raw',"rb") as f:
+        x_len = 10240
+        y_len = 1536
+        z_len = 1
+        total_requests = ((x_end-x_start) // x_len) *\
+            ((y_end-y_start) // y_len) * \
+            ((z_end-z_start) // z_len)
+        request_no = 1
+        
+        for k in range(x_start, x_end, x_len):
+            for i in range(y_start, y_end, y_len):
+                for j in range(z_start, z_end, z_len):
+                    x_stop = min(k+x_len, x_end)
+                    y_stop = min(i+y_len, y_end)
+                    z_stop = min(j+z_len, z_end)
+                    result=client.service.GetAnyCutoutWeb(token,sim_name, field, timestep,
+                                                            k+1, 
+                                                            i+1, 
+                                                            j+1, 
+                                                            x_stop, y_stop, z_stop,
+                                                            x_step, y_step, z_step, 0, 
+                                                            "")  # put empty string for the last parameter
+                    # transfer base64 format to numpy
+                    nx=int((x_end-x_start)/x_step)
+                    ny=int((y_end-y_start)/y_step)
+                    nz=int((z_end-z_start)/z_step)
+                    base64_len=int(nx*ny*nz*num_components)
+                    base64_format='<'+str(base64_len)+'f'
+                    result=struct.unpack(base64_format, result)
+                    result=np.array(result).astype(np.float32).tolist()
+                    f.write(result)
+                    f.flush()
+                    print(f"Request {request_no}/{total_requests} complete")
+                    request_no += 1
 
-name = "channel5200"
-t0 = time.time()
-count = 0
-startts = 1
-endts = 2
-ts_skip = 10
-frames = []
-for i in range(startts, endts, ts_skip):
-    print("TS %i/%i" % (i, endts))
+def old_version(name, ts):
     f = get_full_frame_parallel(0,5120, 1,#x
-    0, 1536, 1, #y
-    0, 7680, 1, #z
-    name, i, 
-    "u", 3, 
-    16)    
+        0, 1536, 1, #y
+        0, 7680, 1, #z
+        name, ts, 
+        "u", 3, 
+        16)    
     print(f.shape)
     mags = np.linalg.norm(f, axis=3)
     f *= (1/mags.max())
@@ -149,9 +181,24 @@ for i in range(startts, endts, ts_skip):
     tensor_to_cdf(torch.tensor(f), "vf")
     print("Finished " + str(i))
     count += 1
-print("finished")
-print(time.time() - t0)
+  
 
-#frames = np.array(frames)
-#frames = frames[:,0,:,:]
-#imageio.mimwrite("frames.gif", frames)
+if __name__ == '__main__':
+    name = "channel5200"
+    t0 = time.time()
+    count = 0
+    startts = 1
+    endts = 2
+    ts_skip = 10
+    frames = []
+    for i in range(startts, endts, ts_skip):
+        print("TS %i/%i" % (i, endts))
+        
+        download_with_buffer(0, 5120, 1, #x
+            0, 1536, 1, #y
+            0, 7680, 1, #z
+            name, i, 
+            "u", 3)
+        
+    print(f"Finished in {time.time() - t0} sec.")
+

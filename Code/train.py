@@ -206,7 +206,7 @@ def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     
     if(opt['log_every'] != 0):
         logging(writer, iteration, 
-            {"Fitting loss": loss}, 
+            {"Fitting loss": loss, "Grid loss": density_loss}, 
             model, opt, dataset.data.shape[2:], dataset, preconditioning='grid')
 
 def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
