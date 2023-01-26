@@ -123,7 +123,7 @@ def download_with_buffer(x_start, x_end, x_step,
     z_start, z_end, z_step,
     sim_name, timestep, field, num_components):
     
-    with open('test.raw',"rb") as f:
+    with open('test.raw',"wb") as f:
         x_len = 10240
         y_len = 1536
         z_len = 1
