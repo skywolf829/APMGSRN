@@ -131,7 +131,7 @@ def download_with_buffer(x_start, x_end, x_step,
             ((y_end-y_start) // y_len) * \
             ((z_end-z_start) // z_len)
         request_no = 1
-        
+        max_norm = 0
         for k in range(x_start, x_end, x_len):
             for i in range(y_start, y_end, y_len):
                 for j in range(z_start, z_end, z_len):
@@ -146,13 +146,17 @@ def download_with_buffer(x_start, x_end, x_step,
                                                             x_step, y_step, z_step, 0, 
                                                             "")  # put empty string for the last parameter
                     # transfer base64 format to numpy
-                    nx=int((x_end-x_start)/x_step)
-                    ny=int((y_end-y_start)/y_step)
-                    nz=int((z_end-z_start)/z_step)
+                    nx=(x_end-x_start)//x_step
+                    ny=(y_end-y_start)//y_step
+                    nz=(z_end-z_start)//z_step
                     base64_len=int(nx*ny*nz*num_components)
                     base64_format='<'+str(base64_len)+'f'
                     result=struct.unpack(base64_format, result)
-                    result=np.array(result).astype(np.float32).tolist()
+                    result=struct.unpack(base64_format, result)
+                    result=np.array(result).reshape((nz, ny, nx, num_components)).astype(np.float32)
+                    result=np.linalg.norm(result, axis=3)
+                    max_norm = max(result.max(), max_norm)
+                    result=result.flatten().tolist()
                     f.write(result)
                     f.flush()
                     print(f"Request {request_no}/{total_requests} complete")
