@@ -218,7 +218,7 @@ def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, schedul
     y = y.to(opt['device'])
     
     model_output = model(x)
-    loss = F.l1_loss(model_output, y, reduction='none')
+    loss = F.mse_loss(model_output, y, reduction='none')
     loss.mean().backward()                   
 
     optimizer.step()
