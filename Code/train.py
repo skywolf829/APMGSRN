@@ -75,10 +75,11 @@ def log_feature_density(model, dataset, opt):
 def log_feature_points(model, dataset, opt, iteration):
     feat_grid_shape = opt['feature_grid_shape'].split(',')
     feat_grid_shape = [eval(i) for i in feat_grid_shape]
+    feat_grid_shape = [2,2,2]
     
     # Dont use feature grid shape - too much overhead
     # Just use [2,2,2]
-    global_points = make_coord_grid([2,2,2], opt['device'], 
+    global_points = make_coord_grid(feat_grid_shape, opt['device'], 
                     flatten=True, align_corners=True)
     transformed_points = model.inverse_transform(global_points)
 
@@ -100,6 +101,7 @@ def log_feature_points(model, dataset, opt, iteration):
 def log_feature_grids(model, dataset, opt, iteration):
     feat_grid_shape = opt['feature_grid_shape'].split(',')
     feat_grid_shape = [eval(i) for i in feat_grid_shape]
+    feat_grid_shape = [2,2,2]
     
     global_points = make_coord_grid(feat_grid_shape, opt['device'], 
                     flatten=True, align_corners=True)
@@ -133,7 +135,7 @@ def log_feature_grids_from_points(opt):
     csvPaths = sorted(glob.glob(os.path.join(logdir, f"*.csv")))
     grids_iters = np.array([np.genfromtxt(csvPath, delimiter=',') for csvPath in csvPaths])
     
-    feat_grid_shape = np.array(opt['feature_grid_shape'].split(','), dtype=int)
+    feat_grid_shape = np.array([2,2,2], dtype=int)
     feat_grid_shape_zyx = np.flip(feat_grid_shape)
     grids_iters = grids_iters.reshape(len(grids_iters), opt['n_grids'], feat_grid_shape.prod(), 4)
     
