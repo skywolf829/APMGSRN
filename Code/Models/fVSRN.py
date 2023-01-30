@@ -110,7 +110,7 @@ class fVSRN(nn.Module):
         pe = self.pe(x)  
         feats = feats.squeeze().permute(1, 0)
         y = torch.cat([pe, feats], dim=1)
-        y = self.decoder(y)
+        y = self.decoder(y).float()
         return y
 
         

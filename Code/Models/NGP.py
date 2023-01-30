@@ -180,4 +180,4 @@ class NGP_TCNN(nn.Module):
         )
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.model(x)
+        return self.model(x).float()
