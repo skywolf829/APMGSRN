@@ -139,7 +139,7 @@ class NGP(nn.Module):
         )
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.decoder(self.hash_grid(x))
+        return self.decoder(self.hash_grid(x)).float()
 
 class NGP_TCNN(nn.Module):
     def __init__(self, opt) -> None:
