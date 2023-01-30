@@ -1,10 +1,7 @@
-from random import gauss
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
-from Other.utility_functions import make_coord_grid    
-from Models.layers import LReLULayer, ReLULayer, SineLayer, SnakeAltLayer, PositionalEncoding
+import torch.nn.functional as F 
+from Models.layers import LReLULayer
 from Models.models import sample_grid
  
 def weights_init(m):
@@ -15,6 +12,7 @@ def weights_init(m):
         torch.nn.init.normal_(m.bias, 0, 0.001)
     else:
         print(f"Found {classname}, not initializing")     
+ 
          
 class AMG_encoder(nn.Module):
     def __init__(self, opt):
