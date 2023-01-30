@@ -264,6 +264,12 @@ class AMGSRN(nn.Module):
     def feature_density_gaussian(self, x):
         return self.encoder.feature_density_gaussian(x)
 
+    def transform(self, x):
+        return self.encoder.transform(x)
+    
+    def inverse_transform(self, x):
+        return self.encoder.inverse_transform(x)
+    
     def precodition_grids(self, dataset, writer, logging):
         
         # First, train the params with fixed grids
