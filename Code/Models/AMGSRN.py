@@ -15,16 +15,14 @@ def weights_init(m):
         torch.nn.init.normal_(m.bias, 0, 0.001)
     else:
         print(f"Found {classname}, not initializing")     
-             
-class AMRSRN(nn.Module):
+         
+class AMG_encoder(nn.Module):
     def __init__(self, opt):
         super().__init__()
-        
         self.opt = opt
-
         feat_grid_shape = opt['feature_grid_shape'].split(',')
         feat_grid_shape = [eval(i) for i in feat_grid_shape]
-        
+    
         self.register_buffer("ROOT_TWO", 
                 torch.tensor([2.0 ** 0.5]),
                 persistent=False)            
@@ -51,46 +49,7 @@ class AMRSRN(nn.Module):
             ).uniform_(-0.0001, 0.0001),
             requires_grad=True
         )
-        
-        self.pe = PositionalEncoding(opt)
-        
-        
-        try:
-            import tinycudann as tcnn 
-            print(f"Using TinyCUDANN (tcnn) since it is installed for performance gains.")
-            print(f"WARNING: This model will be incompatible with non-tcnn compatible systems")
-            self.decoder = tcnn.Network(
-                n_input_dims=opt['n_features']*opt['n_grids'],
-                n_output_dims=opt['n_outputs'],
-                network_config={
-                    "otype": "FullyFusedMLP",
-                    "activation": "ReLU",
-                    "output_activation": "None",
-                    "n_neurons": opt['nodes_per_layer'],
-                    "n_hidden_layers": opt['n_layers'],
-                }
-            )
-        except ImportError:
-            print(f"TinyCUDANN (tcnn) not installed: falling back to normal PyTorch")
-            self.decoder = nn.ModuleList()
-            
-            first_layer_input_size = opt['n_features']*opt['n_grids']# + opt['num_positional_encoding_terms']*opt['n_dims']*2
-                    
-            layer = LReLULayer(first_layer_input_size, 
-                                opt['nodes_per_layer'])
-            self.decoder.append(layer)
-            
-            for i in range(opt['n_layers']):
-                if i == opt['n_layers'] - 1:
-                    layer = nn.Linear(opt['nodes_per_layer'], opt['n_outputs'])
-                    self.decoder.append(layer)
-                else:
-                    layer = LReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
-                    self.decoder.append(layer)
-            self.decoder = torch.nn.Sequential(*self.decoder)
-            
-        self.reset_parameters()
-
+    
     def uniform_grids(self):
         init_scales = torch.ones(
                 [self.opt['n_grids'], 3],
@@ -129,21 +88,7 @@ class AMRSRN(nn.Module):
                 init_translations,
                 requires_grad=True
             )
-        
-    def reset_parameters(self):
-        with torch.no_grad():
-            feat_grid_shape = self.opt['feature_grid_shape'].split(',')
-            feat_grid_shape = [eval(i) for i in feat_grid_shape]
-            self.feature_grids =  torch.nn.parameter.Parameter(
-                torch.ones(
-                    [self.opt['n_grids'], self.opt['n_features'], 
-                    feat_grid_shape[0], feat_grid_shape[1], feat_grid_shape[2]],
-                    device = self.opt['device']
-                ).uniform_(-0.0001, 0.0001),
-                requires_grad=True
-            )
-            self.decoder.apply(weights_init)   
-            
+    
     def get_transformation_matrices(self):
         transformation_matrices = torch.zeros(
                 [self.opt['n_grids'], 4, 4],
@@ -155,18 +100,18 @@ class AMRSRN(nn.Module):
         transformation_matrices[:,0:3,-1] = self.grid_translations      
         transformation_matrices[:,-1,-1] = 1
         return transformation_matrices
-
-    '''
-    Transforms global coordinates x to local coordinates within
-    each feature grid, where feature grids are assumed to be on
-    the boundary of [-1, 1]^3 in their local coordinate system.
-    Scales the grid by a factor to match the gaussian shape
-    (see feature_density_gaussian())
     
-    x: Input coordinates with shape [batch, 3]
-    returns: local coordinates in a shape [batch, n_grids, 3]
-    '''
     def transform(self, x):
+        '''
+        Transforms global coordinates x to local coordinates within
+        each feature grid, where feature grids are assumed to be on
+        the boundary of [-1, 1]^3 in their local coordinate system.
+        Scales the grid by a factor to match the gaussian shape
+        (see feature_density_gaussian())
+        
+        x: Input coordinates with shape [batch, 3]
+        returns: local coordinates in a shape [batch, n_grids, 3]
+        '''
         transformed_points = torch.cat([x, torch.ones([x.shape[0], 1], 
             device=self.opt['device'],
             dtype=torch.float32)], 
@@ -179,18 +124,18 @@ class AMRSRN(nn.Module):
                             transformed_points.transpose(-1, -2)).transpose(-1, -2)
         transformed_points = transformed_points[...,0:3]
         return transformed_points * self.INV_GRID_SCALING
-
-    '''
-    Transforms local coordinates within each feature grid x to 
-    global coordinates. Scales local coordinates by a factor
-    so as to be consistent with the transform() method, which
-    attempts to align feature grids with the guassian density 
-    calculated in feature_density_gaussian()
-    
-    x: Input coordinates with shape [batch, 3]
-    returns: local coordinates in a shape [batch, n_grids, 3]
-    '''
+   
     def inverse_transform(self, x):
+        '''
+        Transforms local coordinates within each feature grid x to 
+        global coordinates. Scales local coordinates by a factor
+        so as to be consistent with the transform() method, which
+        attempts to align feature grids with the guassian density 
+        calculated in feature_density_gaussian()
+        
+        x: Input coordinates with shape [batch, 3]
+        returns: local coordinates in a shape [batch, n_grids, 3]
+        '''
         transformed_points = torch.cat([x * self.GRID_SCALING, 
             torch.ones(
                 [x.shape[0], 1], 
@@ -241,39 +186,96 @@ class AMRSRN(nn.Module):
             dim=-1))
         
         return torch.sum(coeffs * exps, dim=-1, keepdim=True)
-       
-    def feature_density_box(self, volume_shape):
-        feat_density = torch.zeros(volume_shape, 
-            device=self.opt['device'], dtype=torch.float32)
+    
+    def forward(self, x):
+        transformed_points = self.transform(x)       
         
-        starts = torch.tensor([-1, -1, -1], device=self.opt['device'], dtype=torch.float32).unsqueeze(0)
-        stops = torch.tensor([1, 1, 1], device=self.opt['device'], dtype=torch.float32).unsqueeze(0)
+        transformed_points = transformed_points.unsqueeze(1).unsqueeze(1)
+        feats = F.grid_sample(self.feature_grids,
+                transformed_points.detach(),
+                mode='bilinear', align_corners=True,
+                padding_mode="zeros")[:,:,0,0,:]
+        feats = feats.flatten(0,1).permute(1, 0)
+        return feats
+      
+    
+class AMGSRN(nn.Module):
+    def __init__(self, opt):
+        super().__init__()
+        
+        self.opt = opt
 
-        ends = torch.cat([starts, stops], dim=0)
-        transformed_points = self.inverse_transform(ends)
-        transformed_points += 1
-        transformed_points *= 0.5 * (torch.tensor(volume_shape)-1)
-        transformed_points = transformed_points.type(torch.LongTensor)
-        print(transformed_points.shape)
+        feat_grid_shape = opt['feature_grid_shape'].split(',')
+        feat_grid_shape = [eval(i) for i in feat_grid_shape]
+        
+        self.encoder = AMG_encoder(opt)
+        
+        try:
+            import tinycudann as tcnn 
+            print(f"Using TinyCUDANN (tcnn) since it is installed for performance gains.")
+            print(f"WARNING: This model will be incompatible with non-tcnn compatible systems")
+            self.decoder = tcnn.Network(
+                n_input_dims=opt['n_features']*opt['n_grids'],
+                n_output_dims=opt['n_outputs'],
+                network_config={
+                    "otype": "FullyFusedMLP",
+                    "activation": "ReLU",
+                    "output_activation": "None",
+                    "n_neurons": opt['nodes_per_layer'],
+                    "n_hidden_layers": opt['n_layers'],
+                }
+            )
+        except ImportError:
+            print(f"TinyCUDANN (tcnn) not installed: falling back to normal PyTorch")
+            self.decoder = nn.ModuleList()
+            
+            first_layer_input_size = opt['n_features']*opt['n_grids']# + opt['num_positional_encoding_terms']*opt['n_dims']*2
+                    
+            layer = LReLULayer(first_layer_input_size, 
+                                opt['nodes_per_layer'])
+            self.decoder.append(layer)
+            
+            for i in range(opt['n_layers']):
+                if i == opt['n_layers'] - 1:
+                    layer = nn.Linear(opt['nodes_per_layer'], opt['n_outputs'])
+                    self.decoder.append(layer)
+                else:
+                    layer = LReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
+                    self.decoder.append(layer)
+            self.decoder = torch.nn.Sequential(*self.decoder)
+            
+        self.reset_parameters()
+       
+    def reset_parameters(self):
+        with torch.no_grad():
+            feat_grid_shape = self.opt['feature_grid_shape'].split(',')
+            feat_grid_shape = [eval(i) for i in feat_grid_shape]
+            self.encoder.feature_grids =  torch.nn.parameter.Parameter(
+                torch.ones(
+                    [self.opt['n_grids'], self.opt['n_features'], 
+                    feat_grid_shape[0], feat_grid_shape[1], feat_grid_shape[2]],
+                    device = self.opt['device']
+                ).uniform_(-0.0001, 0.0001),
+                requires_grad=True
+            )
+            self.decoder.apply(weights_init)   
+            
+    def get_transformation_matrices(self):        
+        return self.encoder.get_transformation_matrices()
 
-        for i in range(transformed_points.shape[0]):
-            feat_density[transformed_points[i,0,0]:transformed_points[i,1,0],
-                transformed_points[i,0,1]:transformed_points[i,1,1],
-                transformed_points[i,0,2]:transformed_points[i,1,2]] += 1
-
-
-        return feat_density.permute(2,1,0)
+    def feature_density_gaussian(self, x):
+        return self.encoder.feature_density_gaussian(x)
 
     def precodition_grids(self, dataset, writer, logging):
         
         # First, train the params with fixed grids
-        self.uniform_grids()
-        self.feature_grids.requires_grad_(True)
+        self.encoder.uniform_grids()
+        self.encoder.feature_grids.requires_grad_(True)
         self.decoder.requires_grad_(True)
-        self.grid_scales.requires_grad_(False)
-        self.grid_translations.requires_grad_(False)
+        self.encoder.grid_scales.requires_grad_(False)
+        self.encoder.grid_translations.requires_grad_(False)
         param_optimizer = torch.optim.Adam([
-            {"params": [self.feature_grids], "lr": 0.03},
+            {"params": [self.encoder.feature_grids], "lr": 0.03},
             {"params": self.decoder.parameters(), "lr": 0.03}
         ], betas=[self.opt['beta_1'], self.opt['beta_2']], eps = 10e-15)        
         param_scheduler = torch.optim.lr_scheduler.StepLR(param_optimizer, 
@@ -316,13 +318,14 @@ class AMRSRN(nn.Module):
             # Normalize by sum
             error /= error.sum() 
             
-        self.randomize_grids()
-        self.feature_grids.requires_grad_(False)
+        self.encoder.randomize_grids()
+        self.encoder.feature_grids.requires_grad_(False)
         self.decoder.requires_grad_(False)
-        self.grid_scales.requires_grad_(True)
-        self.grid_translations.requires_grad_(True)
+        self.encoder.grid_scales.requires_grad_(True)
+        self.encoder.grid_translations.requires_grad_(True)
         grid_optimizer = torch.optim.Adam([
-            {"params": [self.grid_translations, self.grid_scales], "lr": 0.001}
+            {"params": [self.encoder.grid_translations, 
+                        self.encoder.grid_scales], "lr": 0.001}
         ], betas=[self.opt['beta_1'], self.opt['beta_2']], eps = 10e-15)        
         grid_scheduler = torch.optim.lr_scheduler.StepLR(grid_optimizer, 
                 step_size=9000, gamma=0.1)
@@ -340,7 +343,7 @@ class AMRSRN(nn.Module):
                 y = y.unsqueeze(0)                
             y = y.permute(1,0)
             
-            density = self.feature_density_gaussian(x)       
+            density = self.encoder.feature_density_gaussian(x)       
             density /= density.sum().detach()     
             
             target = torch.exp(torch.log(density+1e-16) / \
@@ -363,15 +366,8 @@ class AMRSRN(nn.Module):
                     preconditioning="grid")
                    
     def forward(self, x):
-        transformed_points = self.transform(x)       
         
-        transformed_points = transformed_points.unsqueeze(1).unsqueeze(1)
-        feats = F.grid_sample(self.feature_grids,
-                transformed_points.detach(),
-                mode='bilinear', align_corners=True,
-                padding_mode="zeros")[:,:,0,0,:]
-        feats = feats.flatten(0,1).permute(1, 0)
-        
+        feats = self.encoder(x)        
         y = self.decoder(feats).float()
         
         return y

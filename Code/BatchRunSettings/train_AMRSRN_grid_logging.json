@@ -1,8 +1,8 @@
 [
     [ "train.py",
         {        
-            "save_name": "Plume_AMRSRN_small_logged",
-            "model": "AMRSRN",
+            "save_name": "Plume_AMGSRN_small_logged",
+            "model": "AMGSRN",
             "data": "Plume.nc",
             "n_features": 1,
             "n_grids": 16,
@@ -16,8 +16,8 @@
     }],
     [ "train.py",
     {        
-        "save_name": "Supernova_AMRSRN_small_logged",
-        "model": "AMRSRN",
+        "save_name": "Supernova_AMGSRN_small_logged",
+        "model": "AMGSRN",
         "data": "Supernova.nc",
         "n_features": 1,
         "n_grids": 16,
@@ -31,8 +31,8 @@
     }],
     [ "train.py",
         {        
-            "save_name": "Nyx_AMRSRN_small_logged",
-            "model": "AMRSRN",
+            "save_name": "Nyx_AMGSRN_small_logged",
+            "model": "AMGSRN",
             "data": "Nyx.nc",
             "n_features": 1,
             "n_grids": 16,
@@ -46,8 +46,8 @@
     }],
     [ "train.py",
         {        
-            "save_name": "Isotropic_AMRSRN_small_logged",
-            "model": "AMRSRN",
+            "save_name": "Isotropic_AMGSRN_small_logged",
+            "model": "AMGSRN",
             "data": "Isotropic.nc",
             "n_features": 1,
             "n_grids": 16,

@@ -150,7 +150,6 @@ def download_with_buffer(x_start, x_end, x_step,
                     ny=(y_end-y_start)//y_step
                     nz=(z_end-z_start)//z_step
                     base64_len=int(nx*ny*nz*num_components)
-                    print(base64_len)
                     base64_format='<'+str(base64_len)+'f'
                     result=struct.unpack(base64_format, result)
                     result=np.array(result).reshape((nz, ny, nx, num_components)).astype(np.float32)

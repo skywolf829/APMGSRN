@@ -39,15 +39,15 @@ def load_model(opt, device):
 def create_model(opt):
     from Models.fVSRN import fVSRN
     from Models.afVSRN import afVSRN
-    from Models.AMRSRN import AMRSRN
+    from Models.AMGSRN import AMGSRN
     from Models.SigmoidNet import SigmoidNet
     from Models.ExpNet import ExpNet
     if(opt['model'] == "fVSRN"):
         return fVSRN(opt)
     elif(opt['model'] == "afVSRN"):
         return afVSRN(opt)
-    elif(opt['model'] == "AMRSRN"):
-        return AMRSRN(opt)
+    elif(opt['model'] == "AMGSRN"):
+        return AMGSRN(opt)
     elif(opt['model'] == "AMRSRN_TCNN"):
         from Models.AMRSRN_TCNN import AMRSRN_TCNN
         return AMRSRN_TCNN(opt)

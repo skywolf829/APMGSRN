@@ -147,7 +147,7 @@ def log_feature_grids_from_points(opt):
             vtm.SetBlock(j, vts)
         write_vtm(os.path.join(vtm_dir, f"grids_{i:03}.vtm", ), vtm)
 
-def train_step_AMRSRN_precondition(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
+def train_step_AMGSRN_precondition(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
     opt['iteration_number'] = iteration
     optimizer.zero_grad() 
                  
@@ -169,7 +169,7 @@ def train_step_AMRSRN_precondition(opt, iteration, batch, dataset, model, optimi
             {"Fitting loss": loss}, 
             model, opt, dataset.data.shape[2:], dataset)
 
-def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
+def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
     opt['iteration_number'] = iteration
     optimizer[0].zero_grad() 
     optimizer[1].zero_grad() 
@@ -253,9 +253,9 @@ def train( model, dataset, opt):
 
     # choose the specific training iteration function based on the model
     train_step = train_step_vanilla
-    if 'AMRSRN' in opt['model']:
+    if 'AMGSRN' in opt['model']:
         if(opt['precondition']):
-            train_step = train_step_AMRSRN_precondition
+            train_step = train_step_AMGSRN_precondition
             model.precodition_grids(dataset, writer, logging)
             model.zero_grad()            
             # Finally, reset the parameters necessary, and keep the grids
@@ -265,13 +265,12 @@ def train( model, dataset, opt):
             model.grid_scales.requires_grad_(False)
             model.grid_translations.requires_grad_(False)
         else:
-            train_step = train_step_AMRSRN
-            
-    
-    if("AMRSRN" in opt['model']):
+            train_step = train_step_AMGSRN
+                
+    if("AMGSRN" in opt['model']):
         if(opt['precondition']):
             optimizer = optim.Adam([
-                {"params": [model.feature_grids], "lr": opt["lr"]},
+                {"params": [model.encoder.feature_grids], "lr": opt["lr"]},
                 {"params": model.decoder.parameters(), "lr": opt["lr"]}
             ],betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15) 
             scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
@@ -279,11 +278,12 @@ def train( model, dataset, opt):
                 gamma=0.1)
         else:
             optimizer = [optim.Adam([
-                {"params": [model.feature_grids], "lr": opt["lr"]},
+                {"params": [model.encoder.feature_grids], "lr": opt["lr"]},
                 {"params": model.decoder.parameters(), "lr": opt["lr"]}
             ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
                 optim.Adam([
-                {"params": [model.grid_translations, model.grid_scales], "lr": opt["lr"] * 0.1}
+                {"params": [model.encoder.grid_translations, 
+                            model.encoder.grid_scales], "lr": opt["lr"] * 0.1}
             ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
             ]        
             scheduler = [
@@ -342,7 +342,7 @@ if __name__ == '__main__':
     parser.add_argument('--n_features',default=None,type=int,
         help='Number of features in the feature grid')       
     parser.add_argument('--n_grids',default=None,type=int,
-        help='Number of grids for AMRSRN')
+        help='Number of grids for AMGSRN')
     parser.add_argument('--num_positional_encoding_terms',default=None,type=int,
         help='Number of positional encoding terms')   
     parser.add_argument('--extents',default=None,type=str,
