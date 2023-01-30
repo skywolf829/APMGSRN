@@ -5,7 +5,7 @@ import json
 import time
 import subprocess
 import shlex
-from Other.utility_functions import create_path, nc_to_tensor, tensor_to_cdf, make_coord_grid
+from Other.utility_functions import create_path, nc_to_tensor, tensor_to_cdf, make_coord_grid, npy_to_cdf
 import h5py
 import numpy as np
 
@@ -134,21 +134,164 @@ def alg(target_density, n_gaussians=1, dims=3):
         for j in range(dims):
             current_cumsum = torch.cumsum(current_cumsum, dim=j)
         tensor_to_cdf(current_cumsum.unsqueeze(0).unsqueeze(0), "cumsum.nc")
+
+def vti_to_nc():
+    import numpy as np
+    import vtk
+
+    reader = vtk.vtkXMLImageDataReader()
+    reader.SetFileName("asteroid.vti")
+    reader.Update()
+    image = reader.GetOutput()
+
+    print(image)
+    
+    dims = image.GetDimensions()
+    print(f"Dimensions: {dims}")
+    
+    point_data = image.GetPointData()
+    
+    print(f"Point data:")
+    print(point_data)
+    
+    '''
+    data = point_data.GetArray('v02')
+    print(f"V02")
+    print(data)
+    
+    data_npy = np.array(data)
+    print(data_npy.shape)
+    data_npy = data_npy.reshape(dims)
+    print(data_npy.shape)
+    data_npy = np.expand_dims(data_npy, 0)
+    data_npy = np.expand_dims(data_npy, 0)
+    
+    data_npy -= data_npy.min()
+    data_npy /= data_npy.max()
+    data[-1,:,:] = 0
+    data[:,:,0] = 0
+    npy_to_cdf(data_npy, "asteroid_v02.nc")
+    
+    data = point_data.GetArray('v03')
+    print(f"V03")
+    print(data)
+    
+    data_npy = np.array(data)
+    print(data_npy.shape)
+    data_npy = data_npy.reshape(dims)
+    print(data_npy.shape)
+    data_npy = np.expand_dims(data_npy, 0)
+    data_npy = np.expand_dims(data_npy, 0)
+    
+    data_npy -= data_npy.min()
+    data_npy /= data_npy.max()
+    data[-1,:,:] = 0
+    data[:,:,0] = 0
+    npy_to_cdf(data_npy, "asteroid_v03.nc")
+    '''
+    
+    data = point_data.GetArray('vtkValidPointMask')
+    print(f"vtkValidPointMask")
+    print(data)
+    
+    data_npy = np.array(data)
+    print(data_npy.shape)
+    data_npy = data_npy.reshape(dims)
+    print(data_npy.shape)
+    data_npy = np.expand_dims(data_npy, 0)
+    data_npy = np.expand_dims(data_npy, 0)
+    
+    npy_to_cdf(data_npy, "asteroid_validpointmask.nc")
+    
+    data = point_data.GetArray('prs')
+    print(f"prs")
+    print(data)
+    
+    data_npy = np.array(data)
+    print(data_npy.shape)
+    data_npy = data_npy.reshape(dims)
+    print(data_npy.shape)
+    data_npy = np.expand_dims(data_npy, 0)
+    data_npy = np.expand_dims(data_npy, 0)
+    
+    data_npy -= data_npy.min()
+    data_npy /= data_npy.max()
+    data[-1,:,:] = 0
+    data[:,:,0] = 0
+    npy_to_cdf(data_npy, "asteroid_prs.nc")
+    
+    data = point_data.GetArray('rho')
+    print(f"rho")
+    print(data)
+    
+    data_npy = np.array(data)
+    print(data_npy.shape)
+    data_npy = data_npy.reshape(dims)
+    print(data_npy.shape)
+    data_npy = np.expand_dims(data_npy, 0)
+    data_npy = np.expand_dims(data_npy, 0)
+    
+    data_npy -= data_npy.min()
+    data_npy /= data_npy.max()
+    data[-1,:,:] = 0
+    data[:,:,0] = 0
+    npy_to_cdf(data_npy, "asteroid_rho.nc")
+    
+    data = point_data.GetArray('snd')
+    print(f"snd")
+    print(data)
+    
+    data_npy = np.array(data)
+    print(data_npy.shape)
+    data_npy = data_npy.reshape(dims)
+    print(data_npy.shape)
+    data_npy = np.expand_dims(data_npy, 0)
+    data_npy = np.expand_dims(data_npy, 0)
+    
+    data_npy -= data_npy.min()
+    data_npy /= data_npy.max()
+    data[-1,:,:] = 0
+    data[:,:,0] = 0
+    npy_to_cdf(data_npy, "asteroid_snd.nc")
+    
+    data = point_data.GetArray('tev')
+    print(f"tev")
+    print(data)
+    
+    data_npy = np.array(data)
+    print(data_npy.shape)
+    data_npy = data_npy.reshape(dims)
+    print(data_npy.shape)
+    data_npy = np.expand_dims(data_npy, 0)
+    data_npy = np.expand_dims(data_npy, 0)
+    
+    data_npy -= data_npy.min()
+    data_npy /= data_npy.max()
+    data[-1,:,:] = 0
+    data[:,:,0] = 0
+    npy_to_cdf(data_npy, "asteroid_tev.nc")
+    
+    quit()
+
+    u = VN.vtk_to_numpy(data.GetCellData().GetArray('velocity'))
+    b = VN.vtk_to_numpy(data.GetCellData().GetArray('cell_centered_B'))
+
+    u = u.reshape(vec,order='F')
+    b = b.reshape(vec,order='F')
+
+    x = zeros(data.GetNumberOfPoints())
+    y = zeros(data.GetNumberOfPoints())
+    z = zeros(data.GetNumberOfPoints())
+
+    for i in range(data.GetNumberOfPoints()):
+            x[i],y[i],z[i] = data.GetPoint(i)
+
+    x = x.reshape(dim,order='F')
+    y = y.reshape(dim,order='F')
+    z = z.reshape(dim,order='F')
         
 if __name__ == '__main__':
 
-    dims=3
-    #target_density, mean_target, cov_target = create_random_sum_of_gaussians(15,dims=dims)
-    #target_density /= target_density.sum()
-
-    torch.manual_seed(987654321)
-    
-    #training(target_density=target_density)
-    #alg(target_density=target_density)
-
-    d,_ = nc_to_tensor(os.path.join(data_folder, "supernova_test.nc"))
-    a = d[:,:,216:,0:216,0:216]
-    d[:,:,0:216,216:,216:] = a
-    tensor_to_cdf(d, os.path.join(data_folder, "supernova_test2.nc"))
+    vti_to_nc()
     
     quit()

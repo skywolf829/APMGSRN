@@ -206,5 +206,57 @@
             "log_features_every": 0,
             "lr": 0.01,
             "iterations": 50000
+    }],
+    [ "train.py",
+        {        
+            "save_name": "Asteroid_AMGSRN_small",
+            "model": "AMGSRN",
+            "data": "asteroid_v03.nc",
+            "n_features": 1,
+            "n_grids": 16,
+            "feature_grid_shape": "16,16,16",
+            "n_layers": 2,
+            "nodes_per_layer": 64,
+            "precondition": false,
+            "log_features_every": 0,
+            "lr": 0.01,
+            "iterations": 50000
+    }],
+    [ "train.py",
+        {        
+            "save_name": "Asteroid_NGP_small",
+            "model": "NGP_TCNN",
+            "data": "asteroid_v03.nc",
+
+            "n_dims": 3,
+            "n_features": 2,
+            "n_grids": 17,
+            "hash_log2_size": 11,
+            "hash_base_resolution": 8,
+            "hash_max_resolution": 256,
+            "n_layers": 2,
+            "nodes_per_layer": 64,
+            "n_outputs": 1,
+
+            "lr": 0.01,
+            "iterations": 50000,
+            "points_per_iteration": 100000,
+            "interpolate": true,
+            "log_every": 25,
+            "log_image": false,
+            "log_image_every": 2000
+    }],    
+    [ "train.py",
+        {        
+            "save_name": "Asteroid_fVSRN_small",
+            "model": "fVSRN",
+            "data": "asteroid_v03.nc",
+            "n_features": 2,
+            "feature_grid_shape": "32,32,32",
+            "n_layers": 2,
+            "nodes_per_layer": 64,
+            "log_features_every": 0,
+            "lr": 0.01,
+            "iterations": 50000
     }]
 ]

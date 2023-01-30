@@ -346,6 +346,34 @@ def create_folder(start_path, folder_name):
         full_path = os.path.join(start_path, f_name)
     return f_name
 
+def npy_to_cdf(t, location, channel_names=None):
+    # Assumes t is a npy array with shape (1, c, d, h[, w])
+
+    d = Dataset(location, 'w')
+
+    # Setup dimensions
+    d.createDimension('x')
+    d.createDimension('y')
+    dims = ['x', 'y']
+
+    if(len(t.shape) == 5):
+        d.createDimension('z')
+        dims.append('z')
+
+    # ['u', 'v', 'w']
+    if(channel_names is None):
+        ch_default = 'a'
+
+    for i in range(t.shape[1]):
+        if(channel_names is None):
+            ch = ch_default
+            ch_default = chr(ord(ch)+1)
+        else:
+            ch = channel_names[i]
+        d.createVariable(ch, t.dtype, dims)
+        d[ch][:] = t[0,i]
+    d.close()
+
 def tensor_to_cdf(t, location, channel_names=None):
     # Assumes t is a tensor with shape (1, c, d, h[, w])
 

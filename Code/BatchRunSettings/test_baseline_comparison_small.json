@@ -58,5 +58,20 @@
         {        
         "load_from": "Isotropic_AMGSRN_small",
         "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Asteroid_NGP_small",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Asteroid_fVSRN_small",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Asteroid_AMGSRN_small",
+        "tests": "reconstruction,error_volume"
     }]
 ]

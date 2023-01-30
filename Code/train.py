@@ -76,7 +76,9 @@ def log_feature_points(model, dataset, opt, iteration):
     feat_grid_shape = opt['feature_grid_shape'].split(',')
     feat_grid_shape = [eval(i) for i in feat_grid_shape]
     
-    global_points = make_coord_grid(feat_grid_shape, opt['device'], 
+    # Dont use feature grid shape - too much overhead
+    # Just use [2,2,2]
+    global_points = make_coord_grid([2,2,2], opt['device'], 
                     flatten=True, align_corners=True)
     transformed_points = model.inverse_transform(global_points)
 
