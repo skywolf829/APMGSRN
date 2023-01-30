@@ -365,8 +365,7 @@ class AMGSRN(nn.Module):
                     self, self.opt, dataset.data.shape[2:], dataset, 
                     preconditioning="grid")
                    
-    def forward(self, x):
-        
+    def forward(self, x):        
         feats = self.encoder(x)        
         y = self.decoder(feats).float()
         
