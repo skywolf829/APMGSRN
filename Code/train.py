@@ -201,6 +201,10 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
             log_target=True)
     density_loss.mean().backward()
     
+    regularization_loss = 10e-4 * torch.cat([x.view(-1) for x in model.parameters()]).abs().mean() + \
+        model.encoder.feature_grids.abs().mean()
+    regularization_loss.backward()
+    
     optimizer[0].step()
     optimizer[1].step()
     scheduler[0].step()   
@@ -210,7 +214,9 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     
     if(opt['log_every'] != 0):
         logging(writer, iteration, 
-            {"Fitting loss": loss, "Grid loss": density_loss}, 
+            {"Fitting loss": loss, 
+             "Grid loss": density_loss,
+             "L1 Regularization": regularization_loss}, 
             model, opt, dataset.data.shape[2:], dataset, preconditioning='grid')
 
 def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
