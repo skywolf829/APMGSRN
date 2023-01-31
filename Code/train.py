@@ -176,7 +176,6 @@ def train_step_AMGSRN_precondition(opt, iteration, batch, dataset, model, optimi
 def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
     opt['iteration_number'] = iteration
     optimizer[0].zero_grad() 
-    optimizer[1].zero_grad() 
                  
     x, y = batch
     x = x.to(opt['device'])
@@ -190,25 +189,27 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     density = model.feature_density_gaussian(x)       
     density /= density.sum().detach()     
     
-    target = torch.exp(torch.log(density+1e-16) / \
-        (loss/loss.mean()))
-    target /= target.sum()
+    if(iteration < opt['iterations']*0.9):
+        optimizer[1].zero_grad() 
+        target = torch.exp(torch.log(density+1e-16) / \
+            (loss/loss.mean()))
+        target /= target.sum()
+            
+        density_loss = F.kl_div(
+            torch.log(density+1e-16), 
+                torch.log(target.detach()+1e-16), 
+                reduction='none', 
+                log_target=True)
+        density_loss.mean().backward()
         
-    density_loss = F.kl_div(
-        torch.log(density+1e-16), 
-            torch.log(target.detach()+1e-16), 
-            reduction='none', 
-            log_target=True)
-    density_loss.mean().backward()
-    
-    regularization_loss = 10e-7 * (torch.cat([x.view(-1) for x in model.parameters()] + \
-        [model.encoder.feature_grids.view(-1)])**2).mean()
-    regularization_loss.backward()
+        regularization_loss = 10e-8 * (torch.cat([x.view(-1) for x in model.parameters()] + \
+            [model.encoder.feature_grids.view(-1)])**2).mean()
+        regularization_loss.backward()
+        optimizer[1].step()
+        scheduler[1].step()   
     
     optimizer[0].step()
-    optimizer[1].step()
     scheduler[0].step()   
-    scheduler[1].step()   
          
     profiler.step()
     
@@ -297,10 +298,10 @@ def train( model, dataset, opt):
             ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
             ]        
             scheduler = [
-                torch.optim.lr_scheduler.StepLR(optimizer[0], 
-                    step_size=(opt['iterations']*9)//10, gamma=0.1),
-                torch.optim.lr_scheduler.StepLR(optimizer[1], 
-                    step_size=(opt['iterations']*4)//10, gamma=0.1)
+                torch.optim.lr_scheduler.CosineAnnealingLR(optimizer[0],
+                    T_max=opt['iterations']),
+                torch.optim.lr_scheduler.CosineAnnealingLR(optimizer[1], 
+                    T_max=opt['iterations'])
             ]      
     else:
         optimizer = optim.Adam(model.parameters(), lr=opt["lr"], 
