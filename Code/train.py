@@ -211,8 +211,8 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         [model.encoder.feature_grids.view(-1)])**2).mean()
     regularization_loss.backward()
     
-    optimizer[0].step(loss)
-    scheduler[0].step()   
+    optimizer[0].step()
+    scheduler[0].step(loss)   
          
     profiler.step()
     
