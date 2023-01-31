@@ -301,9 +301,8 @@ def train( model, dataset, opt):
             ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
             ]        
             scheduler = [
-                torch.optim.lr_scheduler.MultiStepLR(optimizer[0],
-                [opt['iterations']*(3/5)],
-                gamma=0.1),
+                torch.optim.lr_scheduler.ExponentialLR(optimizer[0],
+                gamma=0.9999),
                 torch.optim.lr_scheduler.CosineAnnealingLR(optimizer[1], 
                     T_max=opt['iterations'])
             ]      
