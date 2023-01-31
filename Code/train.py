@@ -211,7 +211,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         [model.encoder.feature_grids.view(-1)])**2).mean()
     regularization_loss.backward()
     
-    optimizer[0].step()
+    optimizer[0].step(loss)
     scheduler[0].step()   
          
     profiler.step()
@@ -301,8 +301,8 @@ def train( model, dataset, opt):
             ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
             ]        
             scheduler = [
-                torch.optim.lr_scheduler.CosineAnnealingLR(optimizer[0],
-                    T_max=opt['iterations']),
+                torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer[0],
+                    factor=0.2, patience=250, threshold=10e-5),
                 torch.optim.lr_scheduler.CosineAnnealingLR(optimizer[1], 
                     T_max=opt['iterations'])
             ]      
