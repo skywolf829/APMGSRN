@@ -201,7 +201,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
             log_target=True)
     density_loss.mean().backward()
     
-    regularization_loss = 10e-4 * ((torch.cat([x.view(-1) for x in model.parameters()])**2).mean() + \
+    regularization_loss = 10e-5 * ((torch.cat([x.view(-1) for x in model.parameters()])**2).mean() + \
         (model.encoder.feature_grids**2).mean())
     regularization_loss.backward()
     
