@@ -185,12 +185,12 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     loss = F.mse_loss(model_output, y, reduction='none')
     loss = loss.sum(dim=1, keepdim=True)
     loss.mean().backward()
-    
-    density = model.feature_density_gaussian(x)       
-    density /= density.sum().detach()     
+       
     
     if(iteration < opt['iterations']*0.9):
         optimizer[1].zero_grad() 
+        density = model.feature_density_gaussian(x)       
+        density /= density.sum().detach()  
         target = torch.exp(torch.log(density+1e-16) / \
             (loss/loss.mean()))
         target /= target.sum()
@@ -202,11 +202,14 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
                 log_target=True)
         density_loss.mean().backward()
         
-        regularization_loss = 10e-8 * (torch.cat([x.view(-1) for x in model.parameters()] + \
-            [model.encoder.feature_grids.view(-1)])**2).mean()
-        regularization_loss.backward()
         optimizer[1].step()
         scheduler[1].step()   
+    else:
+        density_loss = None
+         
+    regularization_loss = 10e-8 * (torch.cat([x.view(-1) for x in model.parameters()] + \
+        [model.encoder.feature_grids.view(-1)])**2).mean()
+    regularization_loss.backward()
     
     optimizer[0].step()
     scheduler[0].step()   
