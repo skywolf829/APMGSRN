@@ -17,6 +17,6 @@
     [ "test.py",
     {        
     "load_from": "temp",
-    "tests": "reconstruction,error_volume,feature_density"
+    "tests": "feature_density"
     }]
 ]

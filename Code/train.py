@@ -297,7 +297,7 @@ def train( model, dataset, opt):
                 optim.Adam([
                 {"params": [model.encoder.grid_translations], "lr": opt['lr'] * 0.1}, 
                 {"params": [model.encoder.grid_scales],"lr": opt['lr'] * 0.1},
-                {"params": [model.encoder.grid_rotations], "lr": opt["lr"] * 1}
+                {"params": [model.encoder.grid_rotations], "lr": opt["lr"] * 0.1}
             ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
             ]        
             scheduler = [
@@ -435,9 +435,9 @@ if __name__ == '__main__':
     data_folder = os.path.join(project_folder_path, "Data")
     output_folder = os.path.join(project_folder_path, "Output")
     save_folder = os.path.join(project_folder_path, "SavedModels")
+    
     os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
     torch.manual_seed(42)
-    torch.jit.enable_onednn_fusion(True)
 
     if(args['load_from'] is None):
         # Init models

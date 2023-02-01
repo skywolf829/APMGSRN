@@ -14,7 +14,7 @@ def weights_init(m):
     else:
         print(f"Found {classname}, not initializing")     
 
-@torch.jit.script
+#@torch.jit.script
 def get_transformation_matrices(num_grids:int,grid_translations,
         grid_scales,grid_rotations,device:str):
     '''
@@ -30,6 +30,8 @@ def get_transformation_matrices(num_grids:int,grid_translations,
         device = device)
     # rotation is applied yaw-pitch-roll (left-to-right) order
     # https://en.wikipedia.org/wiki/Rotation_matrix
+    
+    
     m[:,0,0] = grid_scales[:,0]*c[:,1]*c[:,2]   
     m[:,0,1] = grid_scales[:,1]*(s[:,0]*s[:,1]*c[:,2] - c[:,0]*s[:,2])
     m[:,0,2] = grid_scales[:,2]*(c[:,0]*s[:,1]*c[:,2] + s[:,0]*s[:,2])
@@ -48,7 +50,7 @@ def get_transformation_matrices(num_grids:int,grid_translations,
     m[:,3,3] = 1    
     return m
 
-@torch.jit.script
+#@torch.jit.script
 def get_inverse_transformation_matrices(num_grids:int,grid_translations,
         grid_scales,grid_rotations,device:str):
     '''
@@ -131,24 +133,23 @@ class AMG_encoder(nn.Module):
     
         self.randomize_grids()
         
-        
-    
     def randomize_grids(self):  
         with torch.no_grad():     
             self.grid_scales.uniform_(1.0,1.2)
             self.grid_translations.uniform_(-0.1, 0.1)
             self.grid_rotations.uniform_(-torch.pi/16, torch.pi/16)
     
-    @torch.jit.export
+    #@torch.jit.export
     def get_transformation_matrices(self):
         c = torch.cos(self.grid_rotations)
         s = torch.sin(self.grid_rotations)
-        #m = torch.empty([
-        #    self.grid_rotations.shape[0],4,4],
-        #    device = self.grid_rotations.device)
+        '''
+        m = torch.empty([
+            self.grid_rotations.shape[0],4,4],
+            device = self.grid_rotations.device)
         # rotation is applied yaw-pitch-roll (left-to-right) order
         # https://en.wikipedia.org/wiki/Rotation_matrix
-        '''
+        
         m[:,0,0] = self.grid_scales[:,0]*c[:,1]*c[:,2] 
         m[:,0,1] = self.grid_scales[:,1]*(s[:,0]*s[:,1]*c[:,2] - c[:,0]*s[:,2])
         m[:,0,2] = self.grid_scales[:,2]*(c[:,0]*s[:,1]*c[:,2] + s[:,0]*s[:,2])
@@ -165,6 +166,7 @@ class AMG_encoder(nn.Module):
         m[:,3,1] = 0    
         m[:,3,2] = 0    
         m[:,3,3] = 1
+        
         '''
         zeros = torch.zeros_like(self.grid_scales[:,0])
         ones = torch.ones_like(self.grid_scales[:,0])
@@ -186,10 +188,10 @@ class AMG_encoder(nn.Module):
             zeros,    
             ones,
         ], dim=1).reshape(-1, 4, 4)        
-            
+                
         return m
   
-    @torch.jit.export
+    #@torch.jit.export
     def get_inverse_transformation_matrices(self):
         '''
         Creates the inverse transformation matrices for the grids
@@ -229,7 +231,7 @@ class AMG_encoder(nn.Module):
         m[:,3,3] = 1    
         return m
   
-    @torch.jit.export
+    #@torch.jit.export
     def transform(self, x):
         '''
         Transforms global coordinates x to local coordinates within
@@ -272,7 +274,7 @@ class AMG_encoder(nn.Module):
         # return [n_grids,batch,3]
         return transformed_points
    
-    @torch.jit.export
+    #@torch.jit.export
     def inverse_transform(self, x):
         '''
         Transforms local coordinates within each feature grid x to 
@@ -305,7 +307,7 @@ class AMG_encoder(nn.Module):
         transformed_points = transformed_points[...,0:3].detach().cpu()
         return transformed_points
     
-    @torch.jit.export
+    #@torch.jit.export
     def feature_density_gaussian(self, x):
        
         local_positions = self.transform(x).transpose(0,1)
@@ -339,10 +341,12 @@ class AMGSRN(nn.Module):
         feat_grid_shape = opt['feature_grid_shape'].split(',')
         feat_grid_shape = [eval(i) for i in feat_grid_shape]
         
-        #self.encoder = AMG_encoder(opt)
-        self.encoder = torch.jit.script(AMG_encoder(opt['n_grids'], opt['n_features'], 
+        self.encoder = AMG_encoder(opt['n_grids'], opt['n_features'], 
             [eval(i) for i in opt['feature_grid_shape'].split(',')], opt['n_dims'], 
-            opt['device']))
+            opt['device'])
+        #self.encoder = torch.jit.script(AMG_encoder(opt['n_grids'], opt['n_features'], 
+        #    [eval(i) for i in opt['feature_grid_shape'].split(',')], opt['n_dims'], 
+        #    opt['device']))
         
         try:
             import tinycudann as tcnn 
@@ -379,9 +383,7 @@ class AMGSRN(nn.Module):
             self.decoder = torch.nn.Sequential(*self.decoder)
             
         self.reset_parameters()
-        
-        
-       
+              
     def reset_parameters(self):
         with torch.no_grad():
             feat_grid_shape = self.opt['feature_grid_shape'].split(',')
