@@ -296,16 +296,16 @@ def train( model, dataset, opt):
                 {"params": model.decoder.parameters(), "lr": opt["lr"]}
             ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
                 optim.Adam([
-                {"params": [model.encoder.grid_translations, 
-                            model.encoder.grid_scales,
-                            model.encoder.grid_rotations], "lr": opt["lr"] * 0.1}
+                {"params": [model.encoder.grid_translations], "lr": opt['lr'] * 0.1}, 
+                {"params": [model.encoder.grid_scales],"lr": opt['lr'] * 0.1},
+                {"params": [model.encoder.grid_rotations], "lr": opt["lr"] * 1}
             ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
             ]        
             scheduler = [
                 torch.optim.lr_scheduler.LinearLR(optimizer[0],
-                start_factor=1, end_factor=1),
-                torch.optim.lr_scheduler.CosineAnnealingLR(optimizer[1], 
-                    T_max=opt['iterations'])
+                    start_factor=1, end_factor=1),
+                torch.optim.lr_scheduler.LinearLR(optimizer[1], 
+                    start_factor=1, end_factor=1)
             ]      
     else:
         optimizer = optim.Adam(model.parameters(), lr=opt["lr"], 

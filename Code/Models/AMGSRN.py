@@ -105,7 +105,7 @@ class AMG_encoder(nn.Module):
             torch.ones(
                 [self.opt['n_grids'], 3],
                 device = self.opt['device']
-            ) * 1.48,
+            ),
             requires_grad=True
         )
         self.grid_translations = torch.nn.Parameter(
@@ -181,6 +181,32 @@ class AMG_encoder(nn.Module):
                 requires_grad=True
             )
   
+    def get_transformation_matrices(self):
+        c = torch.cos(self.grid_rotations)
+        s = torch.sin(self.grid_rotations)
+        m = torch.empty([
+            self.opt['n_grids'],4,4],
+            device = self.opt['device'])
+        # rotation is applied yaw-pitch-roll (left-to-right) order
+        # https://en.wikipedia.org/wiki/Rotation_matrix
+        m[:,0,0] = self.grid_scales[:,0]*c[:,1]*c[:,2]   
+        m[:,0,1] = self.grid_scales[:,1]*(s[:,0]*s[:,1]*c[:,2] - c[:,0]*s[:,2])
+        m[:,0,2] = self.grid_scales[:,2]*(c[:,0]*s[:,1]*c[:,2] + s[:,0]*s[:,2])
+        m[:,0,3] = self.grid_translations[:,0]      
+        m[:,1,0] = self.grid_scales[:,0]*c[:,1]*s[:,2]
+        m[:,1,1] = self.grid_scales[:,1]*(s[:,0]*s[:,1]*s[:,2]+c[:,0]*c[:,2])
+        m[:,1,2] = self.grid_scales[:,2]*(c[:,0]*s[:,1]*s[:,2] - s[:,0]*c[:,2])
+        m[:,1,3] = self.grid_translations[:,1]
+        m[:,2,0] = self.grid_scales[:,0]*-s[:,1]
+        m[:,2,1] = self.grid_scales[:,1]*s[:,0]*c[:,1]
+        m[:,2,2] = self.grid_scales[:,2]*c[:,0]*c[:,1]
+        m[:,2,3] = self.grid_translations[:,2]
+        m[:,3,0] = 0    
+        m[:,3,1] = 0    
+        m[:,3,2] = 0    
+        m[:,3,3] = 1    
+        return m
+  
     def transform(self, x):
         '''
         Transforms global coordinates x to local coordinates within
@@ -204,12 +230,13 @@ class AMG_encoder(nn.Module):
             )
 
         
-        transformation_matrices = get_transformation_matrices(
-            self.opt['n_grids'], self.grid_translations, 
-            self.grid_scales, self.grid_rotations, 
-            self.opt['device']
-            )
-
+        #transformation_matrices = get_transformation_matrices(
+        #    self.opt['n_grids'], self.grid_translations, 
+        #    self.grid_scales, self.grid_rotations, 
+        #    self.opt['device']
+        #    )
+        transformation_matrices = self.get_transformation_matrices()
+        
         # BMM will result in [n_grids,4,4] x [n_grids,4,batch]
         # which returns [n_grids,4,batch], which is then transposed
         # to [n_grids,batch,4]

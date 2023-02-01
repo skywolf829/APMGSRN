@@ -3,7 +3,7 @@
         {        
             "save_name": "temp",
             "model": "AMGSRN",
-            "data": "Supernova_test.nc",
+            "data": "asteroid_v03.nc",
             "n_features": 1,
             "n_grids": 16,
             "feature_grid_shape": "16,16,16",
