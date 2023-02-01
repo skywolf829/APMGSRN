@@ -182,8 +182,8 @@ class AMG_encoder(nn.Module):
             )
   
     def get_transformation_matrices(self):
-        c = torch.cos(self.grid_rotations)
-        s = torch.sin(self.grid_rotations)
+        c = torch.cos(self.grid_rotations).to(self.opt['device'])
+        s = torch.sin(self.grid_rotations).to(self.opt['device'])
         m = torch.empty([
             self.opt['n_grids'],4,4],
             device = self.opt['device'])
