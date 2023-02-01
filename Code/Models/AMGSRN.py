@@ -143,28 +143,50 @@ class AMG_encoder(nn.Module):
     def get_transformation_matrices(self):
         c = torch.cos(self.grid_rotations)
         s = torch.sin(self.grid_rotations)
-        m = torch.zeros([
-            self.grid_rotations.shape[0],4,4],
-            device = self.grid_rotations.device)
+        #m = torch.empty([
+        #    self.grid_rotations.shape[0],4,4],
+        #    device = self.grid_rotations.device)
         # rotation is applied yaw-pitch-roll (left-to-right) order
         # https://en.wikipedia.org/wiki/Rotation_matrix
-        
-        m[:,0,0].add_(self.grid_scales[:,0]*c[:,1]*c[:,2])  
-        m[:,0,1].add_(self.grid_scales[:,1]*(s[:,0]*s[:,1]*c[:,2] - c[:,0]*s[:,2]))
-        m[:,0,2].add_(self.grid_scales[:,2]*(c[:,0]*s[:,1]*c[:,2] + s[:,0]*s[:,2]))
-        m[:,0,3].add_(self.grid_translations[:,0])     
-        m[:,1,0].add_(self.grid_scales[:,0]*c[:,1]*s[:,2])
-        m[:,1,1].add_(self.grid_scales[:,1]*(s[:,0]*s[:,1]*s[:,2]+c[:,0]*c[:,2]))
-        m[:,1,2].add_(self.grid_scales[:,2]*(c[:,0]*s[:,1]*s[:,2] - s[:,0]*c[:,2]))
-        m[:,1,3].add_(self.grid_translations[:,1])
-        m[:,2,0].add_(self.grid_scales[:,0]*-s[:,1])
-        m[:,2,1].add_(self.grid_scales[:,1]*s[:,0]*c[:,1])
-        m[:,2,2].add_(self.grid_scales[:,2]*c[:,0]*c[:,1])
-        m[:,2,3].add_(self.grid_translations[:,2])
-        #m[:,3,0] = 0    
-        #m[:,3,1] = 0    
-        #m[:,3,2] = 0    
-        m[:,3,3].add_(1) 
+        '''
+        m[:,0,0] = self.grid_scales[:,0]*c[:,1]*c[:,2] 
+        m[:,0,1] = self.grid_scales[:,1]*(s[:,0]*s[:,1]*c[:,2] - c[:,0]*s[:,2])
+        m[:,0,2] = self.grid_scales[:,2]*(c[:,0]*s[:,1]*c[:,2] + s[:,0]*s[:,2])
+        m[:,0,3] = self.grid_translations[:,0]      
+        m[:,1,0] = self.grid_scales[:,0]*c[:,1]*s[:,2]
+        m[:,1,1] = self.grid_scales[:,1]*(s[:,0]*s[:,1]*s[:,2]+c[:,0]*c[:,2])
+        m[:,1,2] = self.grid_scales[:,2]*(c[:,0]*s[:,1]*s[:,2] - s[:,0]*c[:,2])
+        m[:,1,3] = self.grid_translations[:,1]
+        m[:,2,0] = self.grid_scales[:,0]*-s[:,1]
+        m[:,2,1] = self.grid_scales[:,1]*s[:,0]*c[:,1]
+        m[:,2,2] = self.grid_scales[:,2]*c[:,0]*c[:,1]
+        m[:,2,3] = self.grid_translations[:,2]
+        m[:,3,0] = 0    
+        m[:,3,1] = 0    
+        m[:,3,2] = 0    
+        m[:,3,3] = 1
+        '''
+        zeros = torch.zeros_like(self.grid_scales[:,0])
+        ones = torch.ones_like(self.grid_scales[:,0])
+        m = torch.stack([
+            self.grid_scales[:,0]*c[:,1]*c[:,2],
+            self.grid_scales[:,1]*(s[:,0]*s[:,1]*c[:,2] - c[:,0]*s[:,2]),
+            self.grid_scales[:,2]*(c[:,0]*s[:,1]*c[:,2] + s[:,0]*s[:,2]),
+            self.grid_translations[:,0],      
+            self.grid_scales[:,0]*c[:,1]*s[:,2],
+            self.grid_scales[:,1]*(s[:,0]*s[:,1]*s[:,2]+c[:,0]*c[:,2]),
+            self.grid_scales[:,2]*(c[:,0]*s[:,1]*s[:,2] - s[:,0]*c[:,2]),
+            self.grid_translations[:,1],
+            self.grid_scales[:,0]*-s[:,1],
+            self.grid_scales[:,1]*s[:,0]*c[:,1],
+            self.grid_scales[:,2]*c[:,0]*c[:,1],
+            self.grid_translations[:,2],
+            zeros,   
+            zeros,   
+            zeros,    
+            ones,
+        ], dim=1).reshape(-1, 4, 4)        
+            
         return m
   
     @torch.jit.export
