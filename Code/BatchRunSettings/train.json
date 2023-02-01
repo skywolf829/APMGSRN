@@ -10,7 +10,7 @@
             "n_layers": 2,
             "nodes_per_layer": 32,
             "precondition": false,
-            "log_features_every": 100,
+            "log_features_every": 0,
             "lr": 0.01,
             "iterations": 10000
     }],
