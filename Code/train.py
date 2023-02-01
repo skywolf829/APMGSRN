@@ -73,8 +73,7 @@ def log_feature_density(model, dataset, opt):
         opt['save_name'], "gaussian_density.nc"))
 
 def log_feature_points(model, dataset, opt, iteration):
-    feat_grid_shape = opt['feature_grid_shape'].split(',')
-    feat_grid_shape = [eval(i) for i in feat_grid_shape]
+    feat_grid_shape = [eval(i) for i in opt['feature_grid_shape'].split(',')]
     feat_grid_shape = [2,2,2]
     
     # Dont use feature grid shape - too much overhead
