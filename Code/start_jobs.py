@@ -37,7 +37,7 @@ def build_commands(settings_path):
         script_name = data[i][0]
         variables = data[i][1]
         
-        if("test" in script_name and "all" in variables['load_from']):
+        if("test" in script_name and "all" == variables['load_from']):
             all_saves = os.listdir(save_folder)
             j = 0
             for fold in all_saves:

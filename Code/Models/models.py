@@ -6,13 +6,8 @@ import torch.nn.functional as F
 import os
 from math import pi
 from Models.options import *
-from Models.fVSRN import fVSRN
-from Models.afVSRN import afVSRN
-from Models.AMRSRN import AMRSRN
-from Models.SigmoidNet import SigmoidNet
-from Models.ExpNet import ExpNet
-from Other.utility_functions import create_folder
-from Other.utility_functions import make_coord_grid
+
+from Other.utility_functions import create_folder, make_coord_grid
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
 project_folder_path = os.path.join(project_folder_path, "..", "..")
@@ -42,12 +37,17 @@ def load_model(opt, device):
     return model
 
 def create_model(opt):
+    from Models.fVSRN import fVSRN
+    from Models.afVSRN import afVSRN
+    from Models.AMGSRN import AMGSRN
+    from Models.SigmoidNet import SigmoidNet
+    from Models.ExpNet import ExpNet
     if(opt['model'] == "fVSRN"):
         return fVSRN(opt)
     elif(opt['model'] == "afVSRN"):
         return afVSRN(opt)
-    elif(opt['model'] == "AMRSRN"):
-        return AMRSRN(opt)
+    elif(opt['model'] == "AMGSRN"):
+        return AMGSRN(opt)
     elif(opt['model'] == "AMRSRN_TCNN"):
         from Models.AMRSRN_TCNN import AMRSRN_TCNN
         return AMRSRN_TCNN(opt)

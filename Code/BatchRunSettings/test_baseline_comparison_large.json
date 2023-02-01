@@ -1,0 +1,77 @@
+[
+    [ "test.py",
+        {        
+        "load_from": "Supernova_NGP_large",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_fVSRN_large",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_AMGSRN_large",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Nyx_NGP_large",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Nyx_fVSRN_large",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Nyx_AMGSRN_large",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Plume_NGP_large",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Plume_fVSRN_large",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Plume_AMGSRN_large",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Isotropic_NGP_large",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Isotropic_fVSRN_large",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Isotropic_AMGSRN_large",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Asteroid_NGP_large",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Asteroid_fVSRN_large",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Asteroid_AMGSRN_large",
+        "tests": "reconstruction,error_volume"
+    }]
+]

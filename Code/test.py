@@ -42,7 +42,7 @@ def error_volume(model, dataset, opt):
     create_path(os.path.join(output_folder, "ErrorVolume"))
     
     result -= dataset.data
-    result.abs_()
+    result **= 2
     tensor_to_cdf(result, 
         os.path.join(output_folder, "ErrorVolume",
         opt['save_name'] + "_error.nc"))

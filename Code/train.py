@@ -25,22 +25,31 @@ data_folder = os.path.join(project_folder_path, "Data")
 output_folder = os.path.join(project_folder_path, "Output")
 save_folder = os.path.join(project_folder_path, "SavedModels")
 
-def log_to_writer(iteration, losses, writer, opt):
+def log_to_writer(iteration, losses, writer, opt, preconditioning=None):
     with torch.no_grad():   
         print_str = f"Iteration {iteration}/{opt['iterations']}, "
-        for key in losses.keys():    
-            print_str = print_str + str(key) + f": {losses[key].item() : 0.05f} " 
-            writer.add_scalar(str(key), losses[key].item(), iteration)
+        for key in losses.keys():
+            if(losses[key] is not None):    
+                print_str = print_str + str(key) + f": {losses[key].mean().item() : 0.07f} " 
+                writer.add_scalar(str(key), losses[key].mean().item(), iteration)
         print(print_str)
         if("cuda" in opt['device']):
             GBytes = (torch.cuda.max_memory_allocated(device=opt['device']) \
                 / (1024**3))
-            writer.add_scalar('GPU memory (GB)', GBytes, iteration)
+            if preconditioning is None:
+                writer.add_scalar('GPU memory (GB)', GBytes, iteration)
+            elif "model" in preconditioning:
+                writer.add_scalar('Preconditioning model GPU memory (GB)', GBytes, iteration)
+            elif "grid" in preconditioning:
+                writer.add_scalar('Preconditioning grid GPU memory (GB)', GBytes, iteration)
 
-def logging(writer, iteration, losses, model, opt, grid_to_sample, dataset):
+def logging(writer, iteration, losses, model, opt, grid_to_sample, dataset, 
+            preconditioning=None):
     if(opt['log_every'] > 0 and iteration % opt['log_every'] == 0):
-        log_to_writer(iteration, losses, writer, opt)
-    if(opt['log_features_every'] > 0 and iteration % opt['log_features_every'] == 0):
+        log_to_writer(iteration, losses, writer, opt, preconditioning)
+    if(opt['log_features_every'] > 0 and \
+        iteration % opt['log_features_every'] == 0 and \
+        preconditioning is not None and "grid" in preconditioning):
         log_feature_points(model, dataset, opt, iteration)
 
 def log_feature_density(model, dataset, opt):
@@ -66,13 +75,17 @@ def log_feature_density(model, dataset, opt):
 def log_feature_points(model, dataset, opt, iteration):
     feat_grid_shape = opt['feature_grid_shape'].split(',')
     feat_grid_shape = [eval(i) for i in feat_grid_shape]
+    feat_grid_shape = [2,2,2]
     
+    # Dont use feature grid shape - too much overhead
+    # Just use [2,2,2]
     global_points = make_coord_grid(feat_grid_shape, opt['device'], 
                     flatten=True, align_corners=True)
     transformed_points = model.inverse_transform(global_points)
 
     transformed_points += 1.0
-    transformed_points *= 0.5 * (torch.tensor(list(dataset.data.shape[2:]))-1)
+    transformed_points *= 0.5 
+    transformed_points *= (torch.tensor(list(dataset.data.shape[2:]))-1)
     transformed_points = transformed_points.detach().cpu()
 
     ids = torch.arange(transformed_points.shape[0])
@@ -89,6 +102,7 @@ def log_feature_points(model, dataset, opt, iteration):
 def log_feature_grids(model, dataset, opt, iteration):
     feat_grid_shape = opt['feature_grid_shape'].split(',')
     feat_grid_shape = [eval(i) for i in feat_grid_shape]
+    feat_grid_shape = [2,2,2]
     
     global_points = make_coord_grid(feat_grid_shape, opt['device'], 
                     flatten=True, align_corners=True)
@@ -122,7 +136,7 @@ def log_feature_grids_from_points(opt):
     csvPaths = sorted(glob.glob(os.path.join(logdir, f"*.csv")))
     grids_iters = np.array([np.genfromtxt(csvPath, delimiter=',') for csvPath in csvPaths])
     
-    feat_grid_shape = np.array(opt['feature_grid_shape'].split(','), dtype=int)
+    feat_grid_shape = np.array([2,2,2], dtype=int)
     feat_grid_shape_zyx = np.flip(feat_grid_shape)
     grids_iters = grids_iters.reshape(len(grids_iters), opt['n_grids'], feat_grid_shape.prod(), 4)
     
@@ -138,9 +152,10 @@ def log_feature_grids_from_points(opt):
             vtm.SetBlock(j, vts)
         write_vtm(os.path.join(vtm_dir, f"grids_{i:03}.vtm", ), vtm)
 
-def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
+def train_step_AMGSRN_precondition(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
     opt['iteration_number'] = iteration
-    optimizer.zero_grad()            
+    optimizer.zero_grad() 
+                 
     x, y = batch
     x = x.to(opt['device'])
     y = y.to(opt['device'])
@@ -149,21 +164,6 @@ def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     loss = F.mse_loss(model_output, y, reduction='none')
     loss = loss.sum(dim=1, keepdim=True)
     loss.mean().backward()
-    
-    density = model.feature_density_gaussian(x)       
-    density /= density.sum().detach()
-    
-    target = torch.exp(torch.log(density.detach()+1e-16)/\
-        (loss.detach()/loss.mean().detach()))
-    #target = density.detach() * (loss.detach() / loss.mean().detach())**0.5
-    target /= target.sum()
-    density_loss = F.kl_div(
-        torch.log(density+1e-16), 
-            torch.log(target+1e-16), 
-            reduction='none', 
-            log_target=True)
-    #density_loss = F.mse_loss(density, target, reduction='none')
-    density_loss.mean().backward()
 
     optimizer.step()
     scheduler.step()        
@@ -171,8 +171,57 @@ def train_step_AMRSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     
     if(opt['log_every'] != 0):
         logging(writer, iteration, 
-            {"Fitting loss": loss.mean(), "Density loss": density_loss.mean()}, 
+            {"Fitting loss": loss}, 
             model, opt, dataset.data.shape[2:], dataset)
+
+def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
+    opt['iteration_number'] = iteration
+    optimizer[0].zero_grad() 
+                 
+    x, y = batch
+    x = x.to(opt['device'])
+    y = y.to(opt['device'])
+        
+    model_output = model(x)
+    loss = F.mse_loss(model_output, y, reduction='none')
+    loss = loss.sum(dim=1, keepdim=True)
+    loss.mean().backward()
+       
+    
+    if(iteration < opt['iterations']*0.9):
+        optimizer[1].zero_grad() 
+        density = model.feature_density_gaussian(x) 
+        density /= density.sum().detach()  
+        target = torch.exp(torch.log(density+1e-16) / \
+            (loss/loss.mean()))
+        target /= target.sum()
+            
+        density_loss = F.kl_div(
+            torch.log(density+1e-16), 
+                torch.log(target.detach()+1e-16), 
+                reduction='none', 
+                log_target=True)
+        density_loss.mean().backward()
+        
+        optimizer[1].step()
+        scheduler[1].step()   
+    else:
+        density_loss = None
+         
+    regularization_loss = 10e-6 * (torch.cat([x.view(-1) for x in model.parameters()])**2).mean()
+    regularization_loss.backward()
+    
+    optimizer[0].step()
+    scheduler[0].step()   
+         
+    profiler.step()
+    
+    if(opt['log_every'] != 0):
+        logging(writer, iteration, 
+            {"Fitting loss": loss, 
+             "Grid loss": density_loss,
+             "L1 Regularization": regularization_loss}, 
+            model, opt, dataset.data.shape[2:], dataset, preconditioning='grid')
 
 def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
     opt['iteration_number'] = iteration
@@ -183,7 +232,7 @@ def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, schedul
     y = y.to(opt['device'])
     
     model_output = model(x)
-    loss = F.l1_loss(model_output, y, reduction='none')
+    loss = F.mse_loss(model_output, y, reduction='none')
     loss.mean().backward()                   
 
     optimizer.step()
@@ -196,37 +245,10 @@ def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, schedul
 
 def train( model, dataset, opt):
     model = model.to(opt['device'])
+    print(model)
     print("Training on %s" % (opt["device"]), 
         os.path.join(save_folder, opt["save_name"]))
-    if("AMRSRN" == opt['model']):
-        optimizer = optim.Adam([
-            {
-            "params": [model.grid_translations, model.grid_scales], "lr": opt["lr"]*0.1
-            },
-            {
-            "params": [model.feature_grids], "lr": opt["lr"]
-            },
-            {
-            "params": model.decoder.parameters(), "lr": opt["lr"]
-            }
-        ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
-    elif("AMRSRN_TCNN" == opt['model']):
-        optimizer = optim.Adam([
-            {
-            "params": [model.grid_translations, model.grid_scales], "lr": opt["lr"]*0.1
-            },
-            {
-            "params": model.feature_grids.parameters(), "lr": opt["lr"]
-            },
-            {
-            "params": model.decoder.parameters(), "lr": opt["lr"]
-            }
-        ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
-    else:
-        optimizer = optim.Adam(model.parameters(), lr=opt["lr"], 
-        betas=[opt['beta_1'], opt['beta_2']]) 
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 
-        step_size=(opt['iterations']*9)//10, gamma=0.1)
+    
 
     if(os.path.exists(os.path.join(project_folder_path, "tensorboard", opt['save_name']))):
         shutil.rmtree(os.path.join(project_folder_path, "tensorboard", opt['save_name']))
@@ -245,9 +267,53 @@ def train( model, dataset, opt):
 
     # choose the specific training iteration function based on the model
     train_step = train_step_vanilla
-    if 'AMRSRN' in opt['model']:
-        train_step = train_step_AMRSRN
-    
+    if 'AMGSRN' in opt['model']:
+        if(opt['precondition']):
+            train_step = train_step_AMGSRN_precondition
+            model.precodition_grids(dataset, writer, logging)
+            model.zero_grad()            
+            # Finally, reset the parameters necessary, and keep the grids
+            model.reset_parameters()
+            model.feature_grids.requires_grad_(True)
+            model.decoder.requires_grad_(True)
+            model.grid_scales.requires_grad_(False)
+            model.grid_translations.requires_grad_(False)
+        else:
+            train_step = train_step_AMGSRN
+                
+    if("AMGSRN" in opt['model']):
+        if(opt['precondition']):
+            optimizer = optim.Adam([
+                {"params": [model.encoder.feature_grids], "lr": opt["lr"]},
+                {"params": model.decoder.parameters(), "lr": opt["lr"]}
+            ],betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15) 
+            scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
+                [opt['iterations']*(2/5), opt['iterations']*(4/5)],
+                gamma=0.1)
+        else:
+            optimizer = [optim.Adam([
+                {"params": [model.encoder.feature_grids], "lr": opt["lr"]},
+                {"params": model.decoder.parameters(), "lr": opt["lr"]}
+            ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
+                optim.Adam([
+                {"params": [model.encoder.grid_translations], "lr": opt['lr'] * 0.1}, 
+                {"params": [model.encoder.grid_scales],"lr": opt['lr'] * 0.1},
+                {"params": [model.encoder.grid_rotations], "lr": opt["lr"] * 1}
+            ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
+            ]        
+            scheduler = [
+                torch.optim.lr_scheduler.LinearLR(optimizer[0],
+                    start_factor=1, end_factor=1),
+                torch.optim.lr_scheduler.LinearLR(optimizer[1], 
+                    start_factor=1, end_factor=1)
+            ]      
+    else:
+        optimizer = optim.Adam(model.parameters(), lr=opt["lr"], 
+            betas=[opt['beta_1'], opt['beta_2']]) 
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
+            [opt['iterations']*(2/5), opt['iterations']*(3/5), opt['iterations']*(4/5)],
+            gamma=0.33)
+        
     with torch.profiler.profile(
         activities=[
             torch.profiler.ProfilerActivity.CPU,
@@ -291,7 +357,7 @@ if __name__ == '__main__':
     parser.add_argument('--n_features',default=None,type=int,
         help='Number of features in the feature grid')       
     parser.add_argument('--n_grids',default=None,type=int,
-        help='Number of grids for AMRSRN')
+        help='Number of grids for AMGSRN')
     parser.add_argument('--num_positional_encoding_terms',default=None,type=int,
         help='Number of positional encoding terms')   
     parser.add_argument('--extents',default=None,type=str,
@@ -316,6 +382,8 @@ if __name__ == '__main__':
         help='Save name for the model')
     parser.add_argument('--align_corners',default=None,type=str2bool,
         help='Aligns corners in implicit model.')    
+    parser.add_argument('--precondition',default=None,type=str2bool,
+        help='Preconditions the grid transformations.')    
     parser.add_argument('--n_layers',default=None,type=int,
         help='Number of layers in the model')
     parser.add_argument('--nodes_per_layer',default=None,type=int,

@@ -1,7 +1,7 @@
 [
     [ "test.py",
-        {        
-        "load_from": "Supernova_test2_AMRSRN",
-        "tests": "reconstruction,feature_density,error_volume"
+    {        
+    "load_from": "temp",
+    "tests": "reconstruction,error_volume,feature_density"
     }]
 ]

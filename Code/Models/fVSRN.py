@@ -47,21 +47,42 @@ class fVSRN(nn.Module):
         self.feature_grid = torch.nn.Parameter(self.feature_grid, 
             requires_grad=True)
 
-        self.decoder = nn.ModuleList()
-        first_layer_input_size = opt['num_positional_encoding_terms']*opt['n_dims']*2 + opt['n_features']
-        layer = SnakeAltLayer(first_layer_input_size, 
-                            opt['nodes_per_layer'])
-        self.decoder.append(layer)
-        
-        for i in range(opt['n_layers']):
-            if i == opt['n_layers'] - 1:
-                layer = nn.Linear(opt['nodes_per_layer'], opt['n_outputs'])
-                nn.init.xavier_normal_(layer.weight)
-                self.decoder.append(layer)
-            else:
-                layer = SnakeAltLayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
-                self.decoder.append(layer)
+
+
+        try:
+            import tinycudann as tcnn 
+            print(f"Using TinyCUDANN (tcnn) since it is installed for performance gains.")
+            print(f"WARNING: This model will be incompatible with non-tcnn compatible systems")
+            self.decoder = tcnn.Network(
+                n_input_dims=opt['num_positional_encoding_terms']*opt['n_dims']*2 + opt['n_features'],
+                n_output_dims=opt['n_outputs'],
+                network_config={
+                    "otype": "FullyFusedMLP",
+                    "activation": "ReLU",
+                    "output_activation": "None",
+                    "n_neurons": opt['nodes_per_layer'],
+                    "n_hidden_layers": opt['n_layers'],
+                }
+            )
+        except ImportError:
+            print(f"TinyCUDANN (tcnn) not installed: falling back to normal PyTorch")
+            self.decoder = nn.ModuleList()
             
+            first_layer_input_size = opt['n_features']*opt['n_grids']# + opt['num_positional_encoding_terms']*opt['n_dims']*2
+                    
+            layer = LReLULayer(first_layer_input_size, 
+                                opt['nodes_per_layer'])
+            self.decoder.append(layer)
+            
+            for i in range(opt['n_layers']):
+                if i == opt['n_layers'] - 1:
+                    layer = nn.Linear(opt['nodes_per_layer'], opt['n_outputs'])
+                    self.decoder.append(layer)
+                else:
+                    layer = LReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
+                    self.decoder.append(layer)
+            self.decoder = torch.nn.Sequential(*self.decoder)
+                    
     def add_layer(self):
         self.recently_added_layer = True
         self.previous_last_layer = self.decoder[-1]
@@ -89,23 +110,7 @@ class fVSRN(nn.Module):
         pe = self.pe(x)  
         feats = feats.squeeze().permute(1, 0)
         y = torch.cat([pe, feats], dim=1)
-        
-        i = 0
-        while i < len(self.decoder):
-            if(self.recently_added_layer and i == len(self.decoder - 2)):
-                
-                y1 = self.previous_last_layer(y.clone())
-                y2 = self.decoder[i](y.clone())
-                y2 = self.decoder[i+1](y2)
-                
-                a = self.opt['iters_since_new_layer'] / self.opt['iters_to_train_new_layer']
-                b = 1 - a
-                y = b*y1 + a*y2
-                i = i + 2
-            else:
-                y = self.decoder[i](y)
-                i = i + 1
-            
+        y = self.decoder(y).float()
         return y
 
         

@@ -1,0 +1,18 @@
+[
+    
+    [ "test.py",
+        {        
+        "load_from": "Isotropic_NGP",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Isotropic_fVSRN",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Isotropic_AMRSRN",
+        "tests": "reconstruction,error_volume"
+    }]
+]

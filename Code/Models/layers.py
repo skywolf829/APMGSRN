@@ -27,7 +27,8 @@ class ReLULayer(nn.Module):
     
     def init_weights(self):
         with torch.no_grad():
-            nn.init.kaiming_uniform_(self.linear.weight)
+            nn.init.xavier_normal_(self.linear.weight)
+            nn.init.zeros_(self.linear.bias)
 
     def forward(self, input):
         return F.relu(self.linear(input))
