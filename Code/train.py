@@ -84,7 +84,8 @@ def log_feature_points(model, dataset, opt, iteration):
     transformed_points = model.inverse_transform(global_points)
 
     transformed_points += 1.0
-    transformed_points *= 0.5 * (torch.tensor(list(dataset.data.shape[2:]))-1)
+    transformed_points *= 0.5 
+    transformed_points *= (torch.tensor(list(dataset.data.shape[2:]))-1)
     transformed_points = transformed_points.detach().cpu()
 
     ids = torch.arange(transformed_points.shape[0])
@@ -189,7 +190,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     
     if(iteration < opt['iterations']*0.9):
         optimizer[1].zero_grad() 
-        density = model.feature_density_gaussian(x)       
+        density = model.feature_density_gaussian(x) 
         density /= density.sum().detach()  
         target = torch.exp(torch.log(density+1e-16) / \
             (loss/loss.mean()))
@@ -296,7 +297,8 @@ def train( model, dataset, opt):
             ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
                 optim.Adam([
                 {"params": [model.encoder.grid_translations, 
-                            model.encoder.grid_scales], "lr": opt["lr"] * 0.1}
+                            model.encoder.grid_scales,
+                            model.encoder.grid_rotations], "lr": opt["lr"] * 0.1}
             ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
             ]        
             scheduler = [

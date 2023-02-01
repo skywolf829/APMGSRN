@@ -1,7 +1,7 @@
 [
     [ "test.py",
-        {        
-        "load_from": "Supernova_NGP_large",
-        "tests": "reconstruction,error_volume"
+    {        
+    "load_from": "temp",
+    "tests": "reconstruction,error_volume,feature_density"
     }]
 ]
