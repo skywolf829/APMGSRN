@@ -164,7 +164,7 @@ class AMG_encoder(nn.Module):
         #m[:,3,0] = 0    
         #m[:,3,1] = 0    
         #m[:,3,2] = 0    
-        m[:,3,3].add_(1    
+        m[:,3,3].add_(1) 
         return m
   
     @torch.jit.export
