@@ -290,15 +290,16 @@ def train( model, dataset, opt):
                 [opt['iterations']*(2/5), opt['iterations']*(4/5)],
                 gamma=0.1)
         else:
-            optimizer = [optim.Adam([
-                {"params": [model.encoder.feature_grids], "lr": opt["lr"]},
-                {"params": model.decoder.parameters(), "lr": opt["lr"]}
-            ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
+            optimizer = [
                 optim.Adam([
-                {"params": [model.encoder.grid_translations], "lr": opt['lr'] * 0.1}, 
-                {"params": [model.encoder.grid_scales],"lr": opt['lr'] * 0.1},
-                {"params": [model.encoder.grid_rotations], "lr": opt["lr"] * 0.1}
-            ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
+                    {"params": [model.encoder.feature_grids], "lr": opt["lr"]},
+                    {"params": model.decoder.parameters(), "lr": opt["lr"]}
+                ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
+                optim.Adam(
+                    model.encoder.get_transform_parameters(), 
+                    lr=opt['lr'] * 0.1, 
+                    betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15
+                    )
             ]        
             scheduler = [
                 torch.optim.lr_scheduler.LinearLR(optimizer[0],

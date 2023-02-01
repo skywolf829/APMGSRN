@@ -132,6 +132,12 @@ class AMG_encoder(nn.Module):
         )
     
         self.randomize_grids()
+    
+    def get_transform_parameters(self):
+        return [{"params": self.grid_scales},
+            {"params":self.grid_translations},
+            {"params":self.grid_rotations}
+        ]
         
     def randomize_grids(self):  
         with torch.no_grad():     
