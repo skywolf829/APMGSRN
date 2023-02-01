@@ -437,6 +437,7 @@ if __name__ == '__main__':
     save_folder = os.path.join(project_folder_path, "SavedModels")
     os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
     torch.manual_seed(42)
+    torch.jit.enable_onednn_fusion(True)
 
     if(args['load_from'] is None):
         # Init models
