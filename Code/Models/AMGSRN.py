@@ -165,8 +165,8 @@ class AMG_encoder(nn.Module):
             #self.grid_rotations.uniform_(-torch.pi/16, torch.pi/16)
             d = self.transformation_matrices.device
             self.transformation_matrices[:] = torch.eye(4, device=d, dtype=torch.float32)
-            self.transformation_matrices[:,0:3,:] += torch.rand_like(
-                self.transformation_matrices[:,0:3,:],
+            self.transformation_matrices[:,0:3,3] += torch.rand_like(
+                self.transformation_matrices[:,0:3,3],
                 device=d, dtype=torch.float32) * 0.1
             self.transformation_matrices = torch.nn.Parameter(
                 self.transformation_matrices @ \
