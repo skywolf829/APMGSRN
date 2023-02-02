@@ -143,7 +143,8 @@ class AMG_encoder(nn.Module):
     
         self.randomize_grids()
     
-    def get_transform_parameters(self):
+    @torch.jit.export
+    def get_transform_parameters(self) -> List[Dict[str, torch.Tensor]]:
         #return [{"params": self.grid_scales},
         #    {"params":self.grid_translations},
         #    {"params":self.grid_rotations}
@@ -166,15 +167,15 @@ class AMG_encoder(nn.Module):
             self.transformation_matrices[:,3,0:3] = 0
             self.transformation_matrices.detach_().requires_grad_()
 
-    #@torch.jit.export
+    @torch.jit.export
     def get_transformation_matrices(self):
         return self.transformation_matrices
   
-    #@torch.jit.export
+    @torch.jit.export
     def get_inverse_transformation_matrices(self):
         return torch.linalg.inv(self.transformation_matrices)
   
-    #@torch.jit.export
+    @torch.jit.export
     def transform(self, x):
         '''
         Transforms global coordinates x to local coordinates within
@@ -222,7 +223,7 @@ class AMG_encoder(nn.Module):
         # return [n_grids,batch,3]
         return transformed_points
    
-    #@torch.jit.export
+    @torch.jit.export
     def inverse_transform(self, x):
         '''
         Transforms local coordinates within each feature grid x to 
@@ -257,18 +258,23 @@ class AMG_encoder(nn.Module):
         transformed_points = transformed_points[...,0:3].detach().cpu()
         return transformed_points
     
-    #@torch.jit.export
+    @torch.jit.export
     def feature_density_gaussian(self, x):
-       
+        
+        # get local positions [n_grids,batch,3], transpose to [batch,n_grids,3]
         local_positions = self.transform(x).transpose(0,1)
         
-        #coeffs = torch.prod(self.grid_scales, dim=-1).unsqueeze(0) / self.DIM_COEFF
+        
+        # get the coeffs [n_grids], then unsqueeze to [1,n_grids] for broadcasting
         coeffs = torch.linalg.det(self.transformation_matrices[:,0:3,0:3]).unsqueeze(0) / self.DIM_COEFF
-        #coeffs = 1
+        
+        # sum the exp part to [batch,n_grids]
         exps = torch.exp(-0.5 * \
             torch.sum(
                 local_positions**20, 
             dim=-1))
+        #exps = 1 / (1 + torch.sum(local_positions**20,dim=-1))
+        
         return torch.sum(coeffs * exps, dim=-1, keepdim=True)
     
     def forward(self, x):
@@ -295,12 +301,12 @@ class AMGSRN(nn.Module):
         feat_grid_shape = opt['feature_grid_shape'].split(',')
         feat_grid_shape = [eval(i) for i in feat_grid_shape]
         
-        self.encoder = AMG_encoder(opt['n_grids'], opt['n_features'], 
-            [eval(i) for i in opt['feature_grid_shape'].split(',')], opt['n_dims'], 
-            opt['device'])
-        #self.encoder = torch.jit.script(AMG_encoder(opt['n_grids'], opt['n_features'], 
+        #self.encoder = AMG_encoder(opt['n_grids'], opt['n_features'], 
         #    [eval(i) for i in opt['feature_grid_shape'].split(',')], opt['n_dims'], 
-        #    opt['device']))
+        #    opt['device'])
+        self.encoder = torch.jit.script(AMG_encoder(opt['n_grids'], opt['n_features'], 
+            [eval(i) for i in opt['feature_grid_shape'].split(',')], opt['n_dims'], 
+            opt['device']))
         
         try:
             import tinycudann as tcnn 
