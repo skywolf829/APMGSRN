@@ -201,14 +201,13 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
             (loss/loss.mean()))
         target /= target.sum()
         torch.cuda.synchronize()
-        '''  
+        
         density_loss = F.kl_div(
             torch.log(density+1e-16), 
                 torch.log(target.detach()+1e-16), 
                 reduction='none', 
                 log_target=True)
-        '''       
-        density_loss = F.mse_loss(density, target.detach())        
+        
         torch.cuda.synchronize()
         density_loss.mean().backward()
         torch.cuda.synchronize()

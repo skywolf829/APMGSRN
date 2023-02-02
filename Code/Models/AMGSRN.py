@@ -273,11 +273,12 @@ class AMG_encoder(nn.Module):
     
     def forward(self, x):
         torch.cuda.synchronize()
-        transformed_points = self.transform(x)       
-        torch.cuda.synchronize()
-        transformed_points = transformed_points.unsqueeze(1).unsqueeze(1)
+        with torch.no_grad():
+            transformed_points = self.transform(x)       
+            torch.cuda.synchronize()
+            transformed_points = transformed_points.unsqueeze(1).unsqueeze(1)
         feats = F.grid_sample(self.feature_grids,
-                transformed_points.detach(),
+                transformed_points,
                 mode='bilinear', align_corners=True,
                 padding_mode="zeros")[:,:,0,0,:]
         torch.cuda.synchronize()
