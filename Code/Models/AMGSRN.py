@@ -99,7 +99,12 @@ class AMG_encoder(nn.Module):
         self.register_buffer("DIM_COEFF", 
                 torch.tensor([(2.0*torch.pi)**(n_dims/2)]),
                 persistent=False)    
-        
+        self.register_buffer("FLAT_TOP_GAUSSIAN_EXP", 
+                torch.tensor([2.0 * 10.0]),
+                persistent=False) 
+        self.register_buffer("HALF", 
+                torch.tensor([-0.5]),
+                persistent=False)
         '''
         self.grid_scales = torch.nn.Parameter(
             torch.ones(
@@ -194,14 +199,13 @@ class AMG_encoder(nn.Module):
         torch.cuda.synchronize()
         # x starts [batch,3], this changes it to [n_grids,batch,4]#
         # by appending 1 to the xyz and repeating it n_grids times
-        with torch.no_grad():
-            n_grids = transformation_matrices.shape[0]
+            
         transformed_points = torch.cat(
             [x, torch.ones([x.shape[0], 1], 
             device=x.device,
             dtype=torch.float32)], 
             dim=1).unsqueeze(0).repeat(
-                n_grids, 1, 1
+                transformation_matrices.shape[0], 1, 1
             )
         
         torch.cuda.synchronize()
@@ -270,9 +274,9 @@ class AMG_encoder(nn.Module):
         coeffs = torch.linalg.det(self.transformation_matrices[:,0:3,0:3]).unsqueeze(0) / self.DIM_COEFF
         
         # sum the exp part to [batch,n_grids]
-        exps = torch.exp(-0.5 * \
+        exps = torch.exp(self.HALF * \
             torch.sum(
-                self.transform(x).transpose(0,1)**20, 
+                self.transform(x).transpose(0,1)**self.FLAT_TOP_GAUSSIAN_EXP, 
             dim=-1))
         #exps = 1 / (1 + torch.sum(local_positions**20,dim=-1))
         
@@ -286,7 +290,7 @@ class AMG_encoder(nn.Module):
             torch.cuda.synchronize()
             transformed_points = transformed_points.unsqueeze(1).unsqueeze(1)
         feats = F.grid_sample(self.feature_grids,
-                transformed_points,
+                transformed_points.detach(),
                 mode='bilinear', align_corners=True,
                 padding_mode="zeros")[:,:,0,0,:]
         torch.cuda.synchronize()
@@ -469,6 +473,9 @@ class AMGSRN(nn.Module):
                     preconditioning="grid")
                    
     def forward(self, x):        
-        return self.decoder(self.encoder(x)).float()
+        feats = self.encoder(x)        
+        y = self.decoder(feats).float()
+        
+        return y
 
         
