@@ -82,8 +82,8 @@ if __name__ == '__main__':
     start_time = time.time()
     writer = SummaryWriter(os.path.join('tensorboard','profiletest'))
     
-    target = torch.randn([10000, 1], device="cuda:0", dtype=torch.float32)
-    target /= target.sum()
+    target_density = torch.randn([10000, 1], device="cuda:0", dtype=torch.float32)
+    target_density /= target_density.sum()
     
     model = benchmark_model()
     
@@ -91,6 +91,7 @@ if __name__ == '__main__':
             betas=[0.99, 0.99]) 
     
     x = torch.rand([10000, 3], device="cuda:0", dtype=torch.float32)*2 - 1 
+    '''
     with torch.profiler.profile(
         activities=[
             torch.profiler.ProfilerActivity.CPU,
@@ -106,37 +107,34 @@ if __name__ == '__main__':
         with_modules=True,
         on_trace_ready=torch.profiler.tensorboard_trace_handler(
             os.path.join('tensorboard',"profiletest"))) as profiler:
+    '''
+    for iteration in range(10000):
+        torch.cuda.synchronize()
+        optimizer.zero_grad()
         
-        for iteration in range(10000):
-            torch.cuda.synchronize()
-            optimizer.zero_grad()
-            
-            torch.cuda.synchronize() 
-            
-            torch.cuda.synchronize()          
-            density = model(x)
-            
-            torch.cuda.synchronize()
-            density /= density.sum().detach()  
-            
-            torch.cuda.synchronize()
-            density_loss = F.kl_div(
-                torch.log(density+1e-16), 
-                    torch.log(target.detach()+1e-16), 
-                    reduction='none', 
-                    log_target=True)
-            
-            torch.cuda.synchronize()
-            density_loss.mean().backward()
-            
-            torch.cuda.synchronize()
-            optimizer.step()   
-            
-            torch.cuda.synchronize()
-            profiler.step()    
-            
-            if(iteration % 100 == 0):
-                print(f"Iter {iteration}/10000")
+        torch.cuda.synchronize() 
+        
+        torch.cuda.synchronize()          
+        density = model(x)
+        
+        torch.cuda.synchronize()
+        density /= density.sum().detach()  
+        
+        torch.cuda.synchronize()
+        density_loss = F.kl_div(
+            torch.log(density+1e-16), 
+                torch.log(target_density.detach()+1e-16), 
+                reduction='none', 
+                log_target=True)
+        
+        torch.cuda.synchronize()
+        density_loss.mean().backward()
+        
+        torch.cuda.synchronize()
+        optimizer.step()   
+        
+        torch.cuda.synchronize()
+        #profiler.step()    
 
     end_time = time.time()
     print(f"Took {(end_time-start_time)/60 : 0.02f} min")    
