@@ -18,15 +18,6 @@ class benchmark_model(torch.nn.Module):
             ),
             requires_grad=True
         )
-        
-        self.feature_grids =  torch.nn.parameter.Parameter(
-            torch.ones(
-                [16, 1, 4, 4, 4],
-                device = "cuda:0",
-                dtype=torch.float32
-            ).uniform_(-0.0001, 0.0001),
-            requires_grad=True
-        )
     
         self.randomize_grids()
     
@@ -86,8 +77,6 @@ class benchmark_model(torch.nn.Module):
         torch.cuda.synchronize()
         return result
     
-        
-
 if __name__ == '__main__':
 
     start_time = time.time()
@@ -98,9 +87,10 @@ if __name__ == '__main__':
     
     model = benchmark_model()
     
-    optimizer = optim.Adam([{"params": model.transformation_matrices}], lr=0.001, 
+    optimizer = optim.Adam([{"params": model.transformation_matrices}], lr=0.0001, 
             betas=[0.99, 0.99]) 
     
+    x = torch.rand([10000, 3], device="cuda:0", dtype=torch.float32)*2 - 1 
     with torch.profiler.profile(
         activities=[
             torch.profiler.ProfilerActivity.CPU,
@@ -111,19 +101,17 @@ if __name__ == '__main__':
             warmup=8,
             active=1,
             repeat=1),
-        record_shapes=True,
         profile_memory=True,
         with_stack=True,
         with_modules=True,
         on_trace_ready=torch.profiler.tensorboard_trace_handler(
             os.path.join('tensorboard',"profiletest"))) as profiler:
-        torch.cuda.synchronize()
+        
         for iteration in range(10000):
             torch.cuda.synchronize()
             optimizer.zero_grad()
             
-            torch.cuda.synchronize()
-            x = torch.rand([10000, 3], device="cuda:0", dtype=torch.float32)*2 - 1  
+            torch.cuda.synchronize() 
             
             torch.cuda.synchronize()          
             density = model(x)
