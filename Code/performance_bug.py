@@ -19,20 +19,15 @@ class benchmark_model(torch.nn.Module):
             requires_grad=True
         )
     
-        self.randomize_grids()
-    
-    def randomize_grids(self):  
-        with torch.no_grad():     
-            d = self.transformation_matrices.device
-            self.transformation_matrices[:] = torch.eye(4, device=d, dtype=torch.float32)
-            self.transformation_matrices[:,0:3,:] += torch.rand_like(
-                self.transformation_matrices[:,0:3,:],
-                device=d, dtype=torch.float32) * 0.1
-            self.transformation_matrices = torch.nn.Parameter(
-                self.transformation_matrices @ \
-                self.transformation_matrices.transpose(-1, -2),
-                requires_grad=True)
-            self.transformation_matrices[:,3,0:3] = 0
+        self.transformation_matrices[:] = torch.eye(4, device="cuda:0", dtype=torch.float32)
+        self.transformation_matrices[:,0:3,:] += torch.rand_like(
+            self.transformation_matrices[:,0:3,:],
+            device="cuda:0", dtype=torch.float32) * 0.1
+        self.transformation_matrices = torch.nn.Parameter(
+            self.transformation_matrices @ \
+            self.transformation_matrices.transpose(-1, -2),
+            requires_grad=True)
+        self.transformation_matrices[:,3,0:3] = 0  
 
     def transform(self, x):
         torch.cuda.synchronize()
