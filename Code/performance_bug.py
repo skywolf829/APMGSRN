@@ -74,10 +74,11 @@ class benchmark_model(torch.nn.Module):
     
 if __name__ == '__main__':
 
+    torch.backends.cuda.matmul.allow_tf32 = False
     start_time = time.time()
     writer = SummaryWriter(os.path.join('tensorboard','profiletest'))
     
-    target_density = torch.randn([10000, 1], device="cuda:0", dtype=torch.float32)
+    target_density = torch.randn([10000, 1], device="cuda:0", dtype=torch.float32).abs()
     target_density /= target_density.sum()
     
     model = benchmark_model()
@@ -102,12 +103,9 @@ if __name__ == '__main__':
         with_modules=True,
         on_trace_ready=torch.profiler.tensorboard_trace_handler(
             os.path.join('tensorboard',"profiletest"))) as profiler:
-    
         for iteration in range(10000):
             torch.cuda.synchronize()
             optimizer.zero_grad()
-            
-            torch.cuda.synchronize() 
             
             torch.cuda.synchronize()          
             density = model(x)
