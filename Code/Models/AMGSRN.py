@@ -100,16 +100,17 @@ class AMG_encoder(nn.Module):
                 torch.tensor([(2.0*torch.pi)**(n_dims/2)]),
                 persistent=False)    
         
+        '''
         self.grid_scales = torch.nn.Parameter(
             torch.ones(
-                [n_grids, 3],
+                [n_grids, 34, 4],
                 device = device
             ),
             requires_grad=True
         )
         self.grid_translations = torch.nn.Parameter(
             torch.zeros(
-                [n_grids, 3],
+                [n_grids, 4, 4],
                 device = device
             ),
             requires_grad=True
@@ -121,6 +122,15 @@ class AMG_encoder(nn.Module):
             ),
             requires_grad=True
         )        
+        '''
+        
+        self.transformation_matrices = torch.nn.Parameter(
+            torch.zeros(
+                [n_grids, 4, 4],
+                device = device
+            ),
+            requires_grad=True
+        )
         
         self.feature_grids =  torch.nn.parameter.Parameter(
             torch.ones(
@@ -134,108 +144,34 @@ class AMG_encoder(nn.Module):
         self.randomize_grids()
     
     def get_transform_parameters(self):
-        return [{"params": self.grid_scales},
-            {"params":self.grid_translations},
-            {"params":self.grid_rotations}
-        ]
+        #return [{"params": self.grid_scales},
+        #    {"params":self.grid_translations},
+        #    {"params":self.grid_rotations}
+        #]
+        return [{"params": self.transformation_matrices}]
         
     def randomize_grids(self):  
         with torch.no_grad():     
-            self.grid_scales.uniform_(1.0,1.2)
-            self.grid_translations.uniform_(-0.1, 0.1)
-            self.grid_rotations.uniform_(-torch.pi/16, torch.pi/16)
-    
+            #self.grid_scales.uniform_(1.0,1.2)
+            #self.grid_translations.uniform_(-0.1, 0.1)
+            #self.grid_rotations.uniform_(-torch.pi/16, torch.pi/16)
+            self.transformation_matrices[:] = torch.eye(4)
+            self.transformation_matrices[:,0:3,:] += torch.rand_like(
+                self.transformation_matrices[:,0:3,:]
+            ) * 0.1
+            self.transformation_matrices = torch.nn.Parameter(
+                self.transformation_matrices @ \
+                self.transformation_matrices.transpose(-1, -2),
+                requires_grad=True)
+            self.transformation_matrices[:,3,0:3] = 0
+
     #@torch.jit.export
     def get_transformation_matrices(self):
-        c = torch.cos(self.grid_rotations)
-        s = torch.sin(self.grid_rotations)
-        '''
-        m = torch.empty([
-            self.grid_rotations.shape[0],4,4],
-            device = self.grid_rotations.device)
-        # rotation is applied yaw-pitch-roll (left-to-right) order
-        # https://en.wikipedia.org/wiki/Rotation_matrix
-        
-        m[:,0,0] = self.grid_scales[:,0]*c[:,1]*c[:,2] 
-        m[:,0,1] = self.grid_scales[:,1]*(s[:,0]*s[:,1]*c[:,2] - c[:,0]*s[:,2])
-        m[:,0,2] = self.grid_scales[:,2]*(c[:,0]*s[:,1]*c[:,2] + s[:,0]*s[:,2])
-        m[:,0,3] = self.grid_translations[:,0]      
-        m[:,1,0] = self.grid_scales[:,0]*c[:,1]*s[:,2]
-        m[:,1,1] = self.grid_scales[:,1]*(s[:,0]*s[:,1]*s[:,2]+c[:,0]*c[:,2])
-        m[:,1,2] = self.grid_scales[:,2]*(c[:,0]*s[:,1]*s[:,2] - s[:,0]*c[:,2])
-        m[:,1,3] = self.grid_translations[:,1]
-        m[:,2,0] = self.grid_scales[:,0]*-s[:,1]
-        m[:,2,1] = self.grid_scales[:,1]*s[:,0]*c[:,1]
-        m[:,2,2] = self.grid_scales[:,2]*c[:,0]*c[:,1]
-        m[:,2,3] = self.grid_translations[:,2]
-        m[:,3,0] = 0    
-        m[:,3,1] = 0    
-        m[:,3,2] = 0    
-        m[:,3,3] = 1
-        
-        '''
-        zeros = torch.zeros_like(self.grid_scales[:,0])
-        ones = torch.ones_like(self.grid_scales[:,0])
-        m = torch.stack([
-            self.grid_scales[:,0]*c[:,1]*c[:,2],
-            self.grid_scales[:,1]*(s[:,0]*s[:,1]*c[:,2] - c[:,0]*s[:,2]),
-            self.grid_scales[:,2]*(c[:,0]*s[:,1]*c[:,2] + s[:,0]*s[:,2]),
-            self.grid_translations[:,0],      
-            self.grid_scales[:,0]*c[:,1]*s[:,2],
-            self.grid_scales[:,1]*(s[:,0]*s[:,1]*s[:,2]+c[:,0]*c[:,2]),
-            self.grid_scales[:,2]*(c[:,0]*s[:,1]*s[:,2] - s[:,0]*c[:,2]),
-            self.grid_translations[:,1],
-            self.grid_scales[:,0]*-s[:,1],
-            self.grid_scales[:,1]*s[:,0]*c[:,1],
-            self.grid_scales[:,2]*c[:,0]*c[:,1],
-            self.grid_translations[:,2],
-            zeros,   
-            zeros,   
-            zeros,    
-            ones,
-        ], dim=1).reshape(-1, 4, 4)        
-                
-        return m
+        return self.transformation_matrices
   
     #@torch.jit.export
     def get_inverse_transformation_matrices(self):
-        '''
-        Creates the inverse transformation matrices for the grids
-        defined with the translation, scale, and rotation values.
-        Computes M^-1 = (TRS)^-1 = (S^-1)(R^-1)(T^-1) = (1/S)(R^T)(-T), 
-        where T = translation matrix, R = rotation
-        matrix, S = scale matrix
-        '''
-        c = torch.cos(self.grid_rotations)
-        s = torch.sin(self.grid_rotations)
-        m = torch.zeros([
-            self.grid_rotations.shape[0],4,4],
-            device = self.grid_rotations.device)
-        # rotation is applied yaw-pitch-roll (left-to-right) order
-        # https://en.wikipedia.org/wiki/Rotation_matrix
-        m[:,0,0] = (1/self.grid_scales[:,0])*c[:,1]*c[:,2]     
-        m[:,0,1] = (1/self.grid_scales[:,0])*c[:,1]*s[:,2] 
-        m[:,0,2] = (1/self.grid_scales[:,0])*-s[:,1]
-        m[:,0,3] = (-self.grid_translations[:,0]/self.grid_scales[:,0])*c[:,1]*c[:,2] + \
-            (-self.grid_translations[:,1]/self.grid_scales[:,0])*c[:,1]*s[:,2] + \
-            (-self.grid_translations[:,2]/self.grid_scales[:,0])*-s[:,1]
-        m[:,1,0] = (1/self.grid_scales[:,1])*(s[:,0]*s[:,1]*c[:,2] - c[:,0]*s[:,2])
-        m[:,1,1] = (1/self.grid_scales[:,1])*(s[:,0]*s[:,1]*s[:,2]+c[:,0]*c[:,2])
-        m[:,1,2] = (1/self.grid_scales[:,1])*s[:,0]*c[:,1]
-        m[:,1,3] = (-self.grid_translations[:,0]/self.grid_scales[:,1])*(s[:,0]*s[:,1]*c[:,2] - c[:,0]*s[:,2]) + \
-            (-self.grid_translations[:,1]/self.grid_scales[:,1])*(s[:,0]*s[:,1]*s[:,2]+c[:,0]*c[:,2]) + \
-            (-self.grid_translations[:,2]/self.grid_scales[:,1])*s[:,0]*c[:,1] 
-        m[:,2,0] = (1/self.grid_scales[:,2])*(c[:,0]*s[:,1]*c[:,2] + s[:,0]*s[:,2])  
-        m[:,2,1] = (1/self.grid_scales[:,2])*(c[:,0]*s[:,1]*s[:,2] - s[:,0]*c[:,2])
-        m[:,2,2] = (1/self.grid_scales[:,2])*c[:,0]*c[:,1]
-        m[:,2,3] = (-self.grid_translations[:,0]/self.grid_scales[:,2])*(c[:,0]*s[:,1]*c[:,2] + s[:,0]*s[:,2]) + \
-            (-self.grid_translations[:,1]/self.grid_scales[:,2])*(c[:,0]*s[:,1]*s[:,2] - s[:,0]*c[:,2]) + \
-            (-self.grid_translations[:,2]/self.grid_scales[:,2])*c[:,0]*c[:,1]     
-        m[:,3,0] = 0    
-        m[:,3,1] = 0    
-        m[:,3,2] = 0    
-        m[:,3,3] = 1    
-        return m
+        return torch.linalg.inv(self.transformation_matrices)
   
     #@torch.jit.export
     def transform(self, x):
@@ -249,7 +185,9 @@ class AMG_encoder(nn.Module):
         x: Input coordinates with shape [batch, 3]
         returns: local coordinates in a shape [n_grids, batch, 3]
         '''
-
+        
+        transformation_matrices = self.get_transformation_matrices()
+        
         # x starts [batch,3], this changes it to [n_grids,batch,4]#
         # by appending 1 to the xyz and repeating it n_grids times
         transformed_points = torch.cat(
@@ -257,7 +195,7 @@ class AMG_encoder(nn.Module):
             device=x.device,
             dtype=torch.float32)], 
             dim=1).unsqueeze(0).repeat(
-                self.grid_scales.shape[0], 1, 1
+                transformation_matrices.shape[0], 1, 1
             )
 
         
@@ -266,7 +204,6 @@ class AMG_encoder(nn.Module):
         #    self.grid_scales, self.grid_rotations, 
         #    self.opt['device']
         #    )
-        transformation_matrices = self.get_transformation_matrices()
         
         # BMM will result in [n_grids,4,4] x [n_grids,4,batch]
         # which returns [n_grids,4,batch], which is then transposed
@@ -292,6 +229,8 @@ class AMG_encoder(nn.Module):
         x: Input coordinates with shape [batch, 3]
         returns: local coordinates in a shape [n_grids, batch, 3]
         '''
+        local_to_global_matrices = self.get_inverse_transformation_matrices()
+        
         transformed_points = torch.cat([x, 
             torch.ones(
                 [x.shape[0], 1], 
@@ -299,7 +238,7 @@ class AMG_encoder(nn.Module):
                 dtype=torch.float32
                 )],
             dim=1).unsqueeze(0).repeat(
-                self.grid_rotations.shape[0], 1, 1
+                local_to_global_matrices.shape[0], 1, 1
             )
         
         #local_to_global_matrices = get_inverse_transformation_matrices(
@@ -307,7 +246,7 @@ class AMG_encoder(nn.Module):
         #    self.grid_scales, self.grid_rotations, 
         #    self.opt['device']
         #    )
-        local_to_global_matrices = self.get_inverse_transformation_matrices()
+        
         transformed_points = torch.bmm(local_to_global_matrices,
                                     transformed_points.transpose(-1,-2)).transpose(-1, -2)
         transformed_points = transformed_points[...,0:3].detach().cpu()
@@ -318,7 +257,8 @@ class AMG_encoder(nn.Module):
        
         local_positions = self.transform(x).transpose(0,1)
 
-        coeffs = torch.prod(self.grid_scales, dim=-1).unsqueeze(0) / self.DIM_COEFF
+        #coeffs = torch.prod(self.grid_scales, dim=-1).unsqueeze(0) / self.DIM_COEFF
+        coeffs = torch.linalg.det(self.transformation_matrices[:,0:3,0:3]).unsqueeze(0) / self.DIM_COEFF
         
         exps = torch.exp(-0.5 * \
             torch.sum(
