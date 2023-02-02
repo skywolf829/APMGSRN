@@ -1,0 +1,167 @@
+from __future__ import absolute_import, division, print_function
+import argparse
+from Datasets.datasets import Dataset
+import datetime
+from Other.utility_functions import str2bool
+from Models.models import load_model, create_model, save_model
+import torch
+import torch.optim as optim
+import time
+import os
+from Models.options import *
+from torch.utils.tensorboard import SummaryWriter
+from Models.losses import *
+import shutil
+from Other.utility_functions import make_coord_grid, create_path, tensor_to_cdf
+from Other.vis_io import get_vts, write_vts, write_pvd, write_vtm
+from vtk import vtkMultiBlockDataSet
+import glob
+import numpy as np
+from torch.utils.data import DataLoader
+
+class benchmark_model(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        
+        self.transformation_matrices = torch.nn.Parameter(
+            torch.zeros(
+                [16, 4, 4],
+                device = "cuda:0",
+                dtype=torch.float32
+            ),
+            requires_grad=True
+        )
+        
+        self.feature_grids =  torch.nn.parameter.Parameter(
+            torch.ones(
+                [16, 1, 4, 4, 4],
+                device = "cuda:0",
+                dtype=torch.float32
+            ).uniform_(-0.0001, 0.0001),
+            requires_grad=True
+        )
+    
+        self.randomize_grids()
+    
+    def randomize_grids(self):  
+        with torch.no_grad():     
+            d = self.transformation_matrices.device
+            self.transformation_matrices[:] = torch.eye(4, device=d, dtype=torch.float32)
+            self.transformation_matrices[:,0:3,:] += torch.rand_like(
+                self.transformation_matrices[:,0:3,:],
+                device=d, dtype=torch.float32) * 0.1
+            self.transformation_matrices = torch.nn.Parameter(
+                self.transformation_matrices @ \
+                self.transformation_matrices.transpose(-1, -2),
+                requires_grad=True)
+            self.transformation_matrices[:,3,0:3] = 0
+
+    def transform(self, x):
+        torch.cuda.synchronize()
+        transformation_matrices = self.transformation_matrices
+        
+        torch.cuda.synchronize()            
+        transformed_points = torch.cat(
+            [x, torch.ones([x.shape[0], 1], 
+            device=x.device,
+            dtype=torch.float32)], 
+            dim=1).unsqueeze(0).repeat(
+                transformation_matrices.shape[0], 1, 1
+            )
+        
+        torch.cuda.synchronize()        
+        transformed_points = torch.bmm(transformation_matrices, 
+                            transformed_points.transpose(-1, -2)).transpose(-1, -2)
+        
+        
+        torch.cuda.synchronize()        
+        transformed_points = transformed_points[...,0:3]
+            
+        torch.cuda.synchronize()        
+        return transformed_points 
+    
+    def feature_density_gaussian(self, x):
+        torch.cuda.synchronize()
+        transformed_points = self.transform(x)
+        
+        torch.cuda.synchronize()
+        coeffs = torch.linalg.det(self.transformation_matrices[:,0:3,0:3]).unsqueeze(0) / ((2.0*torch.pi)**(3/2))
+        
+        torch.cuda.synchronize()
+        exps = torch.exp(-0.5 * \
+            torch.sum(
+                transformed_points.transpose(0,1)**20, 
+            dim=-1))
+        
+        torch.cuda.synchronize()
+        result = torch.sum(coeffs * exps, dim=-1, keepdim=True)
+        
+        torch.cuda.synchronize()
+        return result
+    
+        
+
+if __name__ == '__main__':
+
+    now = datetime.datetime.now()
+    start_time = time.time()
+    writer = SummaryWriter(os.path.join('tensorboard','profiletest'))
+    
+    target = torch.randn([10000, 1], device="cuda:0", dtype=torch.float32)
+    target /= target.sum()
+    
+    model = benchmark_model()
+    
+    optimizer = optim.Adam([{"params": model.transformation_matrices}], lr=0.001, 
+            betas=[0.99, 0.99]) 
+    
+    with torch.profiler.profile(
+        activities=[
+            torch.profiler.ProfilerActivity.CPU,
+            torch.profiler.ProfilerActivity.CUDA,
+        ],
+        schedule=torch.profiler.schedule(
+            wait=2,
+            warmup=8,
+            active=1,
+            repeat=1),
+        record_shapes=True,
+        profile_memory=True,
+        with_stack=True,
+        with_modules=True,
+        on_trace_ready=torch.profiler.tensorboard_trace_handler(
+            os.path.join('tensorboard',"profiletest"))) as profiler:
+        torch.cuda.synchronize()
+        for iteration in range(10000):
+            torch.cuda.synchronize()
+            optimizer.zero_grad()
+            
+            torch.cuda.synchronize()
+            x = torch.rand([10000, 3], device="cuda:0", dtype=torch.float32)*2 - 1  
+            
+            torch.cuda.synchronize()          
+            density = model.feature_density_gaussian(x)
+            
+            torch.cuda.synchronize()
+            density /= density.sum().detach()  
+            
+            torch.cuda.synchronize()
+            density_loss = F.kl_div(
+                torch.log(density+1e-16), 
+                    torch.log(target.detach()+1e-16), 
+                    reduction='none', 
+                    log_target=True)
+            
+            torch.cuda.synchronize()
+            density_loss.mean().backward()
+            
+            torch.cuda.synchronize()
+            optimizer.step()   
+            
+            torch.cuda.synchronize()
+            profiler.step()    
+            if(iteration % 100 == 0):
+                print(f"Iter {iteration}/10000")
+
+
+    writer.close()
