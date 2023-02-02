@@ -267,28 +267,34 @@ class AMG_encoder(nn.Module):
         return transformed_points
     
     #@torch.jit.export
-    def feature_density_gaussian(self, x):
-                       
-        
+    def feature_density_gaussian(self, x, transformed=False):
+        if(not transformed):
+            transformed_points = self.transform(x)
+        else:
+            transformed_points = x
         # get the coeffs [n_grids], then unsqueeze to [1,n_grids] for broadcasting
         coeffs = torch.linalg.det(self.transformation_matrices[:,0:3,0:3]).unsqueeze(0) / self.DIM_COEFF
         
         # sum the exp part to [batch,n_grids]
         exps = torch.exp(self.HALF * \
             torch.sum(
-                self.transform(x).transpose(0,1).detach()**self.FLAT_TOP_GAUSSIAN_EXP, 
+                transformed_points.transpose(0,1)**self.FLAT_TOP_GAUSSIAN_EXP, 
             dim=-1))
         #exps = 1 / (1 + torch.sum(local_positions**20,dim=-1))
         
         result = torch.sum(coeffs * exps, dim=-1, keepdim=True)
         return result
     
-    def forward(self, x):
+    def forward(self, x, transformed=False):
         torch.cuda.synchronize()
-        with torch.no_grad():
-            transformed_points = self.transform(x)       
-            torch.cuda.synchronize()
-            transformed_points = transformed_points.unsqueeze(1).unsqueeze(1)
+        if(transformed):
+            transformed_points = x.unsqueeze(1).unsqueeze(1).detach()
+        else:
+            with torch.no_grad():
+                transformed_points = self.transform(x)       
+                torch.cuda.synchronize()
+                transformed_points = transformed_points.unsqueeze(1).unsqueeze(1)
+                
         feats = F.grid_sample(self.feature_grids,
                 transformed_points.detach(),
                 mode='bilinear', align_corners=True,
@@ -364,8 +370,8 @@ class AMGSRN(nn.Module):
     def get_transformation_matrices(self):        
         return self.encoder.get_transformation_matrices()
 
-    def feature_density_gaussian(self, x):
-        return self.encoder.feature_density_gaussian(x)
+    def feature_density_gaussian(self, x, transformed=False):
+        return self.encoder.feature_density_gaussian(x, transformed)
 
     def transform(self, x):
         return self.encoder.transform(x)
@@ -472,8 +478,8 @@ class AMGSRN(nn.Module):
                     self, self.opt, dataset.data.shape[2:], dataset, 
                     preconditioning="grid")
                    
-    def forward(self, x):        
-        feats = self.encoder(x)        
+    def forward(self, x, transformed=False):        
+        feats = self.encoder(x, transformed)        
         y = self.decoder(feats).float()
         
         return y

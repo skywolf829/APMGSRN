@@ -182,8 +182,9 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     x = x.to(opt['device'])
     y = y.to(opt['device'])
     torch.cuda.synchronize()
-        
-    model_output = model(x)
+    
+    transformed_x = model.transform(x)    
+    model_output = model(transformed_x, transformed=True)
     torch.cuda.synchronize()
     loss = F.mse_loss(model_output, y, reduction='none')
     loss = loss.sum(dim=1, keepdim=True)
@@ -194,7 +195,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     if(iteration < opt['iterations']*0.9):
         optimizer[1].zero_grad() 
         torch.cuda.synchronize()
-        density = model.feature_density_gaussian(x) 
+        density = model.feature_density_gaussian(transformed_x, transformed=True) 
         torch.cuda.synchronize()
         density /= density.sum().detach()  
         target = torch.exp(torch.log(density+1e-16) / \
