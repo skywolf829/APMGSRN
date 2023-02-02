@@ -178,10 +178,13 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     optimizer[0].zero_grad() 
                  
     x, y = batch
+    torch.cuda.synchronize()
     x = x.to(opt['device'])
     y = y.to(opt['device'])
+    torch.cuda.synchronize()
         
     model_output = model(x)
+    torch.cuda.synchronize()
     loss = F.mse_loss(model_output, y, reduction='none')
     loss = loss.sum(dim=1, keepdim=True)
     torch.cuda.synchronize()

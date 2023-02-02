@@ -186,7 +186,7 @@ class AMG_encoder(nn.Module):
         x: Input coordinates with shape [batch, 3]
         returns: local coordinates in a shape [n_grids, batch, 3]
         '''
-        
+        torch.cuda.synchronize()
         transformation_matrices = self.get_transformation_matrices()
         
         torch.cuda.synchronize()
