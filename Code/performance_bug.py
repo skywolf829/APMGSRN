@@ -1,23 +1,10 @@
 from __future__ import absolute_import, division, print_function
-import argparse
-from Datasets.datasets import Dataset
-import datetime
-from Other.utility_functions import str2bool
-from Models.models import load_model, create_model, save_model
 import torch
 import torch.optim as optim
+import torch.nn.functional as F
 import time
 import os
-from Models.options import *
 from torch.utils.tensorboard import SummaryWriter
-from Models.losses import *
-import shutil
-from Other.utility_functions import make_coord_grid, create_path, tensor_to_cdf
-from Other.vis_io import get_vts, write_vts, write_pvd, write_vtm
-from vtk import vtkMultiBlockDataSet
-import glob
-import numpy as np
-from torch.utils.data import DataLoader
 
 class benchmark_model(torch.nn.Module):
     def __init__(self):
@@ -80,7 +67,7 @@ class benchmark_model(torch.nn.Module):
         torch.cuda.synchronize()        
         return transformed_points 
     
-    def feature_density_gaussian(self, x):
+    def forward(self, x):
         torch.cuda.synchronize()
         transformed_points = self.transform(x)
         
@@ -103,7 +90,6 @@ class benchmark_model(torch.nn.Module):
 
 if __name__ == '__main__':
 
-    now = datetime.datetime.now()
     start_time = time.time()
     writer = SummaryWriter(os.path.join('tensorboard','profiletest'))
     
@@ -140,7 +126,7 @@ if __name__ == '__main__':
             x = torch.rand([10000, 3], device="cuda:0", dtype=torch.float32)*2 - 1  
             
             torch.cuda.synchronize()          
-            density = model.feature_density_gaussian(x)
+            density = model(x)
             
             torch.cuda.synchronize()
             density /= density.sum().detach()  
@@ -160,8 +146,11 @@ if __name__ == '__main__':
             
             torch.cuda.synchronize()
             profiler.step()    
+            
             if(iteration % 100 == 0):
                 print(f"Iter {iteration}/10000")
 
+    end_time = time.time()
+    print(f"Took {(end_time-start_time)/60 : 0.02f} min")    
 
     writer.close()
