@@ -447,6 +447,7 @@ if __name__ == '__main__':
     
     os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
     torch.manual_seed(42)
+    
 
     if(args['load_from'] is None):
         # Init models

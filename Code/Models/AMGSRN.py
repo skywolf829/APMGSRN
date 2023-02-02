@@ -213,6 +213,7 @@ class AMG_encoder(nn.Module):
         # to [n_grids,batch,4]
         transformed_points = torch.bmm(transformation_matrices, 
                             transformed_points.transpose(-1, -2)).transpose(-1, -2)
+        #transformed_points = torch.einsum('bct,blt->blc',[transformation_matrices,transformed_points])
         
         torch.cuda.synchronize()
         # Finally, only the xyz coordinates are taken
