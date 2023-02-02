@@ -263,8 +263,8 @@ class AMG_encoder(nn.Module):
         local_positions = self.transform(x).transpose(0,1)
         
         #coeffs = torch.prod(self.grid_scales, dim=-1).unsqueeze(0) / self.DIM_COEFF
-        coeffs = torch.linalg.det(self.transformation_matrices[:,0:3,0:3]).unsqueeze(0) / self.DIM_COEFF
-        
+        #coeffs = torch.linalg.det(self.transformation_matrices[:,0:3,0:3]).unsqueeze(0) / self.DIM_COEFF
+        coeffs = 1
         exps = torch.exp(-0.5 * \
             torch.sum(
                 local_positions**2, 
