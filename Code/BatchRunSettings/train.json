@@ -13,10 +13,5 @@
             "log_features_every": 0,
             "lr": 0.01,
             "iterations": 10000
-    }],
-    [ "test.py",
-    {        
-    "load_from": "temp",
-    "tests": "feature_density,reconstruction"
     }]
 ]
