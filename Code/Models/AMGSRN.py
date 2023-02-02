@@ -189,6 +189,7 @@ class AMG_encoder(nn.Module):
         
         transformation_matrices = self.get_transformation_matrices()
         
+        torch.cuda.synchronize()
         # x starts [batch,3], this changes it to [n_grids,batch,4]#
         # by appending 1 to the xyz and repeating it n_grids times
         transformed_points = torch.cat(
@@ -198,7 +199,8 @@ class AMG_encoder(nn.Module):
             dim=1).unsqueeze(0).repeat(
                 transformation_matrices.shape[0], 1, 1
             )
-
+        
+        torch.cuda.synchronize()
         
         #transformation_matrices = get_transformation_matrices(
         #    self.opt['n_grids'], self.grid_translations, 
@@ -211,10 +213,12 @@ class AMG_encoder(nn.Module):
         # to [n_grids,batch,4]
         transformed_points = torch.bmm(transformation_matrices, 
                             transformed_points.transpose(-1, -2)).transpose(-1, -2)
-
+        
+        torch.cuda.synchronize()
         # Finally, only the xyz coordinates are taken
         transformed_points = transformed_points[...,0:3]
-                    
+            
+        torch.cuda.synchronize()        
         # return [n_grids,batch,3]
         return transformed_points
    
@@ -257,7 +261,7 @@ class AMG_encoder(nn.Module):
     def feature_density_gaussian(self, x):
        
         local_positions = self.transform(x).transpose(0,1)
-
+        
         #coeffs = torch.prod(self.grid_scales, dim=-1).unsqueeze(0) / self.DIM_COEFF
         coeffs = torch.linalg.det(self.transformation_matrices[:,0:3,0:3]).unsqueeze(0) / self.DIM_COEFF
         
