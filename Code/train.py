@@ -328,10 +328,11 @@ def train( model, dataset, opt):
         record_shapes=True,
         profile_memory=True,
         with_flops=True,
+        with_flops=True,
+        with_stack=True,
         with_modules=True,
         on_trace_ready=torch.profiler.tensorboard_trace_handler(
-            os.path.join('tensorboard',opt['save_name'])),
-    with_stack=True) as profiler:
+            os.path.join('tensorboard',opt['save_name']))) as profiler:
         for (iteration, batch) in enumerate(dataloader):
             train_step(opt,
                        iteration,

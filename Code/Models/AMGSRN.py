@@ -272,13 +272,15 @@ class AMG_encoder(nn.Module):
         return torch.sum(coeffs * exps, dim=-1, keepdim=True)
     
     def forward(self, x):
+        torch.cuda.synchronize()
         transformed_points = self.transform(x)       
-        
+        torch.cuda.synchronize()
         transformed_points = transformed_points.unsqueeze(1).unsqueeze(1)
         feats = F.grid_sample(self.feature_grids,
                 transformed_points.detach(),
                 mode='bilinear', align_corners=True,
                 padding_mode="zeros")[:,:,0,0,:]
+        torch.cuda.synchronize()
         feats = feats.flatten(0,1).permute(1, 0)
         return feats
       
