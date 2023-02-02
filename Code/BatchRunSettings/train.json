@@ -12,6 +12,7 @@
             "precondition": false,
             "log_features_every": 0,
             "lr": 0.01,
-            "iterations": 10000
+            "iterations": 10000,
+            "points_per_iteration": 65536
     }]
 ]
