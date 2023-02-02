@@ -267,7 +267,7 @@ class AMG_encoder(nn.Module):
         
         exps = torch.exp(-0.5 * \
             torch.sum(
-                local_positions**20, 
+                local_positions**2, 
             dim=-1))
         return torch.sum(coeffs * exps, dim=-1, keepdim=True)
     
