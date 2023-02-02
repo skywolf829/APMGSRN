@@ -457,9 +457,6 @@ class AMGSRN(nn.Module):
                     preconditioning="grid")
                    
     def forward(self, x):        
-        feats = self.encoder(x)        
-        y = self.decoder(feats).float()
-        
-        return y
+        return self.decoder(self.encoder(x)).float()
 
         
