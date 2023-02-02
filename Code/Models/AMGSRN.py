@@ -194,12 +194,14 @@ class AMG_encoder(nn.Module):
         torch.cuda.synchronize()
         # x starts [batch,3], this changes it to [n_grids,batch,4]#
         # by appending 1 to the xyz and repeating it n_grids times
+        with torch.no_grad():
+            n_grids = transformation_matrices.shape[0]
         transformed_points = torch.cat(
             [x, torch.ones([x.shape[0], 1], 
             device=x.device,
             dtype=torch.float32)], 
             dim=1).unsqueeze(0).repeat(
-                transformation_matrices.shape[0], 1, 1
+                n_grids, 1, 1
             )
         
         torch.cuda.synchronize()
