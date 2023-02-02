@@ -77,7 +77,7 @@ if __name__ == '__main__':
     print(f"matmul.allow_tf32 {torch.backends.cuda.matmul.allow_tf32}")
     print(f"matmul.allow_fp16_reduced_precision_reduction {torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction}")
     print(f"cudnn.enabled.allow_tf32 {torch.backends.cudnn.enabled}")
-    
+    torch.backends.cuda.matmul.allow_tf32 = True
     start_time = time.time()
     writer = SummaryWriter(os.path.join('tensorboard','profiletest'))
     
