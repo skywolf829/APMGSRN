@@ -189,7 +189,6 @@ class AMG_encoder(nn.Module):
         '''
         torch.cuda.synchronize()
         transformation_matrices = self.get_transformation_matrices()
-        
         torch.cuda.synchronize()
         # x starts [batch,3], this changes it to [n_grids,batch,4]#
         # by appending 1 to the xyz and repeating it n_grids times
@@ -260,10 +259,7 @@ class AMG_encoder(nn.Module):
     
     @torch.jit.export
     def feature_density_gaussian(self, x):
-        
-        # get local positions [n_grids,batch,3], transpose to [batch,n_grids,3]
-        local_positions = self.transform(x).transpose(0,1)
-        
+                       
         
         # get the coeffs [n_grids], then unsqueeze to [1,n_grids] for broadcasting
         coeffs = torch.linalg.det(self.transformation_matrices[:,0:3,0:3]).unsqueeze(0) / self.DIM_COEFF
@@ -271,11 +267,12 @@ class AMG_encoder(nn.Module):
         # sum the exp part to [batch,n_grids]
         exps = torch.exp(-0.5 * \
             torch.sum(
-                local_positions**20, 
+                self.transform(x).transpose(0,1)**20, 
             dim=-1))
         #exps = 1 / (1 + torch.sum(local_positions**20,dim=-1))
         
-        return torch.sum(coeffs * exps, dim=-1, keepdim=True)
+        result = torch.sum(coeffs * exps, dim=-1, keepdim=True)
+        return result
     
     def forward(self, x):
         torch.cuda.synchronize()
@@ -301,12 +298,9 @@ class AMGSRN(nn.Module):
         feat_grid_shape = opt['feature_grid_shape'].split(',')
         feat_grid_shape = [eval(i) for i in feat_grid_shape]
         
-        #self.encoder = AMG_encoder(opt['n_grids'], opt['n_features'], 
-        #    [eval(i) for i in opt['feature_grid_shape'].split(',')], opt['n_dims'], 
-        #    opt['device'])
-        self.encoder = torch.jit.script(AMG_encoder(opt['n_grids'], opt['n_features'], 
+        self.encoder = AMG_encoder(opt['n_grids'], opt['n_features'], 
             [eval(i) for i in opt['feature_grid_shape'].split(',')], opt['n_dims'], 
-            opt['device']))
+            opt['device'])
         
         try:
             import tinycudann as tcnn 

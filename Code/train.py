@@ -349,7 +349,7 @@ def train( model, dataset, opt):
                        scheduler,
                        profiler,
                        writer)
-            
+    writer.add_graph(model, torch.zeros([1, 3], device=opt['device'], dtype=torch.float32))
     writer.close()
     save_model(model, opt)
 
