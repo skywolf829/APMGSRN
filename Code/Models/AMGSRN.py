@@ -127,7 +127,8 @@ class AMG_encoder(nn.Module):
         self.transformation_matrices = torch.nn.Parameter(
             torch.zeros(
                 [n_grids, 4, 4],
-                device = device
+                device = device,
+                dtype=torch.float32
             ),
             requires_grad=True
         )
@@ -136,14 +137,15 @@ class AMG_encoder(nn.Module):
             torch.ones(
                 [n_grids, n_features, 
                 feat_grid_shape[0], feat_grid_shape[1], feat_grid_shape[2]],
-                device = device
+                device = device,
+                dtype=torch.float32
             ).uniform_(-0.0001, 0.0001),
             requires_grad=True
         )
     
         self.randomize_grids()
     
-    @torch.jit.export
+    #@torch.jit.export
     def get_transform_parameters(self) -> List[Dict[str, torch.Tensor]]:
         #return [{"params": self.grid_scales},
         #    {"params":self.grid_translations},
@@ -156,26 +158,26 @@ class AMG_encoder(nn.Module):
             #self.grid_scales.uniform_(1.0,1.2)
             #self.grid_translations.uniform_(-0.1, 0.1)
             #self.grid_rotations.uniform_(-torch.pi/16, torch.pi/16)
-            self.transformation_matrices[:] = torch.eye(4)
+            d = self.transformation_matrices.device()
+            self.transformation_matrices[:] = torch.eye(4, device=d, dtype=torch.float32)
             self.transformation_matrices[:,0:3,:] += torch.rand_like(
-                self.transformation_matrices[:,0:3,:]
-            ) * 0.1
+                self.transformation_matrices[:,0:3,:],
+                device=d, dtype=torch.float32) * 0.1
             self.transformation_matrices = torch.nn.Parameter(
                 self.transformation_matrices @ \
                 self.transformation_matrices.transpose(-1, -2),
                 requires_grad=True)
             self.transformation_matrices[:,3,0:3] = 0
-            self.transformation_matrices.detach_().requires_grad_()
 
-    @torch.jit.export
+    #@torch.jit.export
     def get_transformation_matrices(self):
         return self.transformation_matrices
   
-    @torch.jit.export
+    #@torch.jit.export
     def get_inverse_transformation_matrices(self):
         return torch.linalg.inv(self.transformation_matrices)
   
-    @torch.jit.export
+    #@torch.jit.export
     def transform(self, x):
         '''
         Transforms global coordinates x to local coordinates within
@@ -223,7 +225,7 @@ class AMG_encoder(nn.Module):
         # return [n_grids,batch,3]
         return transformed_points
    
-    @torch.jit.export
+    #@torch.jit.export
     def inverse_transform(self, x):
         '''
         Transforms local coordinates within each feature grid x to 
@@ -258,7 +260,7 @@ class AMG_encoder(nn.Module):
         transformed_points = transformed_points[...,0:3].detach().cpu()
         return transformed_points
     
-    @torch.jit.export
+    #@torch.jit.export
     def feature_density_gaussian(self, x):
                        
         
