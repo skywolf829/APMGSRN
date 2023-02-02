@@ -164,6 +164,7 @@ class AMG_encoder(nn.Module):
                 self.transformation_matrices.transpose(-1, -2),
                 requires_grad=True)
             self.transformation_matrices[:,3,0:3] = 0
+            self.transformation_matrices.detach_().requires_grad_()
 
     #@torch.jit.export
     def get_transformation_matrices(self):
