@@ -74,7 +74,10 @@ class benchmark_model(torch.nn.Module):
     
 if __name__ == '__main__':
 
-    torch.backends.cuda.matmul.allow_tf32 = False
+    print(f"matmul.allow_tf32 {torch.backends.cuda.matmul.allow_tf32}")
+    print(f"matmul.allow_fp16_reduced_precision_reduction {torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction}")
+    print(f"cudnn.enabled.allow_tf32 {torch.backends.cudnn.enabled}")
+    
     start_time = time.time()
     writer = SummaryWriter(os.path.join('tensorboard','profiletest'))
     
