@@ -193,32 +193,35 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     
     if(iteration < opt['iterations']*0.9):
         optimizer[1].zero_grad() 
+        torch.cuda.synchronize()
         density = model.feature_density_gaussian(x) 
+        torch.cuda.synchronize()
         density /= density.sum().detach()  
         target = torch.exp(torch.log(density+1e-16) / \
             (loss/loss.mean()))
         target /= target.sum()
-            
+        torch.cuda.synchronize()    
         density_loss = F.kl_div(
             torch.log(density+1e-16), 
                 torch.log(target.detach()+1e-16), 
                 reduction='none', 
                 log_target=True)
+        torch.cuda.synchronize()
         density_loss.mean().backward()
-        
+        torch.cuda.synchronize()
         optimizer[1].step()
         scheduler[1].step()   
     else:
         density_loss = None
-         
+    torch.cuda.synchronize()     
     regularization_loss = 10e-6 * (torch.cat([x.view(-1) for x in model.parameters()])**2).mean()
     regularization_loss.backward()
-    
+    torch.cuda.synchronize()
     optimizer[0].step()
     scheduler[0].step()   
-         
+    torch.cuda.synchronize()     
     profiler.step()
-    
+    torch.cuda.synchronize()
     if(opt['log_every'] != 0):
         logging(writer, iteration, 
             {"Fitting loss": loss, 
