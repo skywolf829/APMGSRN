@@ -327,8 +327,6 @@ def train( model, dataset, opt):
             repeat=1),
         record_shapes=True,
         profile_memory=True,
-        with_flops=True,
-        with_flops=True,
         with_stack=True,
         with_modules=True,
         on_trace_ready=torch.profiler.tensorboard_trace_handler(
