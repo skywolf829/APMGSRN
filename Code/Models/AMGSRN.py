@@ -267,7 +267,7 @@ class AMG_encoder(nn.Module):
         return transformed_points
     
     #@torch.jit.export
-    def feature_density_gaussian(self, x, transformed:str=False):
+    def feature_density_gaussian(self, x, transformed:bool=False):
         if(not transformed):
             transformed_points = self.transform(x)
         else:
@@ -285,7 +285,7 @@ class AMG_encoder(nn.Module):
         result = torch.sum(coeffs * exps, dim=-1, keepdim=True)
         return result
     
-    def forward(self, x, transformed:str=False):
+    def forward(self, x, transformed:bool=False):
         
         if(transformed):
             transformed_points = x.unsqueeze(1).unsqueeze(1).detach()
@@ -373,7 +373,7 @@ class AMGSRN(nn.Module):
     def get_transformation_matrices(self):        
         return self.encoder.get_transformation_matrices()
 
-    def feature_density_gaussian(self, x, transformed:str=False):
+    def feature_density_gaussian(self, x, transformed:bool=False):
         return self.encoder.feature_density_gaussian(x, transformed)
 
     def transform(self, x):
@@ -483,7 +483,7 @@ class AMGSRN(nn.Module):
                     preconditioning="grid")
     '''
                    
-    def forward(self, x, transformed:str=False):        
+    def forward(self, x, transformed:bool=False):        
         feats = self.encoder(x, transformed)        
         y = self.decoder(feats).float()
         
