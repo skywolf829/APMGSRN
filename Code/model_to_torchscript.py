@@ -8,6 +8,10 @@ import time
 import os
 from Models.options import *
 
+def remove_tinycudann(model):
+    print(model.decoder.__type__)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Trains an implicit model on data.')
 
@@ -27,8 +31,8 @@ if __name__ == '__main__':
     opt["save_name"] = args["model_name"]
     
     model = load_model(opt, opt['device'])
-
-        
+    remove_tinycudann(model)
+    
     model_jit = torch.jit.script(model)
     torch.jit.save(model_jit,
         os.path.join(save_folder, args["model_name"], "traced_model.pt"))
