@@ -268,7 +268,7 @@ def train( model, dataset, opt):
     writer = SummaryWriter(os.path.join('tensorboard',opt['save_name']))
     dataloader = DataLoader(dataset, 
                             batch_size=None, 
-                            num_workers=4 if "cpu" in opt['data_device'] and "cuda" in opt['device'] else 0,
+                            num_workers=4 if ("cpu" in opt['data_device'] and "cuda" in opt['device']) else 0,
                             pin_memory=True if ("cpu" in opt['data_device'] and "cuda" in opt['device']) else False,
                             pin_memory_device=opt['device'])
     
