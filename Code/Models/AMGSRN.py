@@ -305,49 +305,53 @@ class AMG_encoder(nn.Module):
       
     
 class AMGSRN(nn.Module):
-    def __init__(self, opt):
+    def __init__(self, n_grids: int, n_features: int, 
+        feature_grid_shape: List[int], n_dims : int, 
+        n_outputs: int, nodes_per_layer: int, n_layers: int, device):
         super().__init__()
         
-        self.opt = opt
+        self.n_grids : int = n_grids
+        self.n_features : int = n_features
+        self.feature_grid_shape : List[int] = feature_grid_shape
+        self.n_dims : int = n_dims
+        self.n_outputs : int = n_outputs
+        self.nodes_per_layer : int = nodes_per_layer
+        self.n_layers : int = n_layers
 
-        feat_grid_shape = opt['feature_grid_shape'].split(',')
-        feat_grid_shape = [eval(i) for i in feat_grid_shape]
-        
-        self.encoder = AMG_encoder(opt['n_grids'], opt['n_features'], 
-            [eval(i) for i in opt['feature_grid_shape'].split(',')], opt['n_dims'], 
-            opt['device'])
+        self.encoder = AMG_encoder(n_grids, n_features, 
+            feature_grid_shape, n_dims, device)
         
         try:
             import tinycudann as tcnn 
             print(f"Using TinyCUDANN (tcnn) since it is installed for performance gains.")
             print(f"WARNING: This model will be incompatible with non-tcnn compatible systems")
             self.decoder = tcnn.Network(
-                n_input_dims=opt['n_features']*opt['n_grids'],
-                n_output_dims=opt['n_outputs'],
+                n_input_dims=n_features*n_grids,
+                n_output_dims=n_outputs,
                 network_config={
                     "otype": "FullyFusedMLP",
                     "activation": "ReLU",
                     "output_activation": "None",
-                    "n_neurons": opt['nodes_per_layer'],
-                    "n_hidden_layers": opt['n_layers'],
+                    "n_neurons": nodes_per_layer,
+                    "n_hidden_layers": n_layers,
                 }
             )
         except ImportError:
             print(f"TinyCUDANN (tcnn) not installed: falling back to normal PyTorch")
             self.decoder = nn.ModuleList()
             
-            first_layer_input_size = opt['n_features']*opt['n_grids']# + opt['num_positional_encoding_terms']*opt['n_dims']*2
+            first_layer_input_size = n_features*n_grids
                     
             layer = LReLULayer(first_layer_input_size, 
-                                opt['nodes_per_layer'])
+                nodes_per_layer)
             self.decoder.append(layer)
             
-            for i in range(opt['n_layers']):
-                if i == opt['n_layers'] - 1:
-                    layer = nn.Linear(opt['nodes_per_layer'], opt['n_outputs'])
+            for i in range(n_layers):
+                if i == n_layers - 1:
+                    layer = nn.Linear(nodes_per_layer, n_outputs)
                     self.decoder.append(layer)
                 else:
-                    layer = LReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
+                    layer = LReLULayer(nodes_per_layer, nodes_per_layer)
                     self.decoder.append(layer)
             self.decoder = torch.nn.Sequential(*self.decoder)
             
@@ -355,13 +359,12 @@ class AMGSRN(nn.Module):
               
     def reset_parameters(self):
         with torch.no_grad():
-            feat_grid_shape = self.opt['feature_grid_shape'].split(',')
-            feat_grid_shape = [eval(i) for i in feat_grid_shape]
+            feat_grid_shape = self.feature_grid_shape
             self.encoder.feature_grids =  torch.nn.parameter.Parameter(
                 torch.ones(
-                    [self.opt['n_grids'], self.opt['n_features'], 
+                    [self.n_grids, self.n_features, 
                     feat_grid_shape[0], feat_grid_shape[1], feat_grid_shape[2]],
-                    device = self.opt['device']
+                    device = self.encoder.feature_grids.device
                 ).uniform_(-0.0001, 0.0001),
                 requires_grad=True
             )
@@ -370,7 +373,7 @@ class AMGSRN(nn.Module):
     def get_transformation_matrices(self):        
         return self.encoder.get_transformation_matrices()
 
-    def feature_density_gaussian(self, x, transformed=False):
+    def feature_density_gaussian(self, x, transformed:str=False):
         return self.encoder.feature_density_gaussian(x, transformed)
 
     def transform(self, x):
@@ -379,6 +382,7 @@ class AMGSRN(nn.Module):
     def inverse_transform(self, x):
         return self.encoder.inverse_transform(x)
     
+    '''
     def precodition_grids(self, dataset, writer, logging):
         
         # First, train the params with fixed grids
@@ -477,8 +481,9 @@ class AMGSRN(nn.Module):
                     {"Grid fitting loss": density_loss}, 
                     self, self.opt, dataset.data.shape[2:], dataset, 
                     preconditioning="grid")
+    '''
                    
-    def forward(self, x, transformed=False):        
+    def forward(self, x, transformed:str=False):        
         feats = self.encoder(x, transformed)        
         y = self.decoder(feats).float()
         

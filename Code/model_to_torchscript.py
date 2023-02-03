@@ -30,6 +30,6 @@ if __name__ == '__main__':
 
         
     model_jit = torch.jit.script(model)
-    torch.jit.save(model_jit, 
+    torch.jit.save(model_jit,
         os.path.join(save_folder, args["model_name"], "traced_model.pt"))
 
