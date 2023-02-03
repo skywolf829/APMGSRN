@@ -192,7 +192,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     loss.mean().backward()
        
     
-    if(iteration < opt['iterations']*0.9):
+    if(iteration < opt['iterations']*0.8):
         optimizer[1].zero_grad() 
         
         density = model.feature_density_gaussian(transformed_x, transformed=True) 
@@ -312,8 +312,9 @@ def train( model, dataset, opt):
                     )
             ]        
             scheduler = [
-                torch.optim.lr_scheduler.LinearLR(optimizer[0],
-                    start_factor=1, end_factor=1),
+                torch.optim.lr_scheduler.MultiStepLR(optimizer,
+                    [opt['iterations']*(9/10)],
+                    gamma=0.1),
                 torch.optim.lr_scheduler.LinearLR(optimizer[1], 
                     start_factor=1, end_factor=0.5)
             ]      
