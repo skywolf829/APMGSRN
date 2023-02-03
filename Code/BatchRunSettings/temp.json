@@ -1,36 +1,22 @@
 [
-    
-    [ "train.py",
+    [ "test.py",
         {        
-            "save_name": "temp_tcnn_fVSRN",
-            "model": "fVSRN",
-            "data": "Nyx.nc",
-            "n_features": 16,
-            "feature_grid_shape": "16,16,16",
-            "n_layers": 2,
-            "nodes_per_layer": 32,
-            "precondition": false,
-            "log_features_every": 0,
-            "lr": 0.01,
-            "iterations": 100,
-            "points_per_iteration": 100000,
-            "use_tcnn_if_available": true
+        "load_from": "temp_tcnn_fVSRN",
+        "tests": "reconstruction"
     }],
-    [ "train.py",
+    [ "test.py",
         {        
-            "save_name": "temp_tcnn_AMGSRN",
-            "model": "AMGSRN",
-            "data": "Nyx.nc",
-            "n_features": 1,
-            "n_grids": 16,
-            "feature_grid_shape": "16,16,16",
-            "n_layers": 2,
-            "nodes_per_layer": 32,
-            "precondition": false,
-            "log_features_every": 0,
-            "lr": 0.01,
-            "iterations": 100,
-            "points_per_iteration": 100000,
-            "use_tcnn_if_available": true
+        "load_from": "temp_tcnn_AMGSRN",
+        "tests": "reconstruction"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "temp_tcnn_fVSRN_convert_to_pytorch",
+        "tests": "reconstruction"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "temp_tcnn_AMGSRN_convert_to_pytorch",
+        "tests": "reconstruction"
     }]
 ]

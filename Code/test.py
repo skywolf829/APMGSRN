@@ -19,6 +19,7 @@ def model_reconstruction(model, dataset, opt):
     grid = list(dataset.data.shape[2:])
     with torch.no_grad():
         result = sample_grid(model, grid, max_points=1000000,
+                             align_corners=opt['align_corners'],
                              device=opt['device'],
                              data_device=opt['data_device'])
     result = result.to(opt['data_device'])

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F 
-from Models.layers import LReLULayer
+from Models.layers import ReLULayer
 from typing import List, Dict
 import math
 
@@ -222,7 +222,7 @@ class AMGSRN(nn.Module):
             if(requires_padded_feats):
                 first_layer_input_size = n_features*n_grids + self.padding_size
                                            
-            layer = LReLULayer(first_layer_input_size, 
+            layer = ReLULayer(first_layer_input_size, 
                 nodes_per_layer, bias=use_bias)
             decoder.append(layer)
             
@@ -231,7 +231,7 @@ class AMGSRN(nn.Module):
                     layer = nn.Linear(nodes_per_layer, n_outputs, bias=use_bias)
                     decoder.append(layer)
                 else:
-                    layer = LReLULayer(nodes_per_layer, nodes_per_layer, bias=use_bias)
+                    layer = ReLULayer(nodes_per_layer, nodes_per_layer, bias=use_bias)
                     decoder.append(layer)
             decoder = torch.nn.Sequential(*decoder)
             return decoder

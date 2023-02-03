@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from Models.layers import LReLULayer, PositionalEncoding
+from Models.layers import ReLULayer, PositionalEncoding
 from typing import List
 import math
 
@@ -55,7 +55,7 @@ class fVSRN(nn.Module):
             if(requires_padded_feats):
                 input_size = n_features+num_positional_encoding_terms*n_dims*2 + self.padding_size
                                     
-            layer = LReLULayer(input_size, 
+            layer = ReLULayer(input_size, 
                 nodes_per_layer, bias=use_bias)
             decoder.append(layer)
             
@@ -64,7 +64,7 @@ class fVSRN(nn.Module):
                     layer = nn.Linear(nodes_per_layer, n_outputs, bias=use_bias)
                     decoder.append(layer)
                 else:
-                    layer = LReLULayer(nodes_per_layer, nodes_per_layer, bias=use_bias)
+                    layer = ReLULayer(nodes_per_layer, nodes_per_layer, bias=use_bias)
                     decoder.append(layer)
             decoder = torch.nn.Sequential(*decoder)
             return decoder

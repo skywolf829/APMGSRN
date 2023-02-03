@@ -59,10 +59,11 @@ def create_model(opt):
         from Models.NGP import NGP_TCNN
         return NGP_TCNN(opt)
 
-def sample_grid(model, grid, device="cuda", data_device="cuda", max_points = 100000):
+def sample_grid(model, grid, align_corners:bool = False,
+                device:str="cuda", data_device:str="cuda", max_points:int = 100000):
     coord_grid = make_coord_grid(grid, 
         data_device, flatten=False,
-        align_corners=model.opt['align_corners'])
+        align_corners=align_corners)
     coord_grid_shape = list(coord_grid.shape)
     coord_grid = coord_grid.view(-1, coord_grid.shape[-1])
     vals = forward_maxpoints(model, coord_grid, 
@@ -70,7 +71,7 @@ def sample_grid(model, grid, device="cuda", data_device="cuda", max_points = 100
                              data_device=data_device,
                              device=device
                              )
-    coord_grid_shape[-1] = model.opt['n_outputs']
+    coord_grid_shape[-1] = -1
     vals = vals.reshape(coord_grid_shape)
     return vals
 

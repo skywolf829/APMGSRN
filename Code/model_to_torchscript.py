@@ -68,7 +68,7 @@ if __name__ == '__main__':
         layer_shape = [opt['nodes_per_layer'], opt['nodes_per_layer']]
         layer_weight_shape.append(layer_shape)
         
-    last_layer_shape = [output_dim_padded, opt['nodes_per_layer']]
+    last_layer_shape = [output_dim_padded,opt['nodes_per_layer']]
     layer_weight_shape.append(last_layer_shape)
     
     weights = ckpt['state_dict']['decoder.params']
@@ -83,7 +83,8 @@ if __name__ == '__main__':
         if(current_weight_index+num_weights_this_layer > weights.shape[0]):
             print(f"Number of expected weights {current_weight_index+num_weights_this_layer} is larger than the number of weights saved {weights.shape}.")
             quit()
-        this_layer_weights = weights[current_weight_index:current_weight_index+num_weights_this_layer].clone().reshape(weight_shape_this_layer)
+        this_layer_weights = weights[current_weight_index:current_weight_index+num_weights_this_layer].clone()
+        this_layer_weights = this_layer_weights.reshape(weight_shape_this_layer)
         new_weights.append(this_layer_weights)
         current_weight_index += num_weights_this_layer
         
