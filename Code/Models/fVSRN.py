@@ -92,8 +92,8 @@ class fVSRN(nn.Module):
             x = x * self.dim_global_proportions
             x = x + self.dim_start
         pe = self.pe(x)  
-        print(feats.shape)
-        feats = feats.squeeze().permute(1, 0)
+        
+        feats = feats.flatten(0, -2).permute(1, 0)
         y = torch.cat([pe, feats], dim=1)
         y = self.decoder(y).float()
         return y
