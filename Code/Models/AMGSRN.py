@@ -267,7 +267,7 @@ class AMG_encoder(nn.Module):
         return transformed_points
     
     #@torch.jit.export
-    def feature_density_gaussian(self, x, transformed=False):
+    def feature_density_gaussian(self, x, transformed:str=False):
         if(not transformed):
             transformed_points = self.transform(x)
         else:
@@ -285,7 +285,7 @@ class AMG_encoder(nn.Module):
         result = torch.sum(coeffs * exps, dim=-1, keepdim=True)
         return result
     
-    def forward(self, x, transformed=False):
+    def forward(self, x, transformed:str=False):
         
         if(transformed):
             transformed_points = x.unsqueeze(1).unsqueeze(1).detach()
