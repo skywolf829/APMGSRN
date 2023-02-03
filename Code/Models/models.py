@@ -47,7 +47,7 @@ def create_model(opt):
     elif(opt['model'] == "afVSRN"):
         return afVSRN(opt)
     elif(opt['model'] == "AMGSRN"):
-        return AMGSRN(opt['n_grids']. opt['n_features'], 
+        return AMGSRN(opt['n_grids'], opt['n_features'], 
         [eval(i) for i in opt['feature_grid_shape'].split(",")], 
         opt['n_dims'], opt['n_outputs'], opt['nodes_per_layer'], 
         opt['n_layers'], opt['device'])
