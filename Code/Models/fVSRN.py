@@ -15,6 +15,7 @@ class fVSRN(nn.Module):
         
         
         self.requires_padded_feats : bool = requires_padded_feats
+        self.padding_size : int = 0
         if(requires_padded_feats):
             self.padding_size : int = \
                 16*int(math.ceil(max(1, (n_features+num_positional_encoding_terms*n_dims*2)/16))) - \
@@ -88,7 +89,7 @@ class fVSRN(nn.Module):
         feats = feats.flatten(0, -2).permute(1, 0)
         feats = torch.cat([pe, feats], dim=1)
         if(self.requires_padded_feats):
-            feats = F.pad(feats, (0, self.padding_size), value=1) 
+            feats = F.pad(feats, (0, self.padding_size), value=1.0) 
         y = self.decoder(feats).float()
         return y
 

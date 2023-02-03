@@ -4,30 +4,17 @@ from Models.models import load_model
 import argparse
 import torch
 import math
-from Other.utility_functions import create_folder
+from Other.utility_functions import create_folder, str2bool
 
 def next_highest_multiple(num:int, base:int):
     return base*int(math.ceil(max(1, num/base)))
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Loads a model trained using TCNN and converts it to a model that is pure PyTorch.')
-
-    parser.add_argument('--model_name',default=None,type=str,
-        help='Saved model to load and convert to torchscript')
-    parser.add_argument('--padded_size',default=16,type=int,
-        help='When TCNN trains, it padds the input and output dimensions to the nearest multiple of 16 or 8, ' + \
-        "depending on the GPU. TensorCore natively pad to 16, while CutlassMLP padds to 8. " + \
-        "See https://github.com/NVlabs/tiny-cuda-nn/issues/6 for more details.")
-
-    args = vars(parser.parse_args())
-
+def convert_tcnn_to_pytorch(model_name, tcnn_pad_size):
     project_folder_path = os.path.dirname(os.path.abspath(__file__))
     project_folder_path = os.path.join(project_folder_path, "..")
-    data_folder = os.path.join(project_folder_path, "Data")
-    output_folder = os.path.join(project_folder_path, "Output")
     save_folder = os.path.join(project_folder_path, "SavedModels")
     
-    opt = load_options(os.path.join(save_folder, args["model_name"]))
+    opt = load_options(os.path.join(save_folder, model_name))
     opt["device"] = "cpu"
     opt['use_tcnn_if_available'] = False
     
@@ -35,7 +22,7 @@ if __name__ == '__main__':
         map_location = "cpu")
     print(ckpt['state_dict']['decoder.params'].shape)    
     
-    base = args['padded_size']
+    base = tcnn_pad_size
     requires_padding = False
     if(opt['model'] == "fVSRN"):
         input_dim = opt['n_features']+opt['num_positional_encoding_terms']*opt['n_dims']*2
@@ -108,7 +95,7 @@ if __name__ == '__main__':
             ckpt['state_dict'][name] = new_weights[i]
         
     opt['requires_padded_feats'] = requires_padding
-    opt["save_name"] = args["model_name"]+"_convert_to_pytorch"
+    opt["save_name"] = model_name+"_convert_to_pytorch"
     
     folder = create_folder(save_folder, opt["save_name"])
     path_to_save = os.path.join(save_folder, folder)
@@ -119,10 +106,38 @@ if __name__ == '__main__':
         pickle_protocol=4
     )
     save_options(opt, path_to_save)
+    return model_name+"_convert_to_pytorch"
+    
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Loads a model trained using TCNN and converts it to a model that is pure PyTorch.')
+
+    parser.add_argument('--model_name',default=None,type=str,
+        help='Saved model to load and convert to torchscript')
+    parser.add_argument('--convert_from_tcnn',default=False,type=str2bool,
+        help='First converts the model from TCNN to pure pytorch.')
+    parser.add_argument('--tcnn_pad_size',default=16,type=int,
+        help='When TCNN trains, it padds the input and output dimensions to the nearest multiple of 16 or 8, ' + \
+        "depending on the GPU. TensorCore natively pad to 16, while CutlassMLP padds to 8. " + \
+        "See https://github.com/NVlabs/tiny-cuda-nn/issues/6 for more details.")
+
+    args = vars(parser.parse_args())
+    
+    project_folder_path = os.path.dirname(os.path.abspath(__file__))
+    project_folder_path = os.path.join(project_folder_path, "..")
+    save_folder = os.path.join(project_folder_path, "SavedModels")
+    
+    if(args['convert_from_tcnn']):
+        print(f"Converting TCNN to pytorch before trace")
+        model_name = convert_tcnn_to_pytorch(args['model_name'], args['tcnn_pad_size'])
+    else:
+        model_name = args['model_name']
+        
+    opt = load_options(os.path.join(save_folder, model_name))
+    opt["device"] = "cpu"
     
     model = load_model(opt, opt['device'])
     
-    #model_jit = torch.jit.script(model)
-    #torch.jit.save(model_jit,
-    #    os.path.join(save_folder, args["model_name"], "traced_model.pt"))
+    model_jit = torch.jit.script(model)
+    torch.jit.save(model_jit,
+        os.path.join(save_folder, model_name, "traced_model.pt"))
 

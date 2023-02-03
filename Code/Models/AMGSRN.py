@@ -189,6 +189,7 @@ class AMGSRN(nn.Module):
         self.nodes_per_layer : int = nodes_per_layer
         self.n_layers : int = n_layers
         self.requires_padded_feats : bool = requires_padded_feats
+        self.padding_size : int = 0
         if(requires_padded_feats):
             self.padding_size : int = 16*int(math.ceil(max(1, (n_grids*n_features)/16))) - n_grids*n_features
             
@@ -375,7 +376,7 @@ class AMGSRN(nn.Module):
     def forward(self, x, transformed:bool=False):        
         feats = self.encoder(x, transformed)    
         if(self.requires_padded_feats):
-            feats = F.pad(feats, (0, self.padding_size), value=1) 
+            feats = F.pad(feats, (0, self.padding_size), value=1.0) 
         y = self.decoder(feats).float()
         
         return y
