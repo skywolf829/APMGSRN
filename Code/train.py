@@ -312,7 +312,7 @@ def train( model, dataset, opt):
                     )
             ]        
             scheduler = [
-                torch.optim.lr_scheduler.MultiStepLR(optimizer,
+                torch.optim.lr_scheduler.MultiStepLR(optimizer[0],
                     [opt['iterations']*(9/10)],
                     gamma=0.1),
                 torch.optim.lr_scheduler.LinearLR(optimizer[1], 
