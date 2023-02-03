@@ -307,7 +307,7 @@ def train( model, dataset, opt):
                 ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
                 optim.Adam(
                     model.encoder.get_transform_parameters(), 
-                    lr=opt['lr'] * 0.1, 
+                    lr=opt['lr'] * 0.05, 
                     betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15
                     )
             ]        
@@ -315,7 +315,7 @@ def train( model, dataset, opt):
                 torch.optim.lr_scheduler.LinearLR(optimizer[0],
                     start_factor=1, end_factor=1),
                 torch.optim.lr_scheduler.LinearLR(optimizer[1], 
-                    start_factor=1, end_factor=1)
+                    start_factor=1, end_factor=0.5)
             ]      
     else:
         optimizer = optim.Adam(model.parameters(), lr=opt["lr"], 
