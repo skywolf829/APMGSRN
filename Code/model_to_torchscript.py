@@ -1,15 +1,8 @@
 from __future__ import absolute_import, division, print_function
-import argparse
-import datetime
-from Other.utility_functions import str2bool
-from Models.models import load_model, create_model, save_model
-import torch
-import time
-import os
 from Models.options import *
-
-def remove_tinycudann(model):
-    print(model.decoder.__type__)
+from Models.models import tinycudann_to_pytorch
+import argparse
+import torch
 
 
 if __name__ == '__main__':
