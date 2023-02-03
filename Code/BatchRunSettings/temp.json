@@ -1,18 +1,36 @@
 [
     
-    [ "test.py",
+    [ "train.py",
         {        
-        "load_from": "Isotropic_NGP",
-        "tests": "reconstruction,error_volume"
+            "save_name": "temp_tcnn_fVSRN",
+            "model": "fVSRN",
+            "data": "Nyx.nc",
+            "n_features": 16,
+            "feature_grid_shape": "16,16,16",
+            "n_layers": 2,
+            "nodes_per_layer": 32,
+            "precondition": false,
+            "log_features_every": 0,
+            "lr": 0.01,
+            "iterations": 100,
+            "points_per_iteration": 100000,
+            "use_tcnn_if_available": true
     }],
-    [ "test.py",
+    [ "train.py",
         {        
-        "load_from": "Isotropic_fVSRN",
-        "tests": "reconstruction,error_volume"
-    }],
-    [ "test.py",
-        {        
-        "load_from": "Isotropic_AMRSRN",
-        "tests": "reconstruction,error_volume"
+            "save_name": "temp_tcnn_AMGSRN",
+            "model": "AMGSRN",
+            "data": "Nyx.nc",
+            "n_features": 1,
+            "n_grids": 16,
+            "feature_grid_shape": "16,16,16",
+            "n_layers": 2,
+            "nodes_per_layer": 32,
+            "precondition": false,
+            "log_features_every": 0,
+            "lr": 0.01,
+            "iterations": 100,
+            "points_per_iteration": 100000,
+            "use_tcnn_if_available": true
     }]
 ]

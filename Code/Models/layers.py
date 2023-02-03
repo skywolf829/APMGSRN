@@ -90,13 +90,16 @@ class SnakeAltLayer(nn.Module):
         return 0.5*x + torch.sin(x)**2
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, opt):
-        super(PositionalEncoding, self).__init__()        
-        self.opt = opt
-        self.L = opt['num_positional_encoding_terms']
-        self.L_terms = torch.arange(0, opt['num_positional_encoding_terms'], 
-            device=opt['device'], dtype=torch.float32).repeat_interleave(2*opt['n_dims'])
-        self.L_terms = torch.pow(2, self.L_terms) * torch.pi
+    def __init__(self, num_terms:int, n_dims:int):
+        super(PositionalEncoding, self).__init__()  
+        self.n_dims = n_dims      
+        
+        self.L = num_terms
+        L_terms = torch.arange(0, num_terms, 
+            dtype=torch.float32).repeat_interleave(2*n_dims)
+        L_terms = torch.pow(2, L_terms) * torch.pi
+        
+        self.register_buffer("L_terms", L_terms, persistent=False)
 
     def forward(self, locations):
         repeats = len(list(locations.shape)) * [1]
@@ -104,7 +107,7 @@ class PositionalEncoding(nn.Module):
         locations = locations.repeat(repeats)
         
         locations = locations * self.L_terms# + self.phase_shift
-        if(self.opt['n_dims'] == 2):
+        if(self.n_dims == 2):
             locations[..., 0::4] = torch.sin(locations[..., 0::4])
             locations[..., 1::4] = torch.sin(locations[..., 1::4])
             locations[..., 2::4] = torch.cos(locations[..., 2::4])

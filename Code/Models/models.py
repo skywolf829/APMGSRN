@@ -6,7 +6,6 @@ import torch.nn.functional as F
 import os
 from math import pi
 from Models.options import *
-
 from Other.utility_functions import create_folder, make_coord_grid
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,33 +36,28 @@ def load_model(opt, device):
     return model
 
 def create_model(opt):
-    from Models.fVSRN import fVSRN
-    from Models.afVSRN import afVSRN
-    from Models.AMGSRN import AMGSRN
-    from Models.SigmoidNet import SigmoidNet
-    from Models.ExpNet import ExpNet
+
     if(opt['model'] == "fVSRN"):
-        return fVSRN(opt)
-    elif(opt['model'] == "afVSRN"):
-        return afVSRN(opt)
+        from Models.fVSRN import fVSRN
+        return fVSRN(opt['n_features'], 
+        [eval(i) for i in opt['feature_grid_shape'].split(",")], 
+        opt['n_dims'], opt['n_outputs'], opt['nodes_per_layer'], 
+        opt['n_layers'], 
+        opt['num_positional_encoding_terms'], opt['use_tcnn_if_available'],
+        opt['use_bias'], opt['requires_padded_feats'])
     elif(opt['model'] == "AMGSRN"):
+        from Models.AMGSRN import AMGSRN
         return AMGSRN(opt['n_grids'], opt['n_features'], 
         [eval(i) for i in opt['feature_grid_shape'].split(",")], 
         opt['n_dims'], opt['n_outputs'], opt['nodes_per_layer'], 
-        opt['n_layers'], opt['device'])
-    elif(opt['model'] == "AMRSRN_TCNN"):
-        from Models.AMRSRN_TCNN import AMRSRN_TCNN
-        return AMRSRN_TCNN(opt)
+        opt['n_layers'], opt['use_tcnn_if_available'], opt['use_bias'],
+        opt['requires_padded_feats'])
     elif(opt['model'] == "NGP"):
         from Models.NGP import NGP
         return NGP(opt)
     elif(opt['model'] == "NGP_TCNN"):        
         from Models.NGP import NGP_TCNN
         return NGP_TCNN(opt)
-    elif(opt['model'] == "SigmoidNet"):
-        return SigmoidNet(opt)
-    elif(opt['model'] == "ExpNet"):
-        return ExpNet(opt)
 
 def sample_grid(model, grid, device="cuda", data_device="cuda", max_points = 100000):
     coord_grid = make_coord_grid(grid, 

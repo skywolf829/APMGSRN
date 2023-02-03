@@ -1,101 +1,95 @@
-from random import gauss
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-from Other.utility_functions import make_coord_grid    
-from Models.layers import LReLULayer, SineLayer, SnakeAltLayer, PositionalEncoding
+from Models.layers import LReLULayer, PositionalEncoding
+from typing import List
+import math
 
 class fVSRN(nn.Module):
-    def __init__(self, opt):
+    def __init__(self, n_features: int, 
+        feature_grid_shape: List[int], n_dims : int, 
+        n_outputs: int, nodes_per_layer: int, n_layers: int, 
+        num_positional_encoding_terms, use_tcnn:bool, use_bias:bool,
+        requires_padded_feats:bool):
         super().__init__()
         
-        self.opt = opt
-        self.recently_added_layer = False
-
-        if(opt['extents'] is not None):
-            ext = opt['extents'].split(',')
-            self.ext = [eval(i) for i in ext]
-            dim_size_voxels = [
-                self.ext[1]-self.ext[0], self.ext[3]-self.ext[2], self.ext[5]-self.ext[4]
-            ]
-            dim_start = [
-                (self.ext[0] / self.opt['full_shape'][0])*2 - 1,
-                (self.ext[1] / self.opt['full_shape'][1])*2 - 1,
-                (self.ext[2] / self.opt['full_shape'][2])*2 - 1
-            ]
-            dim_global_proportions = [
-                2*dim_size_voxels[0]/self.opt['full_shape'][0],
-                2*dim_size_voxels[1]/self.opt['full_shape'][1],
-                2*dim_size_voxels[2]/self.opt['full_shape'][2]
-            ]
-
-            self.register_buffer("dim_start", 
-                torch.tensor(dim_start), persistent=False)
-            self.register_buffer("dim_global_proportions", 
-                torch.tensor(dim_global_proportions), persistent=False)
-
-        self.pe = PositionalEncoding(opt)
         
-        feat_shape = [1, opt['n_features']] + [eval(i) for i in opt['feature_grid_shape'].split(",")]
+        self.requires_padded_feats : bool = requires_padded_feats
+        if(requires_padded_feats):
+            self.padding_size : int = \
+                16*int(math.ceil(max(1, (n_features+num_positional_encoding_terms*n_dims*2)/16))) - \
+                    (n_features+num_positional_encoding_terms*n_dims*2)
+            
+        self.pe = PositionalEncoding(num_positional_encoding_terms, n_dims)        
+        feat_shape : List[int] = [1, n_features] + feature_grid_shape
 
         self.feature_grid = torch.rand(feat_shape, 
-            device=self.opt['device'], dtype=torch.float32)
+            dtype=torch.float32)
         self.feature_grid = torch.nn.Parameter(self.feature_grid, 
             requires_grad=True)
 
-
-
-        try:
+        def init_decoder_tcnn():
             import tinycudann as tcnn 
-            print(f"Using TinyCUDANN (tcnn) since it is installed for performance gains.")
-            print(f"WARNING: This model will be incompatible with non-tcnn compatible systems")
-            self.decoder = tcnn.Network(
-                n_input_dims=opt['num_positional_encoding_terms']*opt['n_dims']*2 + opt['n_features'],
-                n_output_dims=opt['n_outputs'],
+            
+            input_size:int = n_features+num_positional_encoding_terms*n_dims*2
+            if(requires_padded_feats):
+                input_size = n_features+num_positional_encoding_terms*n_dims*2 + self.padding_size
+                
+            decoder = tcnn.Network(
+                n_input_dims=input_size,
+                n_output_dims=n_outputs,
                 network_config={
                     "otype": "FullyFusedMLP",
                     "activation": "ReLU",
                     "output_activation": "None",
-                    "n_neurons": opt['nodes_per_layer'],
-                    "n_hidden_layers": opt['n_layers'],
+                    "n_neurons": nodes_per_layer,
+                    "n_hidden_layers": n_layers,
                 }
             )
-        except ImportError:
-            print(f"TinyCUDANN (tcnn) not installed: falling back to normal PyTorch")
-            self.decoder = nn.ModuleList()
-            
-            first_layer_input_size = opt['n_features']*opt['n_grids']# + opt['num_positional_encoding_terms']*opt['n_dims']*2
-                    
-            layer = LReLULayer(first_layer_input_size, 
-                                opt['nodes_per_layer'])
-            self.decoder.append(layer)
-            
-            for i in range(opt['n_layers']):
-                if i == opt['n_layers'] - 1:
-                    layer = nn.Linear(opt['nodes_per_layer'], opt['n_outputs'])
-                    self.decoder.append(layer)
-                else:
-                    layer = LReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'])
-                    self.decoder.append(layer)
-            self.decoder = torch.nn.Sequential(*self.decoder)
-                    
+            return decoder
         
+        def init_decoder_pytorch():
+            decoder = nn.ModuleList()
+            
+            input_size:int = n_features+num_positional_encoding_terms*n_dims*2
+            if(requires_padded_feats):
+                input_size = n_features+num_positional_encoding_terms*n_dims*2 + self.padding_size
+                                    
+            layer = LReLULayer(input_size, 
+                nodes_per_layer, bias=use_bias)
+            decoder.append(layer)
+            
+            for i in range(n_layers):
+                if i == n_layers - 1:
+                    layer = nn.Linear(nodes_per_layer, n_outputs, bias=use_bias)
+                    decoder.append(layer)
+                else:
+                    layer = LReLULayer(nodes_per_layer, nodes_per_layer, bias=use_bias)
+                    decoder.append(layer)
+            decoder = torch.nn.Sequential(*decoder)
+            return decoder
+
+        if(use_tcnn):
+            try:
+                self.decoder = init_decoder_tcnn()
+            except ImportError:
+                print(f"Tried to use TinyCUDANN but found it was not installed - reverting to PyTorch layers.")
+                self.decoder = init_decoder_pytorch()
+        else:
+            self.decoder = init_decoder_pytorch()
+                            
     def forward(self, x):     
         
         feats = F.grid_sample(self.feature_grid,
-                x.unsqueeze(0).unsqueeze(0).unsqueeze(0),
+                x.reshape(([1]*x.shape[-1]) + list(x.shape)),
                 mode='bilinear', align_corners=True) 
-        if(self.opt['use_global_position']):
-            x = x + 1.0
-            x = x / 2.0
-            x = x * self.dim_global_proportions
-            x = x + self.dim_start
         pe = self.pe(x)  
         
         feats = feats.flatten(0, -2).permute(1, 0)
-        y = torch.cat([pe, feats], dim=1)
-        y = self.decoder(y).float()
+        feats = torch.cat([pe, feats], dim=1)
+        if(self.requires_padded_feats):
+            feats = F.pad(feats, (0, self.padding_size), value=1) 
+        y = self.decoder(feats).float()
         return y
 
         
