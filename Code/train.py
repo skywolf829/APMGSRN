@@ -173,35 +173,35 @@ def train_step_AMGSRN_precondition(opt, iteration, batch, dataset, model, optimi
             {"Fitting loss": loss}, 
             model, opt, dataset.data.shape[2:], dataset)
 
-def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, writer):
+def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
     opt['iteration_number'] = iteration
     optimizer[0].zero_grad() 
                  
     x, y = batch
-    torch.cuda.synchronize()
+    
     x = x.to(opt['device'])
     y = y.to(opt['device'])
-    torch.cuda.synchronize()
+    
     
     transformed_x = model.transform(x)    
     model_output = model(transformed_x, transformed=True)
-    torch.cuda.synchronize()
+    
     loss = F.mse_loss(model_output, y, reduction='none')
     loss = loss.sum(dim=1, keepdim=True)
-    torch.cuda.synchronize()
+    
     loss.mean().backward()
        
     
     if(iteration < opt['iterations']*0.9):
         optimizer[1].zero_grad() 
-        torch.cuda.synchronize()
+        
         density = model.feature_density_gaussian(transformed_x, transformed=True) 
-        torch.cuda.synchronize()
+        
         density /= density.sum().detach()  
         target = torch.exp(torch.log(density+1e-16) / \
             (loss/loss.mean()))
         target /= target.sum()
-        torch.cuda.synchronize()
+        
         
         density_loss = F.kl_div(
             torch.log(density+1e-16), 
@@ -209,22 +209,22 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
                 reduction='none', 
                 log_target=True)
         
-        torch.cuda.synchronize()
+        
         density_loss.mean().backward()
-        torch.cuda.synchronize()
+        
         optimizer[1].step()
         scheduler[1].step()   
     else:
         density_loss = None
-    torch.cuda.synchronize()     
+         
     regularization_loss = 10e-6 * (torch.cat([x.view(-1) for x in model.parameters()])**2).mean()
     regularization_loss.backward()
-    torch.cuda.synchronize()
+    
     optimizer[0].step()
     scheduler[0].step()   
-    torch.cuda.synchronize()     
-    #profiler.step()
-    torch.cuda.synchronize()
+         
+    profiler.step()
+    
     if(opt['log_every'] != 0):
         logging(writer, iteration, 
             {"Fitting loss": loss, 
@@ -268,8 +268,8 @@ def train( model, dataset, opt):
     writer = SummaryWriter(os.path.join('tensorboard',opt['save_name']))
     dataloader = DataLoader(dataset, 
                             batch_size=None, 
-                            num_workers=0 if "cuda" in opt['data_device'] else 4,
-                            pin_memory=True if "cpu" in opt['data_device'] else False,
+                            num_workers=0 if "cpu" in opt['data_device'] and "cuda" in opt['device'] else 4,
+                            pin_memory=True if "cpu" in opt['data_device'] and "cuda" in opt['device'] else False,
                             pin_memory_device=opt['device'])
     
     model.train(True)
@@ -323,11 +323,13 @@ def train( model, dataset, opt):
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
             [opt['iterations']*(2/5), opt['iterations']*(3/5), opt['iterations']*(4/5)],
             gamma=0.33)
-    '''    
+       
     with torch.profiler.profile(
         activities=[
             torch.profiler.ProfilerActivity.CPU,
             torch.profiler.ProfilerActivity.CUDA,
+        ] if torch.cuda.is_available() else [
+            torch.profiler.ProfilerActivity.CPU
         ],
         schedule=torch.profiler.schedule(
             wait=2,
@@ -340,16 +342,15 @@ def train( model, dataset, opt):
         with_modules=True,
         on_trace_ready=torch.profiler.tensorboard_trace_handler(
             os.path.join('tensorboard',opt['save_name']))) as profiler:
-    '''
-    for (iteration, batch) in enumerate(dataloader):
-        train_step(opt,
+        for (iteration, batch) in enumerate(dataloader):
+            train_step(opt,
                     iteration,
                     batch,
                     dataset,
                     model,
                     optimizer,
                     scheduler,
-                    #profiler,
+                    profiler,
                     writer)
     
     writer.add_graph(model, torch.zeros([1, 3], device=opt['device'], dtype=torch.float32))

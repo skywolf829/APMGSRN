@@ -194,9 +194,9 @@ class AMG_encoder(nn.Module):
         x: Input coordinates with shape [batch, 3]
         returns: local coordinates in a shape [n_grids, batch, 3]
         '''
-        torch.cuda.synchronize()
+        
         transformation_matrices = self.get_transformation_matrices()
-        torch.cuda.synchronize()
+        
         # x starts [batch,3], this changes it to [n_grids,batch,4]#
         # by appending 1 to the xyz and repeating it n_grids times
             
@@ -208,7 +208,7 @@ class AMG_encoder(nn.Module):
                 transformation_matrices.shape[0], 1, 1
             )
         
-        torch.cuda.synchronize()
+        
         
         #transformation_matrices = get_transformation_matrices(
         #    self.opt['n_grids'], self.grid_translations, 
@@ -223,11 +223,11 @@ class AMG_encoder(nn.Module):
                             transformed_points.transpose(-1, -2)).transpose(-1, -2)
         #transformed_points = torch.einsum('bct,blt->blc',[transformation_matrices,transformed_points])
         
-        torch.cuda.synchronize()
+        
         # Finally, only the xyz coordinates are taken
         transformed_points = transformed_points[...,0:3]
             
-        torch.cuda.synchronize()        
+                
         # return [n_grids,batch,3]
         return transformed_points
    
@@ -286,20 +286,20 @@ class AMG_encoder(nn.Module):
         return result
     
     def forward(self, x, transformed=False):
-        torch.cuda.synchronize()
+        
         if(transformed):
             transformed_points = x.unsqueeze(1).unsqueeze(1).detach()
         else:
             with torch.no_grad():
                 transformed_points = self.transform(x)       
-                torch.cuda.synchronize()
+                
                 transformed_points = transformed_points.unsqueeze(1).unsqueeze(1)
                 
         feats = F.grid_sample(self.feature_grids,
                 transformed_points.detach(),
                 mode='bilinear', align_corners=True,
                 padding_mode="zeros")[:,:,0,0,:]
-        torch.cuda.synchronize()
+        
         feats = feats.flatten(0,1).permute(1, 0)
         return feats
       
