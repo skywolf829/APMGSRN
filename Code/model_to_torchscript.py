@@ -29,7 +29,7 @@ if __name__ == '__main__':
     model = load_model(opt, opt['device'])
 
         
-    model_jit = torch.jit.trace(model)
+    model_jit = torch.jit.script(model)
     torch.jit.save(model_jit, 
         os.path.join(save_folder, args["model_name"], "traced_model.pt"))
 
