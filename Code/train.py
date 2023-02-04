@@ -80,7 +80,7 @@ def log_feature_points(model, dataset, opt, iteration):
     # Just use [2,2,2]
     global_points = make_coord_grid(feat_grid_shape, opt['device'], 
                     flatten=True, align_corners=True)
-    transformed_points = model.inverse_transform(global_points)
+    transformed_points = model.inverse_transform(global_points).detach().cpu()
 
     transformed_points += 1.0
     transformed_points *= 0.5 
@@ -195,7 +195,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     if(iteration < opt['iterations']*0.8):
         optimizer[1].zero_grad() 
         
-        density = model.feature_density_gaussian(transformed_x, transformed=True) 
+        density = model.feature_density(transformed_x, transformed=True) 
         
         density /= density.sum().detach()  
         target = torch.exp(torch.log(density+1e-16) / \

@@ -2,18 +2,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F 
 from Models.layers import ReLULayer
-from typing import List, Dict
+from typing import List, Dict, Optional
 import math
 
 def weights_init(m):
     classname = m.__class__.__name__
     if classname.lower().find('linear') != -1:
-        print(f"Found {classname}, initializing to xavier normal")
         nn.init.xavier_normal_(m.weight)
         if(m.bias is not None):
-            torch.nn.init.normal_(m.bias, 0, 0.001)
-    else:
-        print(f"Found {classname}, not initializing")     
+            torch.nn.init.normal_(m.bias, 0, 0.001) 
 
 class AMG_encoder(nn.Module):
     def __init__(self, n_grids:int, n_features:int,
@@ -132,10 +129,10 @@ class AMG_encoder(nn.Module):
         
         transformed_points = torch.bmm(local_to_global_matrices,
                                     transformed_points.transpose(-1,-2)).transpose(-1, -2)
-        transformed_points = transformed_points[...,0:-1].detach().cpu()
+        transformed_points = transformed_points[...,0:-1]
         return transformed_points
     
-    def feature_density_gaussian(self, x, transformed:bool=False):
+    def feature_density(self, x, transformed:bool=False):
         # Transform the points to local grid spaces first
         if(not transformed):
             transformed_points = self.transform(x)
@@ -161,14 +158,13 @@ class AMG_encoder(nn.Module):
         
         # transform first
         if(not transformed):
-            with torch.no_grad():
-                x = self.transform(x)
+            x = self.transform(x)
         transformed_points = x.reshape([x.shape[0]] + [1]*(x.shape[-1]-1) + list(x.shape[1:])) 
         
         # Sample the grids at the batch of transformed point locations
         # Uses zero padding, so any point outside of [-1,1]^n_dims will be a 0 feature vector
         feats = F.grid_sample(self.feature_grids,
-                transformed_points.detach(),
+                transformed_points.detach() if self.training else transformed_points,
                 mode='bilinear', align_corners=True,
                 padding_mode="zeros").flatten(0, -2).permute(1,0)
         
@@ -259,16 +255,20 @@ class AMGSRN(nn.Module):
                 requires_grad=True
             )
             self.decoder.apply(weights_init)   
-            
+
+    @torch.jit.export      
     def get_transformation_matrices(self):        
         return self.encoder.get_transformation_matrices()
 
-    def feature_density_gaussian(self, x, transformed:bool=False):
-        return self.encoder.feature_density_gaussian(x, transformed)
+    @torch.jit.export
+    def feature_density(self, x, transformed:bool=False):
+        return self.encoder.feature_density(x, transformed)
 
+    @torch.jit.export
     def transform(self, x):
         return self.encoder.transform(x)
     
+    @torch.jit.export
     def inverse_transform(self, x):
         return self.encoder.inverse_transform(x)
     
@@ -372,7 +372,18 @@ class AMGSRN(nn.Module):
                     self, self.opt, dataset.data.shape[2:], dataset, 
                     preconditioning="grid")
     '''
-                   
+
+    @torch.jit.export
+    def grad_at(self, x):
+        x.requires_grad_(True)
+        y = self(x, transformed=False)
+
+        grad_outputs: List[Optional[torch.Tensor]] = [torch.ones_like(y),]
+
+        grad_x = torch.autograd.grad([y], [x],
+            grad_outputs=grad_outputs)[0]
+        return grad_x
+
     def forward(self, x, transformed:bool=False):        
         feats = self.encoder(x, transformed)    
         if(self.requires_padded_feats):

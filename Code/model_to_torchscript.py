@@ -136,8 +136,33 @@ if __name__ == '__main__':
     opt["device"] = "cpu"
     
     model = load_model(opt, opt['device'])
-    
+    model.eval()
+
+    print()
+    print()
+    print()
+    print(f"Performing tests")
+    print(f"Model training mode: {model.training}")
+    print(f"Forward at -0.3,0.1,0.2: {model(torch.tensor([[-0.3,0.1,0.2]]))}")
+    print(f"Forward batch: {model(torch.tensor([[-0.3,0.1,0.2], [0,0,0]]))}")
+    print(f"Backward at -0.3,0.1,0.2: {model.grad_at(torch.tensor([[-0.3,0.1,0.2]]))}")
+    print(f"Backward batch: {model.grad_at(torch.tensor([[-0.3,0.1,0.2], [0,0,0]]))}")
+
+
+    print()
+    print()
+    print()
+
     model_jit = torch.jit.script(model)
+    model_jit.eval()
+    print(f"Converting to jit")
+    print(f"Model training mode: {model_jit.training}")
+
+    print(f"Forward at -0.3,0.1,0.2: {model_jit(torch.tensor([[-0.3,0.1,0.2]]))}")
+    print(f"Forward batch: {model_jit(torch.tensor([[-0.3,0.1,0.2], [0,0,0]]))}")
+    print(f"Backward at -0.3,0.1,0.2: {model_jit.grad_at(torch.tensor([[-0.3,0.1,0.2]]))}")
+    print(f"Backward batch: {model_jit.grad_at(torch.tensor([[-0.3,0.1,0.2], [0,0,0]]))}")
+
     torch.jit.save(model_jit,
         os.path.join(save_folder, model_name, "traced_model.pt"))
 
