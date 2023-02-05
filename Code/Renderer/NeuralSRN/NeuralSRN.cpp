@@ -28,7 +28,7 @@ at::Tensor TracedNeuralModel::grad_at_phys_pos (torch::Tensor queryPoints) {
   std::vector<torch::jit::IValue> inputs;
   inputs.push_back(queryPoints);
 
-  auto output = module.get_method("grad_at")(inputs).toTensor();
+  at::Tensor output = module.get_method("grad_at")(inputs).toTensor();
   return output;
 }
 

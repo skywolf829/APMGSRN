@@ -354,7 +354,7 @@ def train( model, dataset, opt):
                     profiler,
                     writer)
     
-    writer.add_graph(model, torch.zeros([1, 3], device=opt['device'], dtype=torch.float32))
+    #writer.add_graph(model, torch.zeros([1, 3], device=opt['device'], dtype=torch.float32))
     writer.close()
     save_model(model, opt)
 
