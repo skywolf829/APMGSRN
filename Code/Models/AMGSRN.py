@@ -51,8 +51,6 @@ class AMG_encoder(nn.Module):
             n_dims = self.transformation_matrices.shape[-1]-1
             self.transformation_matrices[:] = torch.eye(n_dims+1, 
                 device=d, dtype=torch.float32)
-            '''
-            # Translation, scale, shear, rotation
             self.transformation_matrices[:,0:n_dims,:] += torch.rand_like(
                 self.transformation_matrices[:,0:n_dims,:],
                 device=d, dtype=torch.float32) * 0.1
@@ -61,18 +59,6 @@ class AMG_encoder(nn.Module):
                 self.transformation_matrices.transpose(-1, -2),
                 requires_grad=True)
             self.transformation_matrices[:,n_dims,0:n_dims] = 0
-            self.transformation_matrices[:,-1,-1] = 1
-            '''
-            # Only translation + scale
-            self.transformation_matrices[:,0:n_dims,-1] += torch.rand_like(
-                self.transformation_matrices[:,0:n_dims,-1],
-                device=d, dtype=torch.float32) * 0.1
-            self.transformation_matrices += torch.eye(n_dims+1, 
-                device=d, dtype=torch.float32) * torch.rand_like(
-                    torch.eye(n_dims+1, 
-                        device=d, dtype=torch.float32)
-                )*0.1
-            self.transformation_matrices[:,-1,-1] = 1
 
     def get_transformation_matrices(self):
         return self.transformation_matrices
