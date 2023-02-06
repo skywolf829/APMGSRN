@@ -85,7 +85,7 @@ def log_feature_points(model, dataset, opt, iteration):
     transformed_points += 1.0
     transformed_points *= 0.5 
     transformed_points *= (torch.tensor(list(dataset.data.shape[2:]))-1)
-    transformed_points = transformed_points.detach().cpu()
+    transformed_points = transformed_points.detach().cpu().flip(-1)
 
     ids = torch.arange(transformed_points.shape[0])
     ids = ids.unsqueeze(1).unsqueeze(1)
