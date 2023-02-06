@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import argparse
 import os
 from math import log2
+from Other.utility_functions import create_path
 
 #plt.style.use('Solarize_Light2')
 plt.style.use('fivethirtyeight')
@@ -22,9 +23,12 @@ plt.rcParams.update(font)
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
 project_folder_path = os.path.join(project_folder_path, "..",)
 save_folder = os.path.join(project_folder_path, "Output", "Charts")
+output_folder = os.path.join(project_folder_path, "Output")
    
 
 def data_to_figure(data, name):
+    
+    create_path(os.path.join(output_folder, "Charts"))
     markers = ['o', 'v', 's']
     idx = 0
     for method in data.keys():
@@ -56,96 +60,96 @@ def data_to_figure(data, name):
 def model_size_performance_chart():
     supernova_results = {
         "Ours": {
-            2**16 : 41.218,
-            2**20 : 44.696,
-            2**24 : 46.667 #can improve to 47.something with dif params
+            2**16 : 41.907,
+            2**20 : 46.610,
+            2**24 : 49.710 
         },
         "NGP": {
-            2**16 : 37.682,
-            2**20 : 40.444,
-            2**24 : 47.915
+            2**16 : 39.420,
+            2**20 : 41.197,
+            2**24 : 45.870
         },
         "fVSRN": {
-            2**16 : 38.553,
-            2**20 : 42.555,
-            2**24 : 46.445
-        }
-    }
-    
-    supernova_test_results = {
-        "Ours": {
-            2**16 : 48.887,
-            2**20 : 50.53,
-            2**24 : 51.367
-        },
-        "NGP": {
-            2**16 : 48.321,
-            2**20 : 51.303,
-            2**24 : 52.935
-        },
-        "fVSRN": {
-            2**16 : 44.889,
-            2**20 : 47.644,
-            2**24 : 49.81
+            2**16 : 39.461,
+            2**20 : 43.437,
+            2**24 : 47.453
         }
     }
 
     plume_results = {
         "Ours": {
-            2**16 : 45.392,
-            2**20 : 55.463,
-            2**24 : 56.449
+            2**16 : 50.064,
+            2**20 : 57.372,
+            2**24 : 59.668
         },
         "NGP": {
-            2**16 : 42.774,
-            2**20 : 50.14,
-            2**24 : 55.962
+            2**16 : 44.321,
+            2**20 : 45.340,
+            2**24 : 49.079
         },
         "fVSRN": {
-            2**16 : 43.262,
-            2**20 : 51.201,
-            2**24 : 56.137
+            2**16 : 44.844,
+            2**20 : 52.550,
+            2**24 : 55.369
         }
     }
 
     isotropic_results = {
         "Ours": {
-            2**16 : 27.598,
-            2**20 : 31.624,
-            2**24 : 34.090
+            2**16 : 27.700,
+            2**20 : 32.222,
+            2**24 : 38.111
         },
         "NGP": {
-            2**16 : 25.022,
-            2**20 : 28.226,
-            2**24 : 32.893
+            2**16 : 25.283,
+            2**20 : 27.568,
+            2**24 : 34.557
         },
         "fVSRN": {
-            2**16 : 27.203,
-            2**20 : 31.02,
-            2**24 : 36.166
+            2**16 : 27.416,
+            2**20 : 31.784,
+            2**24 : 38.470
         }
     }
     
     nyx_results = {
         "Ours": {
-            2**16 : 29.482,
-            2**20 : 36.593,
-            2**24 : 41.229
+            2**16 : 29.628,
+            2**20 : 37.728,
+            2**24 : 43.926
         },
         "NGP": {
-            2**16 : 26.373,
-            2**20 : 30.593,
-            2**24 : 37.799
+            2**16 : 26.730,
+            2**20 : 30.230,
+            2**24 : 38.677
         },
         "fVSRN": {
-            2**16 : 28.886,
-            2**20 : 36.61,
-            2**24 : 43.594
+            2**16 : 29.181,
+            2**20 : 37.754,
+            2**24 : 43.912
+        }
+    }
+
+    asteroid_results = {
+        "Ours": {
+            2**16 : 35.325,
+            2**20 : 39.775,
+            2**24 : 43.135
+        },
+        "NGP": {
+            2**16 : 35.554,
+            2**20 : 40.985,
+            2**24 : 47.925
+        },
+        "fVSRN": {
+            2**16 : 33.040,
+            2**20 : 35.427,
+            2**24 : 40.397
         }
     }
 
     data_to_figure(supernova_results, "Supernova")    
-    data_to_figure(supernova_test_results, "Supernova Test")    
+    data_to_figure(asteroid_results, "Asteroid")    
     data_to_figure(plume_results, "Plume")    
     data_to_figure(isotropic_results, "Isotropic")    
     data_to_figure(nyx_results, "Nyx")
