@@ -84,7 +84,7 @@ def log_feature_points(model, dataset, opt, iteration):
 
     transformed_points += 1.0
     transformed_points *= 0.5 
-    transformed_points *= (torch.tensor(list(dataset.data.shape[2:]))-1)#.flip(0)
+    transformed_points *= (torch.tensor(list(dataset.data.shape[2:]))-1).flip(0)
     transformed_points = transformed_points.detach().cpu()#.flip(-1)
 
     ids = torch.arange(transformed_points.shape[0])
@@ -116,7 +116,7 @@ def log_feature_grids(model, dataset, opt, iteration):
     transformed_points = torch.cat((transformed_points, ids), dim=2)
     
     # use zyx point ordering for vtk files
-    #feat_grid_shape_zyx = np.flip(feat_grid_shape)
+    feat_grid_shape_zyx = np.flip(feat_grid_shape)
 
     # write each grid as a vts file, and aggregate their info in one .pvd file
     grid_dir = os.path.join(output_folder, "FeatureLocations", opt['save_name'], f"iter{iteration}")
