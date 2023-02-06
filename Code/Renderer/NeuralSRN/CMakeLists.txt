@@ -8,7 +8,7 @@ execute_process(
 list(APPEND CMAKE_PREFIX_PATH ${TorchPath})
 find_package(Torch REQUIRED)
 
-add_executable(NeuralSRN NeuralSRN.cxx)
+add_executable(NeuralSRN NeuralSRN.cpp)
 target_link_libraries(NeuralSRN "${TORCH_LIBRARIES}")
 set_property(TARGET NeuralSRN PROPERTY CXX_STANDARD 14)
 

@@ -1,4 +1,11 @@
-#include <torch/script.h> // One-stop header.
+
+
+#ifndef _NeuralSRN_HPP
+#define _NeuralSRN_HPP
+
+//#include "/Users/sky/miniconda3/lib/python3.9/site-packages/torch/include/torch/csrc/api/include/torch/torch.h"
+//#include <torch/torch.h> // One-stop header.
+#include "../pytorch/torch/csrc/api/include/torch/torch.h"
 #include <iostream>
 
 class TracedNeuralModel {
@@ -60,3 +67,5 @@ int main(int argc, const char* argv[]) {
   std::cout << "Batch grad output: " << batch_grad_output << '\n';
 }
 */
+
+#endif
