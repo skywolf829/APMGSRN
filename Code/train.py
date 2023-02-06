@@ -109,6 +109,7 @@ def log_feature_grids(model, dataset, opt, iteration):
 
     transformed_points += 1.0
     transformed_points *= 0.5 * (torch.tensor(dataset.data.shape)-1)
+    transformed_points = transformed_points.flip(-1)
     ids = torch.arange(transformed_points.shape[0])
     ids = ids.unsqueeze(1).unsqueeze(1)
     ids = ids.repeat([1, transformed_points.shape[1], 1])
