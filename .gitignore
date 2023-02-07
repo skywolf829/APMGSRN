@@ -148,3 +148,4 @@ osc.sh
 *.out
 
 /.vscode
+/Code/Renderer/libtorch
