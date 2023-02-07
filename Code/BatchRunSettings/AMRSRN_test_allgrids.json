@@ -1,7 +1,0 @@
-[
-    [ "test.py",
-        {        
-        "load_from": "all",
-        "tests": "reconstruction"
-    }]
-]
