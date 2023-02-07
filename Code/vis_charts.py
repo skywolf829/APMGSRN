@@ -56,13 +56,85 @@ def data_to_figure(data, name):
                 bbox_inches='tight',
                 dpi=200)
     plt.clf()
+
+def rotation_performance_chart():
+    supernova_results = {
+        "No rotation": {
+            2**16 : 41.360,
+            2**20 : 46.155, 
+            2**24 : 49.295 
+        },
+        "Rotation": {
+            2**16 : 41.907,
+            2**20 : 46.610,
+            2**24 : 49.710 
+        }
+    }
+
+    plume_results = {
+        "No rotation": {
+            2**16 : 49.592,
+            2**20 : 55.973,
+            2**24 : 58.178 
+        },
+        "Rotation": {
+            2**16 : 50.064,
+            2**20 : 57.372,
+            2**24 : 59.668
+        }
+    }
+
+    isotropic_results = {
+        "No rotation": {
+            2**16 : 27.724,
+            2**20 : 32.128,
+            2**24 : 38.027 
+        },
+        "Rotation": {
+            2**16 : 27.700,
+            2**20 : 32.222,
+            2**24 : 38.111
+        }
+    }
+    
+    nyx_results = {
+        "No rotation": {
+            2**16 : 29.633, 
+            2**20 : 38.601, 
+            2**24 : 45.186 
+        },
+        "Rotation": {
+            2**16 : 29.628,
+            2**20 : 37.728,
+            2**24 : 43.926
+        }
+    }
+
+    asteroid_results = {
+        "No rotation": {
+            2**16 : 35.348, 
+            2**20 : 39.583, 
+            2**24 : 42.767 
+        },
+        "Rotation": {
+            2**16 : 35.325,
+            2**20 : 39.775,
+            2**24 : 43.135
+        }
+    }
+
+    data_to_figure(supernova_results, "Supernova_rotation")    
+    data_to_figure(asteroid_results, "Asteroid_rotation")    
+    data_to_figure(plume_results, "Plume_rotation")    
+    data_to_figure(isotropic_results, "Isotropic_rotation")    
+    data_to_figure(nyx_results, "Nyx_rotation")
     
 def model_size_performance_chart():
     supernova_results = {
         "Ours": {
-            2**16 : 41.907,
-            2**20 : 46.610,
-            2**24 : 49.710 
+            2**16 : 41.360, # with rotation 41.907,
+            2**20 : 46.155, # with rotation 46.610,
+            2**24 : 49.295  # with rotation 49.710 
         },
         "NGP": {
             2**16 : 39.420,
@@ -78,9 +150,9 @@ def model_size_performance_chart():
 
     plume_results = {
         "Ours": {
-            2**16 : 50.064,
-            2**20 : 57.372,
-            2**24 : 59.668
+            2**16 : 49.592, # with rotation 50.064,
+            2**20 : 55.973, # with rotation 57.372,
+            2**24 : 58.178 # with rotation 59.668
         },
         "NGP": {
             2**16 : 44.321,
@@ -96,9 +168,9 @@ def model_size_performance_chart():
 
     isotropic_results = {
         "Ours": {
-            2**16 : 27.700,
-            2**20 : 32.222,
-            2**24 : 38.111
+            2**16 : 27.724, # with rotation 27.700,
+            2**20 : 32.128, # with rotation 32.222,
+            2**24 : 38.027 # with rotation 38.111
         },
         "NGP": {
             2**16 : 25.283,
@@ -114,9 +186,9 @@ def model_size_performance_chart():
     
     nyx_results = {
         "Ours": {
-            2**16 : 29.628,
-            2**20 : 37.728,
-            2**24 : 43.926
+            2**16 : 29.633, # with rotation 29.628,
+            2**20 : 38.601, # with rotaiton 37.728,
+            2**24 : 45.186 # with rotation 43.926
         },
         "NGP": {
             2**16 : 26.730,
@@ -132,9 +204,9 @@ def model_size_performance_chart():
 
     asteroid_results = {
         "Ours": {
-            2**16 : 35.325,
-            2**20 : 39.775,
-            2**24 : 43.135
+            2**16 : 35.348, # with rotation 35.325,
+            2**20 : 39.583, # with rotation 39.775,
+            2**24 : 42.767 # with rotation 43.135
         },
         "NGP": {
             2**16 : 35.554,
@@ -164,127 +236,5 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
 
     model_size_performance_chart()
+    rotation_performance_chart()
     quit()
-    
-    for scale_factor in results.keys():
-        print(scale_factor)
-
-        interp_results = results[scale_factor][interp]
-
-
-        for metric in interp_results.keys():
-            fig = plt.figure()
-            y_label = metric
-
-            for SR_type in results[scale_factor].keys():
-                # model results plotting
-                x = np.arange(args['start_ts'], 
-                    args['start_ts'] + args['ts_skip']*len(results[scale_factor][SR_type][metric]),
-                    args['ts_skip'])
-                y = results[scale_factor][SR_type][metric]
-                l = SR_type
-                plt.plot(x, y, label=l)
-
-            #plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
-            #    fancybox=True, ncol=4, shadow=True)
-            plt.legend()
-            plt.xlabel("Timestep")
-            plt.ylabel(y_label)
-
-            plt.title(scale_factor + " SR - " + metric)
-            plt.savefig(os.path.join(save_folder, scale_factor, metric+".png"),
-                        bbox_inches='tight',
-                        dpi=200)
-            plt.clf()
-
-    # Overall graphs
-
-    averaged_results = {}
-
-    scale_factors = []
-
-    for scale_factor in results.keys():
-
-        scale_factor_int = int(scale_factor.split('x')[0])
-        scale_factors.append(scale_factor_int)
-
-        for metric in results[scale_factor][interp].keys():
-            for SR_type in results[scale_factor].keys():
-                if SR_type not in averaged_results.keys():
-                    averaged_results[SR_type] = {}
-
-                if(metric not in averaged_results[SR_type].keys()):
-                    averaged_results[SR_type][metric] = []
-
-                averaged_results[SR_type][metric].append(np.median(
-                    np.array(results[scale_factor][SR_type][metric])))
-
-    
-    for metric in averaged_results[interp].keys():
-        fig = plt.figure()
-        y_label = metric
-        for SR_type in averaged_results.keys():
-            # model results plotting
-            x = scale_factors
-            y = averaged_results[SR_type][metric]
-            l = SR_type
-            
-            plt.plot(x, y, label=l)
-
-        #plt.legend(bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
-        #        mode="expand", borderaxespad=0, ncol=4)
-        if(metric == "SSIM"):
-            plt.xlabel("Scale factor")
-        if(args['output_file_name'] == "Isomag2D.results"):
-            plt.ylabel(y_label)
-        plt.xscale('log')
-        plt.minorticks_off()
-        plt.xticks(scale_factors, labels=scale_factors)
-        #plt.title("Median " + metric + " over SR factors")
-        if(metric == "PSNR (dB)"):
-            plt.ylim(bottom=20, top=55)
-            t = args['output_file_name'].split(".")[0]
-            if(t == "Nyx256"):
-                t = "Nyx"
-            elif(t == "Boussinesq"):
-                t = "Heated flow"
-            plt.title(t)
-        elif(metric == "SSIM"):
-            plt.ylim(bottom=0.45, top=1.0)
-        plt.savefig(os.path.join(save_folder, "MedianValues", metric+".png"),
-            bbox_inches='tight',
-            dpi=200)
-        #plt.show()
-        plt.clf()
-
-    fig, ax1 = plt.subplots()
-    ax2 = ax1.twinx()
-
-    left_y_label = "PSNR (dB)"
-    right_y_label = "SSIM"
-
-    for SR_type in averaged_results.keys():
-        # model results plotting
-        x = scale_factors
-        left_y = averaged_results[SR_type][left_y_label]
-        right_y = averaged_results[SR_type][right_y_label]
-        l = SR_type
-        ax1.plot(x, left_y, label=l, marker="s")
-        ax2.plot(x, right_y, label=l, marker="^", linestyle='dashed')
-
-    ax1.legend()
-    #ax2.legend()
-    ax1.set_xlabel("Scale factor")
-    ax1.set_ylabel(left_y_label)
-    ax2.set_ylabel(right_y_label)
-
-    ax1.set_xscale('log')
-    ax1.minorticks_off()
-    
-    ax1.set_xticks(scale_factors)
-    ax1.set_xticklabels(scale_factors)
-    ax1.set_title("Median PSNR/SSIM over SR factors")
-    plt.savefig(os.path.join(save_folder, "MedianValues", "Combined.png"),
-                bbox_inches='tight',
-                dpi=200)
-    plt.clf()
