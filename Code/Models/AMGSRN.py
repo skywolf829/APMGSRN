@@ -87,7 +87,7 @@ class AMG_encoder(nn.Module):
         # by appending 1 to the xy(z(t)) and repeating it n_grids times
             
         transformed_points = x.unsqueeze(0).repeat(
-                self.grid_translations.shape[1], 1, 1
+                self.grid_translations.shape[0], 1, 1
             )
         print(transformed_points.shape)
         print(self.grid_scales.shape)
@@ -117,7 +117,7 @@ class AMG_encoder(nn.Module):
         '''
        
         transformed_points = x.unsqueeze(0).repeat(
-                self.grid_translations.shape[1], 1, 1
+                self.grid_translations.shape[0], 1, 1
             )
         
         #transformed_points = torch.bmm(local_to_global_matrices,
