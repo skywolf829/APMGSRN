@@ -89,9 +89,6 @@ class AMG_encoder(nn.Module):
         transformed_points = x.unsqueeze(0).repeat(
                 self.grid_translations.shape[0], 1, 1
             )
-        print(transformed_points.shape)
-        print(self.grid_scales.shape)
-        print(self.grid_translations.shape)
         # BMM will result in [n_grids,n_dims+1,n_dims+1] x [n_grids,n_dims+1,batch]
         # which returns [n_grids,n_dims+1,batch], which is then transposed
         # to [n_grids,batch,n_dims+1]
