@@ -7,10 +7,12 @@ execute_process(
 )
 list(APPEND CMAKE_PREFIX_PATH ${TorchPath})
 find_package(Torch REQUIRED)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
-add_executable(NeuralSRN NeuralSRN.cpp)
-target_link_libraries(NeuralSRN "${TORCH_LIBRARIES}")
-set_property(TARGET NeuralSRN PROPERTY CXX_STANDARD 14)
+
+add_library(model NeuralSRN.cpp)
+target_link_libraries(model "${TORCH_LIBRARIES}")
+set_property(TARGET model PROPERTY CXX_STANDARD 14)
 
 # The following code block is suggested to be used on Windows.
 # According to https://github.com/pytorch/pytorch/issues/25457,

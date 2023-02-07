@@ -17,9 +17,16 @@ class AMG_encoder(nn.Module):
                  feat_grid_shape:List[int], n_dims:int):
         super().__init__()
              
-        self.transformation_matrices = torch.nn.Parameter(
+        self.grid_translations = torch.nn.Parameter(
             torch.zeros(
-                [n_grids, n_dims+1, n_dims+1],
+                [n_grids, n_dims],
+                dtype=torch.float32
+            ),
+            requires_grad=True
+        )
+        self.grid_scales = torch.nn.Parameter(
+            torch.zeros(
+                [n_grids, n_dims],
                 dtype=torch.float32
             ),
             requires_grad=True
@@ -36,17 +43,17 @@ class AMG_encoder(nn.Module):
         self.randomize_grids()
     
     def get_transform_parameters(self) -> List[Dict[str, torch.Tensor]]:
-        #return [{"params": self.grid_scales},
-        #    {"params":self.grid_translations},
-        #    {"params":self.grid_rotations}
-        #]
-        return [{"params": self.transformation_matrices}]
+        return [{"params": self.grid_scales},
+            {"params":self.grid_translations}
+        ]
+        #return [{"params": self.transformation_matrices}]
         
     def randomize_grids(self):  
         with torch.no_grad():     
-            #self.grid_scales.uniform_(1.0,1.2)
-            #self.grid_translations.uniform_(-0.1, 0.1)
+            self.grid_scales.uniform_(1.0,1.2)
+            self.grid_translations.uniform_(-0.1, 0.1)
             #self.grid_rotations.uniform_(-torch.pi/16, torch.pi/16)
+            '''
             d = self.transformation_matrices.device
             n_dims = self.transformation_matrices.shape[-1]-1
             self.transformation_matrices[:] = torch.eye(n_dims+1, 
@@ -59,9 +66,7 @@ class AMG_encoder(nn.Module):
                 self.transformation_matrices.transpose(-1, -2),
                 requires_grad=True)
             self.transformation_matrices[:,n_dims,0:n_dims] = 0
-
-    def get_transformation_matrices(self):
-        return self.transformation_matrices
+            '''
   
     def get_inverse_transformation_matrices(self):
         return torch.linalg.inv(self.transformation_matrices)
@@ -72,34 +77,26 @@ class AMG_encoder(nn.Module):
         each feature grid, where feature grids are assumed to be on
         the boundary of [-1, 1]^n_dims in their local coordinate system.
         Scales the grid by a factor to match the gaussian shape
-        (see feature_density_gaussian())
+        (see feature_density_gaussian()). Assumes S*R*T order
         
         x: Input coordinates with shape [batch, n_dims]
         returns: local coordinates in a shape [n_grids, batch, n_dims]
         '''
-        
-        transformation_matrices = self.get_transformation_matrices()
-        
+                
         # x starts [batch,n_dims], this changes it to [n_grids,batch,n_dims+1]
         # by appending 1 to the xy(z(t)) and repeating it n_grids times
             
-        transformed_points = torch.cat(
-            [x, torch.ones([x.shape[0], 1], 
-            device=x.device,
-            dtype=torch.float32)], 
-            dim=1).unsqueeze(0).repeat(
-                transformation_matrices.shape[0], 1, 1
+        transformed_points = x.unsqueeze(0).repeat(
+                self.grid_translations.shape[1], 1, 1
             )
         
         # BMM will result in [n_grids,n_dims+1,n_dims+1] x [n_grids,n_dims+1,batch]
         # which returns [n_grids,n_dims+1,batch], which is then transposed
         # to [n_grids,batch,n_dims+1]
-        transformed_points = torch.bmm(transformation_matrices, 
-                            transformed_points.transpose(-1, -2)).transpose(-1, -2)
-        #transformed_points = torch.einsum('bct,blt->blc',[transformation_matrices,transformed_points])
-        
-        # Finally, only the coordinates are taken
-        transformed_points = transformed_points[...,0:-1]
+        #transformed_points = torch.bmm(transformation_matrices, 
+        #                    transformed_points.transpose(-1, -2)).transpose(-1, -2)
+        transformed_points = transformed_points*self.grid_scales + \
+            self.grid_scales*self.grid_translations
             
         # return [n_grids,batch,n_dims]
         return transformed_points
@@ -110,26 +107,22 @@ class AMG_encoder(nn.Module):
         global coordinates. Scales local coordinates by a factor
         so as to be consistent with the transform() method, which
         attempts to align feature grids with the guassian density 
-        calculated in feature_density_gaussian()
+        calculated in feature_density_gaussian().Assumes S*R*T order,
+        so inverse is T^(-1)*R^T*(1/S)
         
         x: Input coordinates with shape [batch, n_dims]
         returns: local coordinates in a shape [n_grids, batch, n_dims]
         '''
-        local_to_global_matrices = self.get_inverse_transformation_matrices()
-        
-        transformed_points = torch.cat([x, 
-            torch.ones(
-                [x.shape[0], 1], 
-                device=x.device,
-                dtype=torch.float32
-                )],
-            dim=1).unsqueeze(0).repeat(
-                local_to_global_matrices.shape[0], 1, 1
+       
+        transformed_points = x.unsqueeze(0).repeat(
+                self.grid_translations.shape[1], 1, 1
             )
         
-        transformed_points = torch.bmm(local_to_global_matrices,
-                                    transformed_points.transpose(-1,-2)).transpose(-1, -2)
-        transformed_points = transformed_points[...,0:-1]
+        #transformed_points = torch.bmm(local_to_global_matrices,
+        #                            transformed_points.transpose(-1,-2)).transpose(-1, -2)
+        transformed_points = transformed_points*(1/self.grid_scales) \
+            - self.grid_translations
+
         return transformed_points
     
     def feature_density(self, x, transformed:bool=False):
@@ -140,9 +133,11 @@ class AMG_encoder(nn.Module):
             transformed_points = x
             
         # get the coeffs of shape [n_grids], then unsqueeze to [1,n_grids] for broadcasting
-        coeffs = torch.linalg.det(self.transformation_matrices[:,0:-1,0:-1]).unsqueeze(0) \
+        #coeffs = torch.linalg.det(self.transformation_matrices[:,0:-1,0:-1]).unsqueeze(0) \
+        #    / (2.0*torch.pi)**(x.shape[-1]/2)
+        coeffs = torch.prod(self.grid_scales,dim=1).unsqueeze(0) \
             / (2.0*torch.pi)**(x.shape[-1]/2)
-        
+
         # sum the exp part to [batch,n_grids]
         exps = torch.exp(-0.5 * \
             torch.sum(
@@ -255,10 +250,6 @@ class AMGSRN(nn.Module):
                 requires_grad=True
             )
             self.decoder.apply(weights_init)   
-
-    @torch.jit.export      
-    def get_transformation_matrices(self):        
-        return self.encoder.get_transformation_matrices()
 
     @torch.jit.export
     def feature_density(self, x, transformed:bool=False):

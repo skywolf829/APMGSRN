@@ -34,6 +34,15 @@ to be relative paths
 #include    "../../mfa/include/mfa/mfa.hpp"
 #include    "../../mfa/include/mfa/block_base.hpp"
 
+Comment out the Threads::Threads stuff in Common/Systems/Core/CMakeLists.txt
+
+```
+# vtk_module_link(VTK::CommonSystem
+#  PRIVATE
+#    $<$<PLATFORM_ID:WIN32>:wsock32>
+#    Threads::Threads)
+```
+
 # Fixes to build example_MFA-DVR
 
 ```
