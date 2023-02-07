@@ -95,8 +95,8 @@ class AMG_encoder(nn.Module):
         # to [n_grids,batch,n_dims+1]
         #transformed_points = torch.bmm(transformation_matrices, 
         #                    transformed_points.transpose(-1, -2)).transpose(-1, -2)
-        transformed_points = transformed_points*self.grid_scales + \
-            self.grid_scales*self.grid_translations
+        transformed_points = transformed_points*self.grid_scales.unsqueeze(1) + \
+            (self.grid_scales*self.grid_translations).unsqueeze(1)
             
         # return [n_grids,batch,n_dims]
         return transformed_points
@@ -120,8 +120,8 @@ class AMG_encoder(nn.Module):
         
         #transformed_points = torch.bmm(local_to_global_matrices,
         #                            transformed_points.transpose(-1,-2)).transpose(-1, -2)
-        transformed_points = transformed_points*(1/self.grid_scales) \
-            - self.grid_translations
+        transformed_points = transformed_points*(1/self.grid_scales.unsqueeze(1)) \
+            - self.grid_translations.unsqueeze(1)
 
         return transformed_points
     
