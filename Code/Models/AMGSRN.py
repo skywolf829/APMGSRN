@@ -19,7 +19,7 @@ class AMG_encoder(nn.Module):
              
         self.transformation_matrices = torch.nn.Parameter(
             torch.zeros(
-                [n_grids, n_dims+1,n_dims+1],
+                [n_grids, n_dims+1, n_dims+1],
                 dtype=torch.float32
             ),
             requires_grad=True
@@ -58,10 +58,7 @@ class AMG_encoder(nn.Module):
                 self.transformation_matrices.transpose(-1, -2),
                 requires_grad=True)
             self.transformation_matrices[:,n_dims,0:n_dims] = 0
-            
-  
-    def get_inverse_transformation_matrices(self):
-        return torch.linalg.inv(self.transformation_matrices)
+            self.transformation_matrices[:,-1,-1] = 1
   
     def transform(self, x):
         '''
@@ -93,7 +90,7 @@ class AMG_encoder(nn.Module):
 
             
         # return [n_grids,batch,n_dims]
-        return transformed_points
+        return transformed_points[...,0:-1]
    
     def inverse_transform(self, x):
         '''
@@ -123,7 +120,7 @@ class AMG_encoder(nn.Module):
         #transformed_points = transformed_points*(1/self.grid_scales.unsqueeze(1)) \
         #    - self.grid_translations.unsqueeze(1)
 
-        return transformed_points
+        return transformed_points[...,0:-1]
     
     def feature_density(self, x, transformed:bool=False):
         # Transform the points to local grid spaces first
