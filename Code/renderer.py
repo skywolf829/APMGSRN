@@ -35,10 +35,11 @@ if __name__ == '__main__':
     model.eval()
     if("cuda" in args['device']):        
         torch.backends.cuda.matmul.allow_tf32 = True
-        torch.backends.cuda.benchmark = True
+        torch.backends.cudnn.benchmark = True
+    
 
     device = args['device']
-    batch_size = 128
+    batch_size = 64*64
     rays_o = torch.rand((batch_size, 3), device=device)
     rays_d = torch.randn((batch_size, 3), device=device)
     rays_d = rays_d / rays_d.norm(dim=-1, keepdim=True)
