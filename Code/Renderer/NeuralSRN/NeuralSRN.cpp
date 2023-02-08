@@ -1,4 +1,4 @@
-#include "NeuralSRN.hpp"
+#include "NeuralSRN.h"
 #include <torch/script.h>
 
 namespace NeuralSRN{
@@ -24,5 +24,8 @@ namespace NeuralSRN{
 
     at::Tensor output = module.get_method("grad_at")(inputs).toTensor();
     return output;
+  }
+  void TracedNeuralModel::to(torch::Device device){
+    module.to(device);
   }
 }
