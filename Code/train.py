@@ -73,20 +73,19 @@ def log_feature_density(model, dataset, opt):
         opt['save_name'], "gaussian_density.nc"))
 
 def log_feature_points(model, dataset, opt, iteration):
-    feat_grid_shape = opt['feature_grid_shape'].split(',')
-    feat_grid_shape = [eval(i) for i in feat_grid_shape]
+    feat_grid_shape = [eval(i) for i in opt['feature_grid_shape'].split(',')]
     feat_grid_shape = [2,2,2]
     
     # Dont use feature grid shape - too much overhead
     # Just use [2,2,2]
     global_points = make_coord_grid(feat_grid_shape, opt['device'], 
                     flatten=True, align_corners=True)
-    transformed_points = model.inverse_transform(global_points)
+    transformed_points = model.inverse_transform(global_points).detach().cpu()
 
     transformed_points += 1.0
     transformed_points *= 0.5 
-    transformed_points *= (torch.tensor(list(dataset.data.shape[2:]))-1)
-    transformed_points = transformed_points.detach().cpu()
+    transformed_points *= (torch.tensor(list(dataset.data.shape[2:]))-1).flip(0)
+    transformed_points = transformed_points.detach().cpu()#.flip(-1)
 
     ids = torch.arange(transformed_points.shape[0])
     ids = ids.unsqueeze(1).unsqueeze(1)
@@ -109,7 +108,8 @@ def log_feature_grids(model, dataset, opt, iteration):
     transformed_points = model.transform(global_points)
 
     transformed_points += 1.0
-    transformed_points *= 0.5 * (torch.tensor(dataset.data.shape)-1)
+    transformed_points *= 0.5 * (torch.tensor(dataset.data.shape)-1).flip(0)
+    #transformed_points = transformed_points.flip(-1)
     ids = torch.arange(transformed_points.shape[0])
     ids = ids.unsqueeze(1).unsqueeze(1)
     ids = ids.repeat([1, transformed_points.shape[1], 1])
@@ -179,28 +179,38 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     optimizer[0].zero_grad() 
                  
     x, y = batch
+    
     x = x.to(opt['device'])
     y = y.to(opt['device'])
-        
-    model_output = model(x)
+    
+    
+    transformed_x = model.transform(x)    
+    model_output = model(transformed_x, transformed=True)
+    
     loss = F.mse_loss(model_output, y, reduction='none')
     loss = loss.sum(dim=1, keepdim=True)
+    
     loss.mean().backward()
        
     
-    if(iteration < opt['iterations']*0.9):
+    if(iteration < opt['iterations']*0.8):
         optimizer[1].zero_grad() 
-        density = model.feature_density_gaussian(x) 
+        
+        density = model.feature_density(transformed_x, transformed=True) 
+        
         density /= density.sum().detach()  
         target = torch.exp(torch.log(density+1e-16) / \
             (loss/loss.mean()))
         target /= target.sum()
-            
+        
+        
         density_loss = F.kl_div(
             torch.log(density+1e-16), 
                 torch.log(target.detach()+1e-16), 
                 reduction='none', 
                 log_target=True)
+        
+        
         density_loss.mean().backward()
         
         optimizer[1].step()
@@ -259,9 +269,9 @@ def train( model, dataset, opt):
     writer = SummaryWriter(os.path.join('tensorboard',opt['save_name']))
     dataloader = DataLoader(dataset, 
                             batch_size=None, 
-                            num_workers=0 if "cuda" in opt['data_device'] else 4,
-                            pin_memory=True if "cpu" in opt['data_device'] else False,
-                            pin_memory_device=opt['device'])
+                            num_workers=4 if ("cpu" in opt['data_device'] and "cuda" in opt['device']) else 0,
+                            pin_memory=True if ("cpu" in opt['data_device'] and "cuda" in opt['device']) else False,
+                            pin_memory_device=opt['device'] if ("cpu" in opt['data_device'] and "cuda" in opt['device']) else "")
     
     model.train(True)
 
@@ -291,21 +301,23 @@ def train( model, dataset, opt):
                 [opt['iterations']*(2/5), opt['iterations']*(4/5)],
                 gamma=0.1)
         else:
-            optimizer = [optim.Adam([
-                {"params": [model.encoder.feature_grids], "lr": opt["lr"]},
-                {"params": model.decoder.parameters(), "lr": opt["lr"]}
-            ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
+            optimizer = [
                 optim.Adam([
-                {"params": [model.encoder.grid_translations], "lr": opt['lr'] * 0.1}, 
-                {"params": [model.encoder.grid_scales],"lr": opt['lr'] * 0.1},
-                {"params": [model.encoder.grid_rotations], "lr": opt["lr"] * 1}
-            ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15)
+                    {"params": [model.encoder.feature_grids], "lr": opt["lr"]},
+                    {"params": model.decoder.parameters(), "lr": opt["lr"]}
+                ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
+                optim.Adam(
+                    model.encoder.get_transform_parameters(), 
+                    lr=opt['lr'] * 0.05, 
+                    betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15
+                    )
             ]        
             scheduler = [
-                torch.optim.lr_scheduler.LinearLR(optimizer[0],
-                    start_factor=1, end_factor=1),
+                torch.optim.lr_scheduler.MultiStepLR(optimizer[0],
+                    [opt['iterations']*(9/10)],
+                    gamma=0.1),
                 torch.optim.lr_scheduler.LinearLR(optimizer[1], 
-                    start_factor=1, end_factor=1)
+                    start_factor=1, end_factor=0.5)
             ]      
     else:
         optimizer = optim.Adam(model.parameters(), lr=opt["lr"], 
@@ -313,11 +325,13 @@ def train( model, dataset, opt):
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
             [opt['iterations']*(2/5), opt['iterations']*(3/5), opt['iterations']*(4/5)],
             gamma=0.33)
-        
+       
     with torch.profiler.profile(
         activities=[
             torch.profiler.ProfilerActivity.CPU,
             torch.profiler.ProfilerActivity.CUDA,
+        ] if torch.cuda.is_available() else [
+            torch.profiler.ProfilerActivity.CPU
         ],
         schedule=torch.profiler.schedule(
             wait=2,
@@ -326,22 +340,22 @@ def train( model, dataset, opt):
             repeat=1),
         record_shapes=True,
         profile_memory=True,
-        with_flops=True,
+        with_stack=True,
         with_modules=True,
         on_trace_ready=torch.profiler.tensorboard_trace_handler(
-            os.path.join('tensorboard',opt['save_name'])),
-    with_stack=True) as profiler:
+            os.path.join('tensorboard',opt['save_name']))) as profiler:
         for (iteration, batch) in enumerate(dataloader):
             train_step(opt,
-                       iteration,
-                       batch,
-                       dataset,
-                       model,
-                       optimizer,
-                       scheduler,
-                       profiler,
-                       writer)
-            
+                    iteration,
+                    batch,
+                    dataset,
+                    model,
+                    optimizer,
+                    scheduler,
+                    profiler,
+                    writer)
+    
+    #writer.add_graph(model, torch.zeros([1, 3], device=opt['device'], dtype=torch.float32))
     writer.close()
     save_model(model, opt)
 
@@ -362,8 +376,12 @@ if __name__ == '__main__':
         help='Number of positional encoding terms')   
     parser.add_argument('--extents',default=None,type=str,
         help='Spatial extents to use for this model from the data')   
+    parser.add_argument('--bias',default=None,type=str2bool,
+        help='Use bias in linear layers or not')
     parser.add_argument('--use_global_position',default=None,type=str2bool,
         help='For the fourier featuers, whether to use the global position or local.')
+    parser.add_argument('--use_tcnn_if_available',default=None,type=str2bool,
+        help='Whether to use TCNN if available on the machine training.')
     
     # Hash Grid (NGP model) hyperparameters
     parser.add_argument('--hash_log2_size',default=None,type=int,
@@ -389,7 +407,9 @@ if __name__ == '__main__':
     parser.add_argument('--nodes_per_layer',default=None,type=int,
         help='Nodes per layer in the model')    
     parser.add_argument('--interpolate',default=None,type=str2bool,
-        help='Whether or not to use interpolation during training')    
+        help='Whether or not to use interpolation during training')  
+    parser.add_argument('--requires_padded_feats',default=None,type=str2bool,
+        help='Pads features to next multiple of 16 for TCNN.')      
     
     parser.add_argument('--iters_to_train_new_layer',default=None,type=int,
         help='Number of iterations to fine tune a new layer')    
@@ -436,8 +456,10 @@ if __name__ == '__main__':
     data_folder = os.path.join(project_folder_path, "Data")
     output_folder = os.path.join(project_folder_path, "Output")
     save_folder = os.path.join(project_folder_path, "SavedModels")
+    
     os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
     torch.manual_seed(42)
+    torch.backends.cuda.matmul.allow_tf32 = True
 
     if(args['load_from'] is None):
         # Init models

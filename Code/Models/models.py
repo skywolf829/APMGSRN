@@ -6,7 +6,6 @@ import torch.nn.functional as F
 import os
 from math import pi
 from Models.options import *
-
 from Other.utility_functions import create_folder, make_coord_grid
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,35 +36,34 @@ def load_model(opt, device):
     return model
 
 def create_model(opt):
-    from Models.fVSRN import fVSRN
-    from Models.afVSRN import afVSRN
-    from Models.AMGSRN import AMGSRN
-    from Models.SigmoidNet import SigmoidNet
-    from Models.ExpNet import ExpNet
+
     if(opt['model'] == "fVSRN"):
-        return fVSRN(opt)
-    elif(opt['model'] == "afVSRN"):
-        return afVSRN(opt)
+        from Models.fVSRN import fVSRN
+        return fVSRN(opt['n_features'], 
+        [eval(i) for i in opt['feature_grid_shape'].split(",")], 
+        opt['n_dims'], opt['n_outputs'], opt['nodes_per_layer'], 
+        opt['n_layers'], 
+        opt['num_positional_encoding_terms'], opt['use_tcnn_if_available'],
+        opt['use_bias'], opt['requires_padded_feats'])
     elif(opt['model'] == "AMGSRN"):
-        return AMGSRN(opt)
-    elif(opt['model'] == "AMRSRN_TCNN"):
-        from Models.AMRSRN_TCNN import AMRSRN_TCNN
-        return AMRSRN_TCNN(opt)
+        from Models.AMGSRN import AMGSRN
+        return AMGSRN(opt['n_grids'], opt['n_features'], 
+        [eval(i) for i in opt['feature_grid_shape'].split(",")], 
+        opt['n_dims'], opt['n_outputs'], opt['nodes_per_layer'], 
+        opt['n_layers'], opt['use_tcnn_if_available'], opt['use_bias'],
+        opt['requires_padded_feats'])
     elif(opt['model'] == "NGP"):
         from Models.NGP import NGP
         return NGP(opt)
     elif(opt['model'] == "NGP_TCNN"):        
         from Models.NGP import NGP_TCNN
         return NGP_TCNN(opt)
-    elif(opt['model'] == "SigmoidNet"):
-        return SigmoidNet(opt)
-    elif(opt['model'] == "ExpNet"):
-        return ExpNet(opt)
 
-def sample_grid(model, grid, device="cuda", data_device="cuda", max_points = 100000):
+def sample_grid(model, grid, align_corners:bool = False,
+                device:str="cuda", data_device:str="cuda", max_points:int = 100000):
     coord_grid = make_coord_grid(grid, 
         data_device, flatten=False,
-        align_corners=model.opt['align_corners'])
+        align_corners=align_corners)
     coord_grid_shape = list(coord_grid.shape)
     coord_grid = coord_grid.view(-1, coord_grid.shape[-1])
     vals = forward_maxpoints(model, coord_grid, 
@@ -73,7 +71,7 @@ def sample_grid(model, grid, device="cuda", data_device="cuda", max_points = 100
                              data_device=data_device,
                              device=device
                              )
-    coord_grid_shape[-1] = model.opt['n_outputs']
+    coord_grid_shape[-1] = -1
     vals = vals.reshape(coord_grid_shape)
     return vals
 
@@ -90,3 +88,9 @@ def forward_maxpoints(model, coords, out_dim=1, max_points=100000,
             model(coords[start:min(start+max_points, coords.shape[0])].to(device))
     return output
 
+def tinycudann_to_pytorch(model_save_file):
+    '''
+    Converts a model trained and saved with TCNN fully-fused
+    module to standard pytorch.
+    '''
+     

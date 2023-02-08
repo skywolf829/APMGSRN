@@ -1,0 +1,27 @@
+[
+    [ "test.py",
+        {        
+        "load_from": "Supernova_AMGSRN_1grids",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_AMGSRN_2grids",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_AMGSRN_4grids",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_AMGSRN_8grids",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_AMGSRN_16grids",
+        "tests": "reconstruction,error_volume"
+    }]
+]
