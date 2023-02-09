@@ -88,9 +88,3 @@ def forward_maxpoints(model, coords, out_dim=1, max_points=100000,
             model(coords[start:min(start+max_points, coords.shape[0])].to(device))
     return output
 
-def tinycudann_to_pytorch(model_save_file):
-    '''
-    Converts a model trained and saved with TCNN fully-fused
-    module to standard pytorch.
-    '''
-     
