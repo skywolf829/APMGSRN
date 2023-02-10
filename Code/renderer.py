@@ -6,7 +6,7 @@ from Models.models import load_model
 from Models.options import load_options
 import matplotlib.pyplot as plt
 import numpy as np
-from Other.utility_functions import make_coord_grid
+from Other.utility_functions import make_coord_grid, str2bool
 from Models.models import forward_maxpoints
 import time
 import torch.nn.functional as F
@@ -167,14 +167,15 @@ class Scene():
             ray_indices, t_starts, t_ends = self.generate_viewpoint_rays()
             colors = self.render_rays(t_starts, t_ends, ray_indices)
         return colors
-    
-        
+            
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate a model on some tests')
 
     parser.add_argument('--load_from',default=None,type=str,help="Model name to load")
     parser.add_argument('--device',default="cuda:0",type=str,
                         help="Device to load model to")
+    parser.add_argument('--tensorrt',default=True,type=str2bool,
+                        help="Use TensorRT acceleration")
     args = vars(parser.parse_args())
 
     project_folder_path = os.path.dirname(os.path.abspath(__file__))
@@ -189,6 +190,51 @@ if __name__ == '__main__':
     model = load_model(opt, args['device']).to(opt['device'])
     model.eval()
     
+    if(args['tensorrt']):
+        import tensorrt as trt 
+        import onnx
+        import torch_tensorrt as torchtrt
+        # Convert model to torch.jit.scriptmodule
+        if("NGP" in opt['model']):
+            print(f"Cannot convert model type {opt['model']} to torchscript for ONNX conversion. Exiting.")
+            quit()
+        # Check if TCNN was used in this model and convert if necessary
+        if("decoder.params" in model.state_dict().keys()):
+            print(f"TCNN decoder used in model. Converting to pytorch for tracing.")
+            from model_to_torchscript import convert_tcnn_to_pytorch
+            new_model_name = convert_tcnn_to_pytorch(opt['save_name'])
+            opt = load_options(os.path.join(save_folder, new_model_name))
+            opt["device"] = args['device']    
+            model = load_model(opt, opt['device'])
+            model.eval().to(opt['device'])
+        
+        model = torch.jit.script(model).to(opt['device'])
+        model.eval()            
+        '''  
+        # Convert model to onnx
+        onnx_file_path = os.path.join(save_folder, opt['save_name'], "model.onnx")
+        torch.onnx.export(model, torch.rand([1, 3],
+                                dtype=torch.float32, 
+                                device=opt['device']),
+                          onnx_file_path,
+                          export_params=True, 
+                          input_names=["input"],
+                          output_names=['output'],
+                          opset_version=16 #needed for grid_sampler
+                          )
+        model = onnx.load(onnx_file_path)
+        onnx.checker.check_model(model)
+        '''
+        # Convert to torch_tensorrt
+        compile_settings = {
+            "inputs": [torchtrt.Input(shape=[1, 3])],
+            "enabled_precisions": {[torch.float, torch.half]},
+            "workspace_size": 2000000000,
+            "truncate_long_and_double": True,
+        }
+        trt_ts_module = torchtrt.compile(model, **compile_settings)
+        
+        quit()
     if("cuda" in args['device']):        
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.benchmark = True
