@@ -90,7 +90,7 @@ class TransferFunction():
         return torch.index_select(self.precomputed_opacity_map, dim=0, index=value_ind)
     
 class Scene():
-    def __init__(self, model, opt, image_resolution):
+    def __init__(self, model, opt, image_resolution, batch_size):
         self.model = model
         self.opt = opt
         self.device = self.opt['device']
@@ -98,6 +98,7 @@ class Scene():
             torch.tensor([-1.0, -1.0, -1.0, 1.0, 1.0, 1.0], 
             device=self.device)
         self.image_resolution = image_resolution
+        self.batch_size = batch_size
         
         self.transfer_function = TransferFunction(self.device)
         #self.occpancy_grid = self.precompute_occupancy_grid()
@@ -141,13 +142,13 @@ class Scene():
     
     def alpha_fn(self, t_starts, t_ends, ray_indices):
         sample_locs = self.rays_o[ray_indices] + self.rays_d[ray_indices] * (t_starts + t_ends) / 2.0
-        densities = forward_maxpoints(model,sample_locs, max_points=100000)
+        densities = forward_maxpoints(model,sample_locs, max_points=self.batch_size)
         alphas = self.transfer_function.opacity_at_value(densities)
         return alphas
     
     def rgb_alpha_fn(self, t_starts, t_ends, ray_indices):
         sample_locs = self.rays_o[ray_indices] + self.rays_d[ray_indices] * (t_starts + t_ends) / 2.0
-        densities = forward_maxpoints(model,sample_locs, max_points=100000)
+        densities = forward_maxpoints(model,sample_locs, max_points=self.batch_size)
         rgbs = self.transfer_function.color_at_value(densities)
         alphas = self.transfer_function.opacity_at_value(densities)
         return rgbs, torch.log(1+alphas)
@@ -174,7 +175,7 @@ if __name__ == '__main__':
     parser.add_argument('--load_from',default=None,type=str,help="Model name to load")
     parser.add_argument('--device',default="cuda:0",type=str,
                         help="Device to load model to")
-    parser.add_argument('--tensorrt',default=True,type=str2bool,
+    parser.add_argument('--tensorrt',default=False,type=str2bool,
                         help="Use TensorRT acceleration")
     args = vars(parser.parse_args())
 
@@ -190,9 +191,8 @@ if __name__ == '__main__':
     model = load_model(opt, args['device']).to(opt['device'])
     model.eval()
     
+    batch_size = 100000
     if(args['tensorrt']):
-        import tensorrt as trt 
-        import onnx
         import torch_tensorrt as torchtrt
         # Convert model to torch.jit.scriptmodule
         if("NGP" in opt['model']):
@@ -206,10 +206,11 @@ if __name__ == '__main__':
             opt = load_options(os.path.join(save_folder, new_model_name))
             opt["device"] = args['device']    
             model = load_model(opt, opt['device'])
-            model.eval().to(opt['device'])
+            model = model.to(opt['device'])
+        model = model.eval()
+        print(model)
+        #model = torch.jit.script(model)
         
-        model = torch.jit.script(model).to(opt['device'])
-        model.eval()            
         '''  
         # Convert model to onnx
         onnx_file_path = os.path.join(save_folder, opt['save_name'], "model.onnx")
@@ -225,22 +226,31 @@ if __name__ == '__main__':
         model = onnx.load(onnx_file_path)
         onnx.checker.check_model(model)
         '''
-        # Convert to torch_tensorrt
-        compile_settings = {
-            "inputs": [torchtrt.Input(shape=[1, 3])],
-            "enabled_precisions": {[torch.float, torch.half]},
-            "workspace_size": 2000000000,
-            "truncate_long_and_double": True,
-        }
-        trt_ts_module = torchtrt.compile(model, **compile_settings)
         
-        quit()
+        os.environ["CUDA_MODULE_LOADING"] = "LAZY"
+        # Convert to torch_tensorrt
+        inputs = [
+            torchtrt.Input(
+                min_shape=[1, 3],
+                opt_shape=[batch_size, 3],
+                max_shape=[batch_size, 3],
+                dtype=torch.float32
+            )
+        ]
+        enabled_precisions = {torch.float}#, torch.half}
+        with torchtrt.logging.debug():
+            model = torchtrt.compile(model, 
+                inputs = inputs, 
+                enabled_precisions = enabled_precisions,
+                workspace_size = 1 << 33)
+        
+        
     if("cuda" in args['device']):        
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.benchmark = True
     device = args['device']
     
-    scene = Scene(model, opt, [64,64])
+    scene = Scene(model, opt, [128,128], batch_size=batch_size)
     # One warm up is always slower    
     scene.render()
     

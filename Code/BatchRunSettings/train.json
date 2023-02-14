@@ -1,29 +1,16 @@
 [
     [ "train.py",
         {        
-            "save_name": "Supernova_fVSRN_small",
-            "model": "fVSRN",
-            "data": "Supernova.nc",
-            "n_features": 2,
-            "feature_grid_shape": "32,32,32",
-            "n_layers": 2,
-            "nodes_per_layer": 64,
-            "log_features_every": 0,
-            "lr": 0.01,
-            "iterations": 10000
-    }],
-    [ "train.py",
-        {        
             "save_name": "temp",
             "model": "AMGSRN",
-            "data": "Supernova_test.nc",
+            "data": "Supernova.nc",
             "n_features": 1,
             "n_grids": 16,
             "feature_grid_shape": "16,16,16",
             "n_layers": 2,
             "nodes_per_layer": 32,
             "precondition": false,
-            "log_features_every": 0,
+            "log_features_every": 100,
             "lr": 0.01,
             "iterations": 10000,
             "points_per_iteration": 100000

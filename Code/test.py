@@ -72,7 +72,7 @@ def feature_density(model, dataset, opt):
     with torch.no_grad():
         print(grid.device)
         
-        density = forward_maxpoints(model.feature_density_gaussian, grid, 
+        density = forward_maxpoints(model.feature_density, grid, 
                                     data_device=opt['data_device'], 
                                     device=opt['device'],
                                     max_points=100000)

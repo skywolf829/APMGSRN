@@ -185,7 +185,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     
     
     transformed_x = model.transform(x)    
-    model_output = model(transformed_x, transformed=True)
+    model_output = model.forward_pre_transformed(transformed_x)
     
     loss = F.mse_loss(model_output, y, reduction='none')
     loss = loss.sum(dim=1, keepdim=True)
@@ -196,7 +196,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     if(iteration < opt['iterations']*0.8):
         optimizer[1].zero_grad() 
         
-        density = model.feature_density(transformed_x, transformed=True) 
+        density = model.feature_density_pre_transformed(transformed_x) 
         
         density /= density.sum().detach()  
         target = torch.exp(torch.log(density+1e-16) / \
