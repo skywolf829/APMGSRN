@@ -191,7 +191,7 @@ if __name__ == '__main__':
     model = load_model(opt, args['device']).to(opt['device'])
     model.eval()
     
-    batch_size = 100000
+    batch_size = 1000000
     if(args['tensorrt']):
         import torch_tensorrt as torchtrt
         # Convert model to torch.jit.scriptmodule
