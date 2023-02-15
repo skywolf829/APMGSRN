@@ -74,7 +74,7 @@ class AMG_encoder(nn.Module):
                 
         # x starts [batch,n_dims], this changes it to [n_grids,batch,n_dims+1]
         # by appending 1 to the xy(z(t)) and repeating it n_grids times
-        n_grids : int = self.transformation_matrices.shape[0]
+        
         batch : int = x.shape[0]
         dims : int = x.shape[1]
         ones = torch.ones([batch, 1], 
@@ -92,9 +92,10 @@ class AMG_encoder(nn.Module):
         #                    x.transpose(1, 2)).transpose(1, 2)
         transformed_points = torch.matmul(self.transformation_matrices, 
                             x.transpose(0, 1)).transpose(1, 2)
+        transformed_points = transformed_points[...,0:dims]
         
         # return [n_grids,batch,n_dims]
-        return transformed_points[...,0:dims]
+        return transformed_points
    
     def inverse_transform(self, x):
         '''
@@ -111,7 +112,6 @@ class AMG_encoder(nn.Module):
 
         local_to_global_matrices = torch.linalg.inv(self.transformation_matrices)
        
-        n_grids : int = self.transformation_matrices.shape[0]
         batch : int = x.shape[0]
         dims : int = x.shape[1]
         ones = torch.ones([batch, 1], 
@@ -123,11 +123,10 @@ class AMG_encoder(nn.Module):
         #x = x.repeat(n_grids, 1, 1)
         
         transformed_points = torch.matmul(local_to_global_matrices,
-                                    x.transpose(0,1)).transpose(1, 2)
-        #transformed_points = transformed_points*(1/self.grid_scales.unsqueeze(1)) \
-        #    - self.grid_translations.unsqueeze(1)
+            x.transpose(0,1)).transpose(1, 2)
+        transformed_points = transformed_points[...,0:dims]
 
-        return transformed_points[...,0:dims]
+        return transformed_points
     
     def feature_density_pre_transformed(self, x):
         transformed_points = x
@@ -157,8 +156,10 @@ class AMG_encoder(nn.Module):
     def forward_pre_transformed(self, x):
         
         # Reshape to proper grid sampling size
-        dims : int = x.shape[2]
-        x = x.unsqueeze(1).unsqueeze(1)
+        grids : int = x.shape[0]
+        batch : int = x.shape[1]
+        dims : int = x.shape[2]        
+        x = x.reshape(grids, 1, 1, batch, dims)
         
         
         # Sample the grids at the batch of transformed point locations

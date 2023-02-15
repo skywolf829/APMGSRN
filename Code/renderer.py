@@ -7,7 +7,6 @@ from Models.options import load_options
 import matplotlib.pyplot as plt
 import numpy as np
 from Other.utility_functions import make_coord_grid, str2bool
-from Models.models import forward_maxpoints
 import time
 import torch.nn.functional as F
 
@@ -101,7 +100,7 @@ class Scene():
         self.batch_size = batch_size
         
         self.transfer_function = TransferFunction(self.device)
-        #self.occpancy_grid = self.precompute_occupancy_grid()
+        self.occpancy_grid = self.precompute_occupancy_grid()
         torch.cuda.empty_cache()
     
     def precompute_occupancy_grid(self, grid_res=[64, 64, 64]):
@@ -110,11 +109,15 @@ class Scene():
         with torch.no_grad():
             grid = OccupancyGrid(self.scene_aabb, grid_res)
             query_points = make_coord_grid(sample_grid, device=device)
-            output = forward_maxpoints(model, query_points, max_points = 100000)
+            output = self.forward_maxpoints(model, query_points)
             output_density = self.transfer_function.opacity_at_value(output)
             output_density = output_density.reshape(sample_grid)
-            output_density = F.max_pool3d(output_density.unsqueeze(0).unsqueeze(0), kernel_size=4).squeeze()
-            output_density = (output_density>0.1)
+            output_density = F.max_pool3d(output_density.unsqueeze(0).unsqueeze(0), kernel_size=4)
+            filter_size = 16
+            output_density = F.max_pool3d(output_density,
+                kernel_size = filter_size, stride=1, padding = int(filter_size/2))
+            output_density = output_density.squeeze()
+            output_density = (output_density>0.01)
             grid._binary = output_density.clone()
         del output_density
         print(f"{100*((grid._binary.numel()-grid._binary.sum())/grid._binary.numel()):0.02f}% of space empty for skipping!")
@@ -131,27 +134,35 @@ class Scene():
         ray_indices, t_starts, t_ends = ray_marching(
             self.rays_o, self.rays_d, 
             scene_aabb=self.scene_aabb, 
-            render_step_size=1e-3,
-            early_stop_eps = 1e-4,
-            alpha_thre = 1e-3,
-            alpha_fn=self.alpha_fn,
-            #grid=self.occpancy_grid
-            #stratified=True
+            render_step_size = 5e-3,
+            grid=self.occpancy_grid
         ) 
         return ray_indices, t_starts, t_ends
     
     def alpha_fn(self, t_starts, t_ends, ray_indices):
         sample_locs = self.rays_o[ray_indices] + self.rays_d[ray_indices] * (t_starts + t_ends) / 2.0
-        densities = forward_maxpoints(model,sample_locs, max_points=self.batch_size)
+        densities = self.forward_maxpoints(model, sample_locs)
         alphas = self.transfer_function.opacity_at_value(densities)
         return alphas
     
     def rgb_alpha_fn(self, t_starts, t_ends, ray_indices):
         sample_locs = self.rays_o[ray_indices] + self.rays_d[ray_indices] * (t_starts + t_ends) / 2.0
-        densities = forward_maxpoints(model,sample_locs, max_points=self.batch_size)
+        densities = self.forward_maxpoints(model, sample_locs)
         rgbs = self.transfer_function.color_at_value(densities)
         alphas = self.transfer_function.opacity_at_value(densities)
         return rgbs, torch.log(1+alphas)
+
+    def forward_maxpoints(self, model, coords):
+        output_shape = list(coords.shape)
+        output_shape[-1] = 1
+        output = torch.empty(output_shape, 
+            dtype=torch.float32, 
+            device=self.device)
+        
+        for start in range(0, coords.shape[0], self.batch_size):
+            output[start:min(start+self.batch_size, coords.shape[0])] = \
+                model(coords[start:min(start+self.batch_size, coords.shape[0])])
+        return output
 
     def render_rays(self, t_starts, t_ends, ray_indices):
         colors, opacities, depths = rendering(
@@ -160,7 +171,7 @@ class Scene():
             render_bkgd=torch.tensor([1.0, 1.0, 1.0],dtype=torch.float32,device=self.device))
         colors = colors.reshape(self.image_resolution[0], self.image_resolution[1], 3).clip(0.0,1.0)
         colors = colors.cpu().numpy()
-        print(f"Renderer {ray_indices.shape[0]} samples on {self.image_resolution[0]*self.image_resolution[1]} rays.")
+        #print(f"Renderer {ray_indices.shape[0]} samples on {self.image_resolution[0]*self.image_resolution[1]} rays.")
         return colors
         
     def render(self):
@@ -191,7 +202,8 @@ if __name__ == '__main__':
     model = load_model(opt, args['device']).to(opt['device'])
     model.eval()
     
-    batch_size = 1000000
+    batch_size = 2**20 # just over 1 million, 1048576
+    
     if(args['tensorrt']):
         import torch_tensorrt as torchtrt
         # Convert model to torch.jit.scriptmodule
@@ -230,16 +242,12 @@ if __name__ == '__main__':
         os.environ["CUDA_MODULE_LOADING"] = "LAZY"
         # Convert to torch_tensorrt
         inputs = [
-            torchtrt.Input(
-                min_shape=[1, 3],
-                opt_shape=[batch_size, 3],
-                max_shape=[batch_size, 3],
+            torchtrt.Input([batch_size, 3],
                 dtype=torch.float32
             )
         ]
         enabled_precisions = {torch.float}#, torch.half}
-        with torchtrt.logging.debug():
-            model = torchtrt.compile(model, 
+        model = torchtrt.compile(model, 
                 inputs = inputs, 
                 enabled_precisions = enabled_precisions,
                 workspace_size = 1 << 33)
@@ -250,7 +258,7 @@ if __name__ == '__main__':
         torch.backends.cudnn.benchmark = True
     device = args['device']
     
-    scene = Scene(model, opt, [128,128], batch_size=batch_size)
+    scene = Scene(model, opt, [512,512], batch_size=batch_size)
     # One warm up is always slower    
     scene.render()
     
@@ -267,5 +275,5 @@ if __name__ == '__main__':
     print(f"Min frame time: {times.min():0.04f}")
     print(f"Max frame time: {times.max():0.04f}")
     print(f"Average FPS: {1/times.mean():0.02f}")
-    #plt.imshow(np.flip(img, 0))
-    #plt.show()
+    plt.imshow(np.flip(img, 0))
+    plt.show()
