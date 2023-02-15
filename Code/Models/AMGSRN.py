@@ -83,7 +83,7 @@ class AMG_encoder(nn.Module):
             
         x = torch.cat([x, ones], dim=1)
         #x = x.unsqueeze(0)
-        #x = x.repeat(n_grids, 1, 1)
+        #x = x.repeat(self.feature_grids.shape[0], 1, 1)
         
         # BMM will result in [n_grids,n_dims+1,n_dims+1] x [n_grids,n_dims+1,batch]
         # which returns [n_grids,n_dims+1,batch], which is then transposed

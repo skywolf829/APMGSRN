@@ -9,6 +9,7 @@ import numpy as np
 from Other.utility_functions import make_coord_grid, str2bool
 import time
 import torch.nn.functional as F
+from typing import Dict, List, Tuple
 
 def sync_time():
     torch.cuda.synchronize()
@@ -87,25 +88,27 @@ class TransferFunction():
     def opacity_at_value(self, value):
         value_ind = (value[:,0]*self.num_dict_entries).long().clamp(0,self.num_dict_entries)
         return torch.index_select(self.precomputed_opacity_map, dim=0, index=value_ind)
-    
-class Scene():
-    def __init__(self, model, opt, image_resolution, batch_size):
+  
+class Scene(torch.nn.Module):
+    def __init__(self, model, opt, 
+        image_resolution:Tuple[int], batch_size : int):
+        super().__init__()
         self.model = model
-        self.opt = opt
-        self.device = self.opt['device']
+        self.opt : Dict = opt
+        self.device : str = opt['device']
         self.scene_aabb = \
             torch.tensor([-1.0, -1.0, -1.0, 1.0, 1.0, 1.0], 
             device=self.device)
-        self.image_resolution = image_resolution
-        self.batch_size = batch_size
+        self.image_resolution : Tuple[int]= image_resolution
+        self.batch_size : int= batch_size
         
         self.transfer_function = TransferFunction(self.device)
         self.occpancy_grid = self.precompute_occupancy_grid()
         torch.cuda.empty_cache()
-    
-    def precompute_occupancy_grid(self, grid_res=[64, 64, 64]):
+   
+    def precompute_occupancy_grid(self, grid_res:List[int]=[64, 64, 64]):
         # pre-allocate an occupancy grid from a dense sampling that gets max-pooled
-        sample_grid = [grid_res[0]*4, grid_res[1]*4, grid_res[2]*4]
+        sample_grid : List[int] = [grid_res[0]*4, grid_res[1]*4, grid_res[2]*4]
         with torch.no_grad():
             grid = OccupancyGrid(self.scene_aabb, grid_res)
             query_points = make_coord_grid(sample_grid, device=device)
@@ -113,17 +116,16 @@ class Scene():
             output_density = self.transfer_function.opacity_at_value(output)
             output_density = output_density.reshape(sample_grid)
             output_density = F.max_pool3d(output_density.unsqueeze(0).unsqueeze(0), kernel_size=4)
-            filter_size = 16
+            filter_size : int = 16
             output_density = F.max_pool3d(output_density,
                 kernel_size = filter_size, stride=1, padding = int(filter_size/2))
             output_density = output_density.squeeze()
             output_density = (output_density>0.01)
             grid._binary = output_density.clone()
-        del output_density
-        print(f"{100*((grid._binary.numel()-grid._binary.sum())/grid._binary.numel()):0.02f}% of space empty for skipping!")
+        #print(f"{100*((grid._binary.numel()-grid._binary.sum())/grid._binary.numel()):0.02f}% of space empty for skipping!")
         return grid
     
-    def generate_viewpoint_rays(self, camera=None):
+    def generate_viewpoint_rays(self):
         batch_size = self.image_resolution[0]*self.image_resolution[1]
         self.rays_o = torch.cat([1*torch.ones([batch_size, 1], device=device), 
                             1*make_coord_grid([self.image_resolution[0], self.image_resolution[1]], device=device)], dim=1)
@@ -170,11 +172,10 @@ class Scene():
             rgb_alpha_fn=self.rgb_alpha_fn,
             render_bkgd=torch.tensor([1.0, 1.0, 1.0],dtype=torch.float32,device=self.device))
         colors = colors.reshape(self.image_resolution[0], self.image_resolution[1], 3).clip(0.0,1.0)
-        colors = colors.cpu().numpy()
         #print(f"Renderer {ray_indices.shape[0]} samples on {self.image_resolution[0]*self.image_resolution[1]} rays.")
         return colors
-        
-    def render(self):
+      
+    def render(self, camera=None):
         with torch.no_grad():
             ray_indices, t_starts, t_ends = self.generate_viewpoint_rays()
             colors = self.render_rays(t_starts, t_ends, ray_indices)
@@ -251,8 +252,7 @@ if __name__ == '__main__':
                 inputs = inputs, 
                 enabled_precisions = enabled_precisions,
                 workspace_size = 1 << 33)
-        
-        
+             
     if("cuda" in args['device']):        
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.benchmark = True
@@ -266,7 +266,7 @@ if __name__ == '__main__':
     times = np.zeros([timesteps])
     for i in range(timesteps):
         t0 = sync_time()
-        img = scene.render()      
+        img = scene.render().cpu().numpy()     
         t1 = sync_time()
         times[i] = t1-t0
     print(times)
