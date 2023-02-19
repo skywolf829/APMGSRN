@@ -22,22 +22,40 @@ class Ensemble_SRN(nn.Module):
     def __init__(self, opt):
         super().__init__()
         self.opt = opt
+        full_shape = get_data_size(os.path.join(data_folder, opt['data']))
         models = []
+        local_extents = []
         for submodel in os.listdir(os.path.join(save_folder, opt['save_name'])):
             if(os.path.isdir(os.path.join(save_folder, opt['save_name'], submodel))):
                 sub_opt = load_options(os.path.join(save_folder, 
                     opt['save_name'], submodel))
                 sub_opt['device'] = opt['device']
                 models.append(load_model(sub_opt, opt['device']))
-        full_shape = get_data_size(os.path.join(data_folder, opt['data']))
+                model_extents = sub_opt['extents']
+                model_extents = [float(i) for i in model_extents.split(',')]
+                model_extents[0] = ((model_extents[0] / full_shape[0]) - 0.5) * 2
+                model_extents[1] = ((model_extents[1] / full_shape[0]) - 0.5) * 2
+                model_extents[2] = ((model_extents[2] / full_shape[1]) - 0.5) * 2
+                model_extents[3] = ((model_extents[3] / full_shape[1]) - 0.5) * 2
+                model_extents[4] = ((model_extents[4] / full_shape[2]) - 0.5) * 2
+                model_extents[5] = ((model_extents[5] / full_shape[2]) - 0.5) * 2
+                local_extents.append(model_extents)
+
+
         ensemble_grid = [eval(i) for i in opt['ensemble_grid'].split(',')]
         print(f"Loaded {len(models)} models in ensemble model")
-        
+
         self.register_buffer("model_grid_shape",
             torch.tensor(ensemble_grid, dtype=torch.long),
             persistent=False)
         self.register_buffer("full_data_shape",
             torch.tensor(full_shape, dtype=torch.long),
+            persistent=False)
+        self.register_buffer("local_min_extents",
+            torch.tensor(local_extents[:,0::2], dtype=torch.float32),
+            persistent=False)
+        self.register_buffer("local_max_extents",
+            torch.tensor(local_extents[:,1::2], dtype=torch.float32),
             persistent=False)
         self.models = torch.nn.ModuleList(models)
 
@@ -55,7 +73,8 @@ class Ensemble_SRN(nn.Module):
         for i in range(len(self.models)):
             mask = (indices == i)
             x_i = x[mask]
-            y[mask] = self.models[i](x_i)
+            y[mask] = self.models[i](-1+2*(x_i-self.local_min_extents[i]/\
+                (self.local_max_extents[i]-self.local_min_extents[i])))
 
         return y
 
