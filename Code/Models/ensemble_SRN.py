@@ -42,7 +42,7 @@ class Ensemble_SRN(nn.Module):
 
     def forward(self, x):    
         print(x.device)
-        print(self.models[0].device)
+        print(self.models[0].encoder.device)
         print(self.model_grid_shape.device) 
         indices = (x+1)/2
         indices = indices*self.model_grid_shape
