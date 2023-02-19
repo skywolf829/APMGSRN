@@ -67,18 +67,18 @@ def build_commands(settings_path):
 
             run_number = 0
 
-            for x_ind in range(ensemble_grid.shape[0]):
+            for x_ind in range(ensemble_grid[0]):
                 x_start = x_ind * x_step
-                x_end = full_shape[0] if x_ind == ensemble_grid.shape[0]-1 else \
+                x_end = full_shape[0] if x_ind == ensemble_grid[0]-1 else \
                      x_ind * (x_step+1)
                 
-                for y_ind in range(ensemble_grid.shape[1]):
+                for y_ind in range(ensemble_grid[1]):
                     y_start = y_ind * y_step
-                    y_end = full_shape[1] if y_ind == ensemble_grid.shape[1]-1 else \
+                    y_end = full_shape[1] if y_ind == ensemble_grid[1]-1 else \
                         y_ind * (y_step+1)
-                    for z_ind in range(ensemble_grid.shape[2]):
+                    for z_ind in range(ensemble_grid[2]):
                         z_start = z_ind * z_step
-                        z_end = full_shape[2] if z_ind == ensemble_grid.shape[2]-1 else \
+                        z_end = full_shape[2] if z_ind == ensemble_grid[2]-1 else \
                             z_ind * (z_step+1)
                         extents = f"{x_start},{x_end},{y_start},{y_end},{z_start},{z_end}"
 
