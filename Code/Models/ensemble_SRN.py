@@ -19,15 +19,19 @@ class Ensemble_SRN(nn.Module):
     after training, this ensemble model "wraps" the 
     many smaller models for inference/visualization tasks.
     '''
-    def __init__(self, save_name, device):
+    def __init__(self, opt):
         super().__init__()
+        self.opt = opt
         self.models : torch.nn.ModuleList = []
-        for submodel in os.listdir(save_folder, save_name):
-            opt = load_options(os.path.join(save_folder, save_name, submodel, "options.json"))
-            self.models.append(load_model(opt, device))
-            full_shape = get_data_size(os.path.join(data_folder, opt['data']))
-            ensemble_grid = opt['ensemble_grid']
-
+        for submodel in os.listdir(save_folder, opt['save_name']):
+            sub_opt = load_options(os.path.join(save_folder, 
+                opt['save_name'], submodel, "options.json"))
+            sub_opt['device'] = opt['device']
+            self.models.append(load_model(sub_opt, opt['device']))
+        full_shape = get_data_size(os.path.join(data_folder, opt['data']))
+        ensemble_grid = opt['ensemble_grid']
+        print(f"Loaded {len(self.models)} models in ensemble model")
+        
         self.register_buffer("model_grid_shape",
             torch.tensor(ensemble_grid, torch.LongTensor),
             persistent=False)

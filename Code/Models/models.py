@@ -27,37 +27,40 @@ def save_model(model,opt):
 def load_model(opt, device):
     path_to_load = os.path.join(save_folder, opt["save_name"])
     model = create_model(opt)
-
-    ckpt = torch.load(os.path.join(path_to_load, 'model.ckpt.tar'), 
-        map_location = device)
-    
-    model.load_state_dict(ckpt['state_dict'])
+    if(not opt['ensemble']):
+        ckpt = torch.load(os.path.join(path_to_load, 'model.ckpt.tar'), 
+            map_location = device)    
+        model.load_state_dict(ckpt['state_dict'])
 
     return model
 
 def create_model(opt):
 
-    if(opt['model'] == "fVSRN"):
-        from Models.fVSRN import fVSRN
-        return fVSRN(opt['n_features'], 
-        [eval(i) for i in opt['feature_grid_shape'].split(",")], 
-        opt['n_dims'], opt['n_outputs'], opt['nodes_per_layer'], 
-        opt['n_layers'], 
-        opt['num_positional_encoding_terms'], opt['use_tcnn_if_available'],
-        opt['use_bias'], opt['requires_padded_feats'])
-    elif(opt['model'] == "AMGSRN"):
-        from Models.AMGSRN import AMGSRN
-        return AMGSRN(opt['n_grids'], opt['n_features'], 
-        [eval(i) for i in opt['feature_grid_shape'].split(",")], 
-        opt['n_dims'], opt['n_outputs'], opt['nodes_per_layer'], 
-        opt['n_layers'], opt['use_tcnn_if_available'], opt['use_bias'],
-        opt['requires_padded_feats'])
-    elif(opt['model'] == "NGP"):
-        from Models.NGP import NGP
-        return NGP(opt)
-    elif(opt['model'] == "NGP_TCNN"):        
-        from Models.NGP import NGP_TCNN
-        return NGP_TCNN(opt)
+    if(opt['ensemble']):
+        from Models.ensemble_SRN import Ensemble_SRN
+        return Ensemble_SRN(opt)
+    else:
+        if(opt['model'] == "fVSRN"):
+            from Models.fVSRN import fVSRN
+            return fVSRN(opt['n_features'], 
+            [eval(i) for i in opt['feature_grid_shape'].split(",")], 
+            opt['n_dims'], opt['n_outputs'], opt['nodes_per_layer'], 
+            opt['n_layers'], 
+            opt['num_positional_encoding_terms'], opt['use_tcnn_if_available'],
+            opt['use_bias'], opt['requires_padded_feats'])
+        elif(opt['model'] == "AMGSRN"):
+            from Models.AMGSRN import AMGSRN
+            return AMGSRN(opt['n_grids'], opt['n_features'], 
+            [eval(i) for i in opt['feature_grid_shape'].split(",")], 
+            opt['n_dims'], opt['n_outputs'], opt['nodes_per_layer'], 
+            opt['n_layers'], opt['use_tcnn_if_available'], opt['use_bias'],
+            opt['requires_padded_feats'])
+        elif(opt['model'] == "NGP"):
+            from Models.NGP import NGP
+            return NGP(opt)
+        elif(opt['model'] == "NGP_TCNN"):        
+            from Models.NGP import NGP_TCNN
+            return NGP_TCNN(opt)
 
 def sample_grid(model, grid, align_corners:bool = False,
                 device:str="cuda", data_device:str="cuda", max_points:int = 100000):

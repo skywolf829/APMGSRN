@@ -6,6 +6,7 @@ import time
 import subprocess
 import shlex
 from Other.utility_functions import create_path, get_data_size
+from Models.options import Options, save_options
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
 project_folder_path = os.path.join(project_folder_path, "..")
@@ -56,9 +57,14 @@ def build_commands(settings_path):
         elif("train" in script_name and "ensemble" in variables.keys() and \
             variables['ensemble']):
             print(f"Ensemble model being trained - creating jobs")
-
             ensemble_grid = variables['ensemble_grid']
             ensemble_grid = [eval(i) for i in ensemble_grid.split(",")]
+
+            base_opt = Options()
+            for var_name in variables.keys():
+                base_opt[var_name] = variables[var_name]
+            save_options(base_opt, os.path.join(save_folder, base_opt['save_name']))
+
             full_shape = get_data_size(os.path.join(data_folder, variables['data']))
             print(f"Ensemble grid of {ensemble_grid} for data of size {full_shape}")
             x_step = full_shape[0] / ensemble_grid[0]
@@ -84,11 +90,11 @@ def build_commands(settings_path):
 
                         run_name = str(run_number)
 
-
                         command_names.append(run_name)           
                         command = "python Code/" + str(script_name) + " "
                         
                         for var_name in variables.keys():
+                            base_opt[var_name] = variables[var_name]
                             if(var_name == 'save_name'):
                                 new_save_name = f"{str(variables[var_name])}/{extents}"
                                 command = f"{command} --{str(var_name)} {new_save_name} "
