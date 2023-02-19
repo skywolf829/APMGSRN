@@ -22,7 +22,7 @@ class Ensemble_SRN(nn.Module):
     def __init__(self, opt):
         super().__init__()
         self.opt = opt
-        models : torch.nn.ModuleList = torch.nn.Modulelist()
+        models = torch.nn.Modulelist([])
         for submodel in os.listdir(os.path.join(save_folder, opt['save_name'])):
             if(os.path.isdir(os.path.join(save_folder, opt['save_name'], submodel))):
                 sub_opt = load_options(os.path.join(save_folder, 
@@ -39,11 +39,11 @@ class Ensemble_SRN(nn.Module):
         self.register_buffer("full_data_shape",
             torch.tensor(full_shape, dtype=torch.long),
             persistent=False)
-        self.register_module("submodels", models)
+        self.models = torch.nn.ModuleList(models)
 
     def forward(self, x):    
         print(x.device)
-        print(self.submodels[2].encoder.feature_grids.device)
+        print(self.models[2].encoder.feature_grids.device)
         print(self.model_grid_shape.device) 
 
         indices = (x+1)/2
