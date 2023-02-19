@@ -52,8 +52,15 @@ class Ensemble_SRN(nn.Module):
 
         indices = indices[:,0] + indices[:,1]*self.model_grid_shape[0] + \
             indices[:,2]*(self.model_grid_shape[1]*self.model_grid_shape[2])
-        
-        y = self.models[indices](x)
+        y = torch.empty([x.shape[0], 1], 
+            device=x.device, dtype=x.dtype)
+
+        for i in range(len(self.models)):
+            mask = (indices == i)
+            print(f"{mask.sum().item()} indices in model {i}")
+            x_i = x[mask]
+            y[mask] = self.models[i](x_i)
+
         return y
 
         
