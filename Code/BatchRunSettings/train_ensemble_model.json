@@ -4,7 +4,7 @@
             "save_name": "Plume_AMGSRN_ensemble",
             "model": "AMGSRN",
             "ensemble": true,
-            "ensemble_grid": "2,2,2",
+            "ensemble_grid": "4,1,1",
             "data": "Plume.nc",
             "n_features": 1,
             "n_grids": 16,

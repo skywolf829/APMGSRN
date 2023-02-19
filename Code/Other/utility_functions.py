@@ -427,7 +427,7 @@ def nc_to_tensor(location, opt = None):
         channels.append(d)
     d = np.stack(channels)
     d = torch.tensor(d).unsqueeze(0)
-    print(f"Loaded data with shape {full_shape}")
+    print(f"Loaded data with shape {d.shape} (full shape: {full_shape})")
     return d, full_shape
         
 def cdf_to_tensor(location, channel_names):
