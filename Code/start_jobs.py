@@ -60,7 +60,7 @@ def build_commands(settings_path):
             ensemble_grid = variables['ensemble_grid']
             ensemble_grid = [eval(i) for i in ensemble_grid.split(",")]
 
-            base_opt = Options()
+            base_opt = Options.get_default()
             for var_name in variables.keys():
                 base_opt[var_name] = variables[var_name]
             save_options(base_opt, os.path.join(save_folder, base_opt['save_name']))
