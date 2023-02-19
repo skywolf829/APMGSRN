@@ -24,10 +24,11 @@ class Ensemble_SRN(nn.Module):
         self.opt = opt
         self.models : torch.nn.ModuleList = []
         for submodel in os.listdir(os.path.join(save_folder, opt['save_name'])):
-            sub_opt = load_options(os.path.join(save_folder, 
-                opt['save_name'], submodel))
-            sub_opt['device'] = opt['device']
-            self.models.append(load_model(sub_opt, opt['device']))
+            if(os.path.isdir(os.path.join(save_folder, opt['save_name'], submodel))):
+                sub_opt = load_options(os.path.join(save_folder, 
+                    opt['save_name'], submodel))
+                sub_opt['device'] = opt['device']
+                self.models.append(load_model(sub_opt, opt['device']))
         full_shape = get_data_size(os.path.join(data_folder, opt['data']))
         ensemble_grid = opt['ensemble_grid']
         print(f"Loaded {len(self.models)} models in ensemble model")
