@@ -402,6 +402,14 @@ def tensor_to_cdf(t, location, channel_names=None):
         d[ch][:] = t[0,i].detach().cpu().numpy()
     d.close()
 
+def get_data_size(location):
+    import netCDF4 as nc
+    f = nc.Dataset(location)
+
+    for a in f.variables:
+        full_shape = f[a].shape
+    return full_shape
+
 def nc_to_tensor(location, opt = None):
     import netCDF4 as nc
     f = nc.Dataset(location)

@@ -5,7 +5,7 @@ import json
 import time
 import subprocess
 import shlex
-from Other.utility_functions import create_path
+from Other.utility_functions import create_path, get_data_size
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
 project_folder_path = os.path.join(project_folder_path, "..")
@@ -53,6 +53,63 @@ def build_commands(settings_path):
                 
                 j += 1
         
+        elif("train" in script_name and "ensemble" in variables.keys() and \
+            variables['ensemble'] == "true"):
+            print(f"Ensemble model being trained - creating jobs")
+
+            ensemble_grid = variables['ensemble_grid']
+            ensemble_grid = [eval(i) for i in ensemble_grid.split(",")]
+            full_shape = get_data_size(os.path.join(data_folder, variables['data']))
+            
+            x_step = full_shape[0] / ensemble_grid[0]
+            y_step = full_shape[1] / ensemble_grid[1]
+            z_step = full_shape[2] / ensemble_grid[2]
+
+            run_number = 0
+
+            for x_ind in range(ensemble_grid.shape[0]):
+                x_start = x_ind * x_step
+                x_end = full_shape[0] if x_ind == ensemble_grid.shape[0]-1 else \
+                     x_ind * (x_step+1)
+                
+                for y_ind in range(ensemble_grid.shape[1]):
+                    y_start = y_ind * y_step
+                    y_end = full_shape[1] if y_ind == ensemble_grid.shape[1]-1 else \
+                        y_ind * (y_step+1)
+                    for z_ind in range(ensemble_grid.shape[2]):
+                        z_start = z_ind * z_step
+                        z_end = full_shape[2] if z_ind == ensemble_grid.shape[2]-1 else \
+                            z_ind * (z_step+1)
+                        extents = f"{x_start},{x_end},{y_start},{y_end},{z_start},{z_end}"
+
+                        run_name = str(run_number)
+
+
+                        command_names.append(run_name)           
+                        command = "python Code/" + str(script_name) + " "
+                        
+                        for var_name in variables.keys():
+                            if(var_name == 'save_name'):
+                                new_save_name = f"{str(variables[var_name])}/{extents}"
+                                command = f"{command} --{str(var_name)} {new_save_name} "
+                            else:
+                                command = f"{command} --{str(var_name)} {str(variables[var_name])} "
+                        command = f"{command} --extents {extents}"
+                        commands.append(command)
+
+                        if("train" in script_name):
+                            if(os.path.exists(os.path.join(save_folder, new_save_name, "train_log.txt"))):
+                                os.remove(os.path.join(save_folder, new_save_name, "train_log.txt"))
+                            log_locations.append(os.path.join(save_folder, new_save_name, "train_log.txt"))
+                            create_path(os.path.join(save_folder, new_save_name))
+                        elif("test" in script_name):
+                            log_locations.append(os.path.join(save_folder, variables['load_from'], "test_log.txt"))
+                            create_path(os.path.join(save_folder, variables["load_from"]))
+                        else:
+                            log_locations.append(os.path.join(save_folder, variables["load_from"], "log.txt"))
+                            create_path(os.path.join(save_folder, variables["load_from"]))
+    
+
         else:
             
             run_name = str(i)
