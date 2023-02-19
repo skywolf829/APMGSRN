@@ -23,7 +23,7 @@ class Ensemble_SRN(nn.Module):
         super().__init__()
         self.opt = opt
         self.models : torch.nn.ModuleList = []
-        for submodel in os.listdir(save_folder, opt['save_name']):
+        for submodel in os.listdir(os.path.join(save_folder, opt['save_name'])):
             sub_opt = load_options(os.path.join(save_folder, 
                 opt['save_name'], submodel, "options.json"))
             sub_opt['device'] = opt['device']
