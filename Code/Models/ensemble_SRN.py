@@ -40,7 +40,7 @@ class Ensemble_SRN(nn.Module):
                 model_extents[4] = ((model_extents[4] / full_shape[2]) - 0.5) * 2
                 model_extents[5] = ((model_extents[5] / full_shape[2]) - 0.5) * 2
                 local_extents.append(model_extents)
-
+        local_extents = torch.tensor(local_extents)
 
         ensemble_grid = [eval(i) for i in opt['ensemble_grid'].split(',')]
         print(f"Loaded {len(models)} models in ensemble model")
