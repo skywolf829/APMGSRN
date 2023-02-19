@@ -25,7 +25,7 @@ class Ensemble_SRN(nn.Module):
         self.models : torch.nn.ModuleList = []
         for submodel in os.listdir(os.path.join(save_folder, opt['save_name'])):
             sub_opt = load_options(os.path.join(save_folder, 
-                opt['save_name'], submodel, "options.json"))
+                opt['save_name'], submodel))
             sub_opt['device'] = opt['device']
             self.models.append(load_model(sub_opt, opt['device']))
         full_shape = get_data_size(os.path.join(data_folder, opt['data']))
