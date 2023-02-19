@@ -57,7 +57,6 @@ class Ensemble_SRN(nn.Module):
 
         for i in range(len(self.models)):
             mask = (indices == i)
-            print(f"{mask.sum().item()} indices in model {i}")
             x_i = x[mask]
             y[mask] = self.models[i](x_i)
 
