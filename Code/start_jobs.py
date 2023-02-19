@@ -54,7 +54,7 @@ def build_commands(settings_path):
                 j += 1
         
         elif("train" in script_name and "ensemble" in variables.keys() and \
-            "true" in variables['ensemble']):
+            variables['ensemble']):
             print(f"Ensemble model being trained - creating jobs")
 
             ensemble_grid = variables['ensemble_grid']
