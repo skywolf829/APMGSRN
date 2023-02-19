@@ -1,0 +1,7 @@
+[
+    [ "test.py",
+        {        
+        "load_from": "Plume_AMGSRN_ensemble",
+        "tests": "reconstruction,error_volume"
+    }]
+]
