@@ -40,7 +40,10 @@ class Ensemble_SRN(nn.Module):
             torch.tensor(full_shape, dtype=torch.long),
             persistent=False)
 
-    def forward(self, x):     
+    def forward(self, x):    
+        print(x.device)
+        print(self.models[0].device)
+        print(self.model_grid_shape.device) 
         indices = (x+1)/2
         indices = indices*self.model_grid_shape
         indices = indices.type(torch.LongTensor)
