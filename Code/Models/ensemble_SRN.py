@@ -42,9 +42,6 @@ class Ensemble_SRN(nn.Module):
         self.models = torch.nn.ModuleList(models)
 
     def forward(self, x):    
-        print(x.device)
-        print(self.models[2].encoder.feature_grids.device)
-        print(self.model_grid_shape.device) 
 
         indices = (x+1)/2
         indices = indices*self.model_grid_shape
