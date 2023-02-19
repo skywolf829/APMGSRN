@@ -149,3 +149,4 @@ osc.sh
 
 /.vscode
 /Code/Renderer/libtorch
+.DS_Store
