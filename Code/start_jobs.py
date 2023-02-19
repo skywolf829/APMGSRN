@@ -68,18 +68,18 @@ def build_commands(settings_path):
             run_number = 0
 
             for x_ind in range(ensemble_grid[0]):
-                x_start = x_ind * x_step
-                x_end = full_shape[0] if x_ind == ensemble_grid[0]-1 else \
-                     x_ind * (x_step+1)
+                x_start = int(x_ind * x_step)
+                x_end = int(full_shape[0]) if x_ind == ensemble_grid[0]-1 else \
+                     int(x_ind * (x_step+1))
                 
                 for y_ind in range(ensemble_grid[1]):
-                    y_start = y_ind * y_step
-                    y_end = full_shape[1] if y_ind == ensemble_grid[1]-1 else \
-                        y_ind * (y_step+1)
+                    y_start = int(y_ind * y_step)
+                    y_end = int(full_shape[1]) if y_ind == ensemble_grid[1]-1 else \
+                        int(y_ind * (y_step+1))
                     for z_ind in range(ensemble_grid[2]):
-                        z_start = z_ind * z_step
-                        z_end = full_shape[2] if z_ind == ensemble_grid[2]-1 else \
-                            z_ind * (z_step+1)
+                        z_start = int(z_ind * z_step)
+                        z_end = int(full_shape[2]) if z_ind == ensemble_grid[2]-1 else \
+                            int(z_ind * (z_step+1))
                         extents = f"{x_start},{x_end},{y_start},{y_end},{z_start},{z_end}"
 
                         run_name = str(run_number)
@@ -94,7 +94,7 @@ def build_commands(settings_path):
                                 command = f"{command} --{str(var_name)} {new_save_name} "
                             elif "ensemble" not in var_name:
                                 command = f"{command} --{str(var_name)} {str(variables[var_name])} "
-                        command = f"{command} --extents {extents}"
+                        command = f"{command} --extents {extents} "
                         commands.append(command)
 
                         if("train" in script_name):
