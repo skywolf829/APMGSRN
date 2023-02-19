@@ -92,7 +92,7 @@ def build_commands(settings_path):
                             if(var_name == 'save_name'):
                                 new_save_name = f"{str(variables[var_name])}/{extents}"
                                 command = f"{command} --{str(var_name)} {new_save_name} "
-                            elif var_name != "ensemble" and var_name != "ensemble_grid":
+                            elif "ensemble" not in var_name:
                                 command = f"{command} --{str(var_name)} {str(variables[var_name])} "
                         command = f"{command} --extents {extents}"
                         commands.append(command)
