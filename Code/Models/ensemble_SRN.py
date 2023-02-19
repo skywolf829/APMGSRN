@@ -22,16 +22,16 @@ class Ensemble_SRN(nn.Module):
     def __init__(self, opt):
         super().__init__()
         self.opt = opt
-        self.models : torch.nn.ModuleList = []
+        models : torch.nn.ModuleList = []
         for submodel in os.listdir(os.path.join(save_folder, opt['save_name'])):
             if(os.path.isdir(os.path.join(save_folder, opt['save_name'], submodel))):
                 sub_opt = load_options(os.path.join(save_folder, 
                     opt['save_name'], submodel))
                 sub_opt['device'] = opt['device']
-                self.models.append(load_model(sub_opt, opt['device']))
+                models.append(load_model(sub_opt, opt['device']))
         full_shape = get_data_size(os.path.join(data_folder, opt['data']))
         ensemble_grid = [eval(i) for i in opt['ensemble_grid'].split(',')]
-        print(f"Loaded {len(self.models)} models in ensemble model")
+        print(f"Loaded {len(models)} models in ensemble model")
         
         self.register_buffer("model_grid_shape",
             torch.tensor(ensemble_grid, dtype=torch.long),
@@ -39,12 +39,13 @@ class Ensemble_SRN(nn.Module):
         self.register_buffer("full_data_shape",
             torch.tensor(full_shape, dtype=torch.long),
             persistent=False)
+        self.register_module("submodels", models)
 
     def forward(self, x):    
         print(x.device)
-        print(self.models[2].encoder.feature_grids.device)
+        print(self.submodels[2].encoder.feature_grids.device)
         print(self.model_grid_shape.device) 
-        
+
         indices = (x+1)/2
         indices = indices*self.model_grid_shape
         indices = indices.type(torch.LongTensor)
