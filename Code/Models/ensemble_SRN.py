@@ -22,7 +22,7 @@ class Ensemble_SRN(nn.Module):
     def __init__(self, opt):
         super().__init__()
         self.opt = opt
-        models : torch.nn.ModuleList = []
+        models : torch.nn.ModuleList = torch.nn.Modulelist()
         for submodel in os.listdir(os.path.join(save_folder, opt['save_name'])):
             if(os.path.isdir(os.path.join(save_folder, opt['save_name'], submodel))):
                 sub_opt = load_options(os.path.join(save_folder, 
