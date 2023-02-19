@@ -48,7 +48,7 @@ class Ensemble_SRN(nn.Module):
 
         indices = (x+1)/2
         indices = indices*self.model_grid_shape
-        indices = indices.type(torch.long)
+        indices = indices.type(torch.int)
 
         indices = indices[:,0] + indices[:,1]*self.model_grid_shape[0] + \
             indices[:,2]*(self.model_grid_shape[1]*self.model_grid_shape[2])
