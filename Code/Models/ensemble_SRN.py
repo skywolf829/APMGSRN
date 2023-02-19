@@ -6,7 +6,7 @@ from Models.models import load_model
 from Other.utility_functions import get_data_size
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
-project_folder_path = os.path.join(project_folder_path, "..")
+project_folder_path = os.path.join(project_folder_path, "..", "..")
 data_folder = os.path.join(project_folder_path, "Data")
 output_folder = os.path.join(project_folder_path, "Output")
 save_folder = os.path.join(project_folder_path, "SavedModels")
