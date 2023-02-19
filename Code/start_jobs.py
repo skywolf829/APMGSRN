@@ -63,6 +63,7 @@ def build_commands(settings_path):
             base_opt = Options.get_default()
             for var_name in variables.keys():
                 base_opt[var_name] = variables[var_name]
+            create_path(os.path.join(save_folder, base_opt['save_name']))
             save_options(base_opt, os.path.join(save_folder, base_opt['save_name']))
 
             full_shape = get_data_size(os.path.join(data_folder, variables['data']))
