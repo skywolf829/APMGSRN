@@ -30,7 +30,7 @@ class Ensemble_SRN(nn.Module):
                 sub_opt['device'] = opt['device']
                 self.models.append(load_model(sub_opt, opt['device']))
         full_shape = get_data_size(os.path.join(data_folder, opt['data']))
-        ensemble_grid = opt['ensemble_grid']
+        ensemble_grid = [eval(i) for i in opt['ensemble_grid'].split(',')]
         print(f"Loaded {len(self.models)} models in ensemble model")
         
         self.register_buffer("model_grid_shape",
