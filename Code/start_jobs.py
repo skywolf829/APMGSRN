@@ -108,7 +108,7 @@ def build_commands(settings_path):
                         else:
                             log_locations.append(os.path.join(save_folder, variables["load_from"], "log.txt"))
                             create_path(os.path.join(save_folder, variables["load_from"]))
-    
+            run_number += 1
 
         else:
             
