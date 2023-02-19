@@ -73,8 +73,8 @@ class Ensemble_SRN(nn.Module):
         for i in range(len(self.models)):
             mask = (indices == i)
             x_i = x[mask]
-            y[mask] = self.models[i](-1+2*((x_i-self.local_min_extents[i])/\
-                (self.local_max_extents[i]-self.local_min_extents[i])))
+            y[mask] = self.models[i](x_i)#(-1+2*((x_i-self.local_min_extents[i])/\
+                #(self.local_max_extents[i]-self.local_min_extents[i])))
 
         return y
 
