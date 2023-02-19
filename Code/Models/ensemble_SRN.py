@@ -34,10 +34,10 @@ class Ensemble_SRN(nn.Module):
         print(f"Loaded {len(self.models)} models in ensemble model")
         
         self.register_buffer("model_grid_shape",
-            torch.tensor(ensemble_grid, dtype=torch.LongTensor),
+            torch.tensor(ensemble_grid, dtype=torch.Long),
             persistent=False)
         self.register_buffer("full_data_shape",
-            torch.tensor(full_shape, dtype=torch.LongTensor),
+            torch.tensor(full_shape, dtype=torch.Long),
             persistent=False)
 
     def forward(self, x):     
