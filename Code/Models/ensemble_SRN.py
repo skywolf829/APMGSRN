@@ -52,7 +52,7 @@ class Ensemble_SRN(nn.Module):
                 model_extents[4] = ((model_extents[4] / full_shape[2]) - 0.5) * 2
                 model_extents[5] = ((model_extents[5] / full_shape[2]) - 0.5) * 2
                 unsorted_model_dict[ind] = [submodel_model, model_extents]
-        print(unsorted_model_dict.keys())
+
         for i in range(ensemble_grid[0]*ensemble_grid[1]*ensemble_grid[2]):
             models.append(unsorted_model_dict[i][0])
             local_extents.append(unsorted_model_dict[i][1])

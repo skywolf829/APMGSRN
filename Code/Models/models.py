@@ -113,6 +113,7 @@ def load_model(opt, device):
                 model.load_state_dict(ckpt['state_dict'])
             except ImportError:
                 new_ckpt = convert_tcnn_to_pytorch(ckpt, opt)
+                model = create_model(opt)
                 model.load_state_dict(new_ckpt['state_dict'])
         else:
             model.load_state_dict(ckpt['state_dict'])
