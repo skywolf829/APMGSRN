@@ -10,6 +10,10 @@ from Other.utility_functions import make_coord_grid, str2bool
 import time
 import torch.nn.functional as F
 from typing import Dict, List, Tuple
+from PyQt5.QtCore import QSize, Qt
+from PyQt5.QtGui import QImage, QPixmap
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget, QLabel
+import sys
 
 def sync_time():
     torch.cuda.synchronize()
@@ -88,7 +92,49 @@ class TransferFunction():
     def opacity_at_value(self, value):
         value_ind = (value[:,0]*self.num_dict_entries).long().clamp(0,self.num_dict_entries)
         return torch.index_select(self.precomputed_opacity_map, dim=0, index=value_ind)
+
+class Camera():
+    def __init__(self, device):
+        self.device = device
+        self.fov = torch.tensor([60.0], device=self.device)
+        self.transformation_matrix = torch.tensor([[1,0,0,200],
+                                                   [0,1,0,200],
+                                                   [0,0,1,-400],
+                                                   [0,0,0,1]],
+                                                  dtype=torch.float32,
+                                                  device=self.device)
+        self.look_at = torch.tensor([0.0,0.0,0.0], device=self.device)
+    
+    def position(self):
+        return self.transformation_matrix[0:3,3]
+    
+    def up(self):
+        dir=self.transformation_matrix@torch.tensor([0,1.0,0,1.0],
+                                                       device=self.device)
+        return dir[0:3] / dir[0:3].norm()
+    
+    def forward(self):
+        dir = self.transformation_matrix@torch.tensor([0,0,1.0,1.0],
+                                                       device=self.device)
+        return dir[0:3] / dir[0:3].norm()
+    
+    def right(self):
+        dir = self.transformation_matrix@torch.tensor([1.0,0,0,1.0],
+                                                       device=self.device)
+        return dir[0:3] / dir[0:3].norm()
   
+    def screen_to_ray_dirs(self, screen_coords):
+        
+        im_width = screen_coords.shape[1]
+        im_height = screen_coords.shape[0]
+        aspect_ratio = im_width/im_height
+        
+        z = 1/torch.tan(self.fov*torch.pi/360)
+        screen_coords[:,:,0] *= aspect_ratio
+        screen_coords = torch.cat([screen_coords, 
+            z.unsqueeze(0).unsqueeze(0).repeat(im_height, im_width, 1)],dim=-1)
+        return screen_coords
+              
 class Scene(torch.nn.Module):
     def __init__(self, model, opt, 
         image_resolution:Tuple[int], batch_size : int):
@@ -97,8 +143,12 @@ class Scene(torch.nn.Module):
         self.opt : Dict = opt
         self.device : str = opt['device']
         self.scene_aabb = \
-            torch.tensor([-1.0, -1.0, -1.0, 1.0, 1.0, 1.0], 
+            torch.tensor([0.0, 0.0, 0.0, 
+                        self.opt['full_shape'][0],
+                        self.opt['full_shape'][1],
+                        self.opt['full_shape'][2]], 
             device=self.device)
+        print(f"Bounding box: {self.scene_aabb}")
         self.image_resolution : Tuple[int]= image_resolution
         self.batch_size : int= batch_size
         
@@ -125,20 +175,28 @@ class Scene(torch.nn.Module):
         print(f"{100*((grid._binary.numel()-grid._binary.sum())/grid._binary.numel()):0.02f}% of space empty for skipping!")
         return grid
     
-    def generate_viewpoint_rays(self):
+    def generate_viewpoint_rays(self, camera):
         batch_size = self.image_resolution[0]*self.image_resolution[1]
-        self.rays_o = torch.cat([1*torch.ones([batch_size, 1], device=device), 
-                            1*make_coord_grid([self.image_resolution[0], self.image_resolution[1]], device=device)], dim=1)
-        self.rays_d = torch.tensor([-1.0, 0, 0], device=device).unsqueeze(0).repeat(batch_size, 1)
+        
+        pixel_coords = make_coord_grid([self.image_resolution[1], self.image_resolution[0]],
+            device=self.device, flatten=False, align_corners=True)
+        self.rays_d = camera.screen_to_ray_dirs(pixel_coords).view(-1, 3)
         self.rays_d = self.rays_d / self.rays_d.norm(dim=-1, keepdim=True)
+        self.rays_o = camera.position().unsqueeze(0).expand(batch_size, 3)
+        #self.rays_o = torch.cat([1*torch.ones([batch_size, 1], device=self.device), 
+        #                    1*make_coord_grid([self.image_resolution[0], self.image_resolution[1]], device=self.device)], dim=1)
+        #self.rays_d = torch.tensor([-1.0, 0, 0], device=device).unsqueeze(0).repeat(batch_size, 1)
+        
+        print(self.rays_d.shape)
+        print(self.rays_o.shape)
         
         # Ray marching with near far plane.
         ray_indices, t_starts, t_ends = ray_marching(
             self.rays_o, self.rays_d, 
             scene_aabb=self.scene_aabb, 
-            render_step_size = 5e-3,
+            render_step_size = 2,
             grid=self.occpancy_grid
-        ) 
+        )
         return ray_indices, t_starts, t_ends
     
     def alpha_fn(self, t_starts, t_ends, ray_indices):
@@ -149,13 +207,16 @@ class Scene(torch.nn.Module):
     
     def rgb_alpha_fn(self, t_starts, t_ends, ray_indices):
         sample_locs = self.rays_o[ray_indices] + self.rays_d[ray_indices] * (t_starts + t_ends) / 2.0
+        sample_locs /= self.scene_aabb[3:]
+        sample_locs *= 2 
+        sample_locs -= 1
         densities = self.forward_maxpoints(model, sample_locs)
         rgbs = self.transfer_function.color_at_value(densities)
         alphas = self.transfer_function.opacity_at_value(densities)
         return rgbs, torch.log(1+alphas)
 
     def forward_maxpoints(self, model, coords):
-        #print(coords.shape)
+        print(coords.shape)
         output_shape = list(coords.shape)
         output_shape[-1] = 1
         output = torch.empty(output_shape, 
@@ -176,11 +237,31 @@ class Scene(torch.nn.Module):
         #print(f"Renderer {ray_indices.shape[0]} samples on {self.image_resolution[0]*self.image_resolution[1]} rays.")
         return colors
       
-    def render(self, camera=None):
+    def render(self, camera):
         with torch.no_grad():
-            ray_indices, t_starts, t_ends = self.generate_viewpoint_rays()
+            ray_indices, t_starts, t_ends = self.generate_viewpoint_rays(camera)
             colors = self.render_rays(t_starts, t_ends, ray_indices)
         return colors
+
+# Subclass QMainWindow to customize your application's main window
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("My App")
+    
+        self.render_view = QLabel()
+    
+        # Set the central widget of the Window.
+        self.setCentralWidget(self.render_view)
+        
+    def set_render_image(self, img):    
+        height, width, channel = img.shape
+        bytesPerLine = channel * width
+        qImg = QImage(img, width, height, bytesPerLine, QImage.Format_RGB888)
+        self.render_view.setPixmap(QPixmap(qImg))
+
+
             
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate a model on some tests')
@@ -259,15 +340,16 @@ if __name__ == '__main__':
         torch.backends.cudnn.benchmark = True
     device = args['device']
     
+    camera = Camera(device)
     scene = Scene(model, opt, [512,512], batch_size=batch_size)
     # One warm up is always slower    
-    scene.render()
+    scene.render(camera)
     
     timesteps = 10
     times = np.zeros([timesteps])
     for i in range(timesteps):
         t0 = sync_time()
-        img = scene.render().cpu().numpy()     
+        img = scene.render(camera).cpu().numpy()     
         t1 = sync_time()
         times[i] = t1-t0
     print(times)
@@ -276,5 +358,15 @@ if __name__ == '__main__':
     print(f"Min frame time: {times.min():0.04f}")
     print(f"Max frame time: {times.max():0.04f}")
     print(f"Average FPS: {1/times.mean():0.02f}")
-    plt.imshow(np.flip(img, 0))
-    plt.show()
+    #plt.imshow(np.flip(img, 0))
+    #plt.show()
+    
+    app = QApplication([])
+
+    window = MainWindow()
+    img = img*255
+    img = img.astype(np.uint8)
+    window.set_render_image(img)
+    window.show()
+
+    app.exec()

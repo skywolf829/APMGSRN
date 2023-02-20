@@ -59,15 +59,17 @@ def build_commands(settings_path):
             print(f"Ensemble model being trained - creating jobs")
             ensemble_grid = variables['ensemble_grid']
             ensemble_grid = [eval(i) for i in ensemble_grid.split(",")]
+            
+            full_shape = get_data_size(os.path.join(data_folder, variables['data']))
+            print(f"Ensemble grid of {ensemble_grid} for data of size {full_shape}")
 
             base_opt = Options.get_default()
             for var_name in variables.keys():
                 base_opt[var_name] = variables[var_name]
+            base_opt['full_shape'] = list(full_shape)
             create_path(os.path.join(save_folder, base_opt['save_name']))
             save_options(base_opt, os.path.join(save_folder, base_opt['save_name']))
 
-            full_shape = get_data_size(os.path.join(data_folder, variables['data']))
-            print(f"Ensemble grid of {ensemble_grid} for data of size {full_shape}")
             x_step = full_shape[0] / ensemble_grid[0]
             y_step = full_shape[1] / ensemble_grid[1]
             z_step = full_shape[2] / ensemble_grid[2]
