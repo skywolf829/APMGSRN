@@ -122,7 +122,7 @@ class Scene(torch.nn.Module):
             output_density = output_density.squeeze()
             output_density = (output_density>0.01)
             grid._binary = output_density.clone()
-        #print(f"{100*((grid._binary.numel()-grid._binary.sum())/grid._binary.numel()):0.02f}% of space empty for skipping!")
+        print(f"{100*((grid._binary.numel()-grid._binary.sum())/grid._binary.numel()):0.02f}% of space empty for skipping!")
         return grid
     
     def generate_viewpoint_rays(self):
@@ -155,6 +155,7 @@ class Scene(torch.nn.Module):
         return rgbs, torch.log(1+alphas)
 
     def forward_maxpoints(self, model, coords):
+        #print(coords.shape)
         output_shape = list(coords.shape)
         output_shape[-1] = 1
         output = torch.empty(output_shape, 
