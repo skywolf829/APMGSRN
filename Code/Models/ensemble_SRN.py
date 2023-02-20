@@ -78,6 +78,8 @@ class Ensemble_SRN(nn.Module):
 
     def forward(self, x):    
 
+        # divide by slightly larger than 2
+        # to avoid the result equaling 1
         indices = (x+1)/(2+1e-6)
         indices = indices.flip(-1)*self.model_grid_shape 
         indices = indices.type(torch.long)
