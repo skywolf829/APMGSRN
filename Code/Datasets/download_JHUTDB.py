@@ -222,8 +222,8 @@ if __name__ == '__main__':
     save_location = "rotstrat4096.raw"
     t0 = time.time()
     count = 0
-    startts = 10
-    endts = 11
+    startts = 4
+    endts = 5
     ts_skip = 10
     frames = []
     for i in range(startts, endts, ts_skip):
