@@ -75,7 +75,7 @@ def feature_density(model, dataset, opt):
         density = forward_maxpoints(model.feature_density, grid, 
                                     data_device=opt['data_device'], 
                                     device=opt['device'],
-                                    max_points=100000)
+                                    max_points=1000000)
         density = density.reshape(data_shape)
         density = density.unsqueeze(0).unsqueeze(0)
         density = density / density.sum()
