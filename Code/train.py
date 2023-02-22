@@ -410,6 +410,9 @@ if __name__ == '__main__':
         help='Whether or not to use interpolation during training')  
     parser.add_argument('--requires_padded_feats',default=None,type=str2bool,
         help='Pads features to next multiple of 16 for TCNN.')      
+    parser.add_argument('--grid_index',default=None,type=str,
+        help='Index for this network in an ensemble of networks')      
+    
     
     parser.add_argument('--iters_to_train_new_layer',default=None,type=int,
         help='Number of iterations to fine tune a new layer')    

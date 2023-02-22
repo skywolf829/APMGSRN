@@ -292,16 +292,30 @@ def vti_to_nc():
         
 if __name__ == '__main__':
 
-    a = np.array([1, 3, 4.5])
-    b = np.array([100, 102.34])
+    rotstrat = np.fromfile(os.path.join(data_folder, "rotstrat4096.raw"), 
+        dtype=np.float32)
+    rotstrat = rotstrat.reshape(128,128,128,32768)
+    rotstrat = rotstrat.reshape(128,128,128,32,32,32)
+    rotstrat = rotstrat.transpose(0,3,1,4,2,5)
+    rotstrat = rotstrat.reshape(4096,4096,4096)
+    
+    import netCDF4 as nc
+    d = nc.Dataset(os.path.join(data_folder, "rotstrat4096.nc"), 'w')
+    d.createDimension('x')
+    d.createDimension('y')
+    d.createDimension('z')
+    dims = ['x', 'y', 'z']
+    d.createVariable("data", np.float32, dims)
+    d["data"][:] = rotstrat
+    d.close()
 
-    with open("temp.raw", "wb") as f:
-        f.write(a.flatten().tobytes())
-        f.write(b.flatten().tobytes())
-
-    c = np.fromfile("temp.raw")
-    print(c.shape)
-    print(c)
-    print(c.dtype)
+    d = nc.Dataset(os.path.join(data_folder, "rotstrat512.nc"), 'w')
+    d.createDimension('x')
+    d.createDimension('y')
+    d.createDimension('z')
+    dims = ['x', 'y', 'z']
+    d.createVariable("data", np.float32, dims)
+    d["data"][:] = rotstrat[0:512,0:512,0:512]
+    d.close()
     
     quit()
