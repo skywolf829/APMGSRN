@@ -307,5 +307,14 @@ if __name__ == '__main__':
     d.createVariable("data", np.float32, dims)
     d["data"][:] = rotstrat
     d.close()
+
+    d = nc.Dataset(os.path.join(data_folder, "rotstrat512.nc"), 'w')
+    d.createDimension('x')
+    d.createDimension('y')
+    d.createDimension('z')
+    dims = ['x', 'y', 'z']
+    d.createVariable("data", np.float32, dims)
+    d["data"][:] = rotstrat[0:512,0:512,0:512]
+    d.close()
     
     quit()
