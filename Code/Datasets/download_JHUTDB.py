@@ -193,7 +193,7 @@ def download_with_buffer(save_location,
             waiting_tasks = {}
             current_request_no = 1              
             
-            printProgressBar(num_written, total_requests, prefix=f"{num_downloaded-num_written} waiting to write. {num_downloaded}/{total_requests} downloaded")        
+            printProgressBar(num_written, total_requests, prefix=f"{num_downloaded-num_written} waiting to write. {num_written}/{num_downloaded}/{total_requests} written/downloaded")
             for future in as_completed(threads):
                 result, job_id = future.result()
                 threads.remove(future)
@@ -201,7 +201,7 @@ def download_with_buffer(save_location,
                 result=result.flatten().tobytes()
                 num_downloaded += 1
                 #print(f"Job {job_id}/{request_no-1} completed and processed. Adding to waitlist")
-                printProgressBar(num_written, total_requests, prefix=f"{num_downloaded-num_written} waiting to write. {num_downloaded}/{total_requests} downloaded")
+                printProgressBar(num_written, total_requests, prefix=f"{num_downloaded-num_written} waiting to write. {num_written}/{num_downloaded}/{total_requests} written/downloaded")
                 waiting_tasks[job_id] = result
                 
                 while(current_request_no in waiting_tasks.keys()):
@@ -234,7 +234,7 @@ if __name__ == '__main__':
             0, 4096, 1, #y
             0, 4096, 1, #z
             name, i, 
-            "u", 3, 128)
+            "u", 3, 100)
         
     print(f"Finished in {time.time() - t0} sec.")
 
