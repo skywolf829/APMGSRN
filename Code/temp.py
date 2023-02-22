@@ -292,7 +292,8 @@ def vti_to_nc():
         
 if __name__ == '__main__':
 
-    rotstrat = np.fromfile(os.path.join(data_folder, "rotstrat4096.raw"))
+    rotstrat = np.fromfile(os.path.join(data_folder, "rotstrat4096.raw"), 
+        dtype=np.float32)
     rotstrat = rotstrat.reshape(128,128,128,32768)
     rotstrat = rotstrat.reshape(128,128,128,32,32,32)
     rotstrat = rotstrat.transpose(0,3,1,4,2,5)
