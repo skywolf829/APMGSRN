@@ -198,7 +198,7 @@ if __name__ == '__main__':
                 # Job has finished executing
                 jobs_training.pop(i)
                 job_end_time = time.time()
-                print(f"Job {c_name} has finished with exit code {job_code} after {(job_end_time-job_start_time)/60 : 0.02f} minutes, freeing {gpu}")
+                print(f"Job {c_name} on {gpu} has finished with exit code {job_code} after {(job_end_time-job_start_time)/60 : 0.02f} minutes")
                 # The gpu is freed, added back to available_devices
                 available_devices.append(gpu)
             else:
