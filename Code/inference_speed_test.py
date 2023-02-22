@@ -1,22 +1,17 @@
 from __future__ import absolute_import, division, print_function
 import torch
-import torch.optim as optim
-import torch.nn.functional as F
-import time
 import os
 import argparse
 import timeit
 from Models.options import load_options
 from Models.models import load_model
+import time
 
-@torch.no_grad
-def inference_speed_evaluation(model, batch_size, num_iters, device):
-    single_point = torch.rand([batch_size, 3], device=device)
+def inference_speed_evaluation(model, input_batch, num_iters):
 
     for _ in range(num_iters):
-        model_output = model(single_point)
+        model_output = model(input_batch)
 
-    torch.cuda.synchronize()
 
 if __name__ == '__main__':
     torch.backends.cuda.matmul.allow_tf32 = True    
@@ -34,18 +29,24 @@ if __name__ == '__main__':
     save_folder = os.path.join(project_folder_path, "SavedModels")
     
     
+    torch.backends.cudnn.benchmark = True
+    torch.backends.cuda.matmul.allow_tf32 = True
+    
     # Load the model
     opt = load_options(os.path.join(save_folder, args['load_from']))
     opt['device'] = args['device']
-    opt['data_device'] = args['data_device']
-    model = load_model(opt, "cpu").to(opt['device'])
-    model.eval()
+    opt['data_device'] = args['device']
+    model = load_model(opt, "cpu").to(opt['device']).eval()
     
     # Perform tests
-    torch.cuda.synchronize()
-    time_test_1 = timeit.timeit(
-        stmt = f"inference_speed_evaluation(model,{1},{2**30},{args['device']})",
-        setup="seq='Pylenin'",
-        number=1,
-        globals=globals())
-    print(f"Batch size 1 test: {time_test_1}")
+    with torch.no_grad():
+        
+    
+        input_batch = torch.rand([1000000, 3], dtype=torch.float32, device=args['device'])
+        torch.cuda.synchronize()
+        start_time = time.time()
+        inference_speed_evaluation(model,input_batch,1000)        
+        torch.cuda.synchronize()
+        end_time = time.time()
+        print(f"Total time: {end_time - start_time}")
+        

@@ -292,6 +292,16 @@ def vti_to_nc():
         
 if __name__ == '__main__':
 
-    vti_to_nc()
+    a = np.array([1, 3, 4.5])
+    b = np.array([100, 102.34])
+
+    with open("temp.raw", "wb") as f:
+        f.write(a.flatten().tobytes())
+        f.write(b.flatten().tobytes())
+
+    c = np.fromfile("temp.raw")
+    print(c.shape)
+    print(c)
+    print(c.dtype)
     
     quit()

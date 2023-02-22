@@ -5,7 +5,8 @@ import json
 import time
 import subprocess
 import shlex
-from Other.utility_functions import create_path
+from Other.utility_functions import create_path, get_data_size
+from Models.options import Options, save_options
 
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
 project_folder_path = os.path.join(project_folder_path, "..")
@@ -31,6 +32,7 @@ def build_commands(settings_path):
     commands = []
     command_names = []
     log_locations = []
+    run_number = 0
     for i in range(len(data)):
         
         
@@ -39,9 +41,8 @@ def build_commands(settings_path):
         
         if("test" in script_name and "all" == variables['load_from']):
             all_saves = os.listdir(save_folder)
-            j = 0
             for fold in all_saves:
-                run_name = str(j)
+                run_name = str(run_number)
                 command_names.append(run_name)        
                 
                 command_string = "python Code/" + str(script_name) + " --load_from " + fold + " " + \
@@ -51,11 +52,74 @@ def build_commands(settings_path):
                 log_locations.append(os.path.join(save_folder, fold, "test_log.txt"))
                 create_path(os.path.join(save_folder, fold))
                 
-                j += 1
+                run_number += 1
         
+        elif("train" in script_name and "ensemble" in variables.keys() and \
+            variables['ensemble']):
+            print(f"Ensemble model being trained - creating jobs")
+            ensemble_grid = variables['ensemble_grid']
+            ensemble_grid = [eval(i) for i in ensemble_grid.split(",")]
+            
+            full_shape = get_data_size(os.path.join(data_folder, variables['data']))
+            print(f"Ensemble grid of {ensemble_grid} for data of size {full_shape}")
+
+            base_opt = Options.get_default()
+            for var_name in variables.keys():
+                base_opt[var_name] = variables[var_name]
+            base_opt['full_shape'] = list(full_shape)
+            create_path(os.path.join(save_folder, base_opt['save_name']))
+            save_options(base_opt, os.path.join(save_folder, base_opt['save_name']))
+
+            x_step = full_shape[0] / ensemble_grid[0]
+            y_step = full_shape[1] / ensemble_grid[1]
+            z_step = full_shape[2] / ensemble_grid[2]
+
+            for x_ind in range(ensemble_grid[0]):
+                x_start = int(x_ind * x_step)
+                x_end = int(full_shape[0]) if x_ind == ensemble_grid[0]-1 else \
+                     int((x_ind+1) * x_step)
+                
+                for y_ind in range(ensemble_grid[1]):
+                    y_start = int(y_ind * y_step)
+                    y_end = int(full_shape[1]) if y_ind == ensemble_grid[1]-1 else \
+                        int((y_ind+1) * y_step)
+                    for z_ind in range(ensemble_grid[2]):
+                        z_start = int(z_ind * z_step)
+                        z_end = int(full_shape[2]) if z_ind == ensemble_grid[2]-1 else \
+                            int((z_ind+1) * z_step)
+                        extents = f"{x_start},{x_end},{y_start},{y_end},{z_start},{z_end}"
+
+                        run_name = str(run_number)
+
+                        command_names.append(run_name)           
+                        command = "python Code/" + str(script_name) + " "
+                        
+                        for var_name in variables.keys():
+                            base_opt[var_name] = variables[var_name]
+                            if(var_name == 'save_name'):
+                                new_save_name = f"{str(variables[var_name])}/{extents}"
+                                command = f"{command} --{str(var_name)} {new_save_name} "
+                            elif "ensemble" not in var_name:
+                                command = f"{command} --{str(var_name)} {str(variables[var_name])} "
+                        command = f"{command} --extents {extents} "
+                        commands.append(command)
+
+                        if("train" in script_name):
+                            if(os.path.exists(os.path.join(save_folder, new_save_name, "train_log.txt"))):
+                                os.remove(os.path.join(save_folder, new_save_name, "train_log.txt"))
+                            log_locations.append(os.path.join(save_folder, new_save_name, "train_log.txt"))
+                            create_path(os.path.join(save_folder, new_save_name))
+                        elif("test" in script_name):
+                            log_locations.append(os.path.join(save_folder, variables['load_from'], "test_log.txt"))
+                            create_path(os.path.join(save_folder, variables["load_from"]))
+                        else:
+                            log_locations.append(os.path.join(save_folder, variables["load_from"], "log.txt"))
+                            create_path(os.path.join(save_folder, variables["load_from"]))
+                        run_number += 1
+
         else:
             
-            run_name = str(i)
+            run_name = str(run_number)
             command_names.append(run_name)           
             command = "python Code/" + str(script_name) + " "
             
@@ -74,6 +138,7 @@ def build_commands(settings_path):
             else:
                 log_locations.append(os.path.join(save_folder, variables["load_from"], "log.txt"))
                 create_path(os.path.join(save_folder, variables["load_from"]))
+            run_number += 1
     
     
     return command_names, commands, log_locations

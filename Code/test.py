@@ -68,14 +68,14 @@ def feature_density(model, dataset, opt):
     
     data_shape = list(dataset.data.shape[2:])
     grid = make_coord_grid(data_shape, opt['device'], 
-                           flatten=True, align_corners=True)
+                           flatten=True, align_corners=opt['align_corners'])
     with torch.no_grad():
         print(grid.device)
         
-        density = forward_maxpoints(model.feature_density_gaussian, grid, 
+        density = forward_maxpoints(model.feature_density, grid, 
                                     data_device=opt['data_device'], 
                                     device=opt['device'],
-                                    max_points=100000)
+                                    max_points=1000000)
         density = density.reshape(data_shape)
         density = density.unsqueeze(0).unsqueeze(0)
         density = density / density.sum()
@@ -117,7 +117,7 @@ def feature_locations(model, opt):
         feat_grid_shape = [eval(i) for i in feat_grid_shape]
         with torch.no_grad():
             global_points = make_coord_grid(feat_grid_shape, opt['device'], 
-                                flatten=True, align_corners=True)
+                                flatten=True, align_corners=opt['align_corners'])
             
             transformed_points = model.transform(global_points)
             ids = torch.arange(transformed_points.shape[0])
@@ -169,7 +169,8 @@ if __name__ == '__main__':
     opt = load_options(os.path.join(save_folder, args['load_from']))
     opt['device'] = args['device']
     opt['data_device'] = args['data_device']
-    model = load_model(opt, args['device']).to(opt['device'])
+    model = load_model(opt, args['device'])
+    model = model.to(opt['device'])
     print(f"Moved model to {opt['device']}.")
     model.train(False)
     model.eval()

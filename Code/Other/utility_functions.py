@@ -402,6 +402,14 @@ def tensor_to_cdf(t, location, channel_names=None):
         d[ch][:] = t[0,i].detach().cpu().numpy()
     d.close()
 
+def get_data_size(location):
+    import netCDF4 as nc
+    f = nc.Dataset(location)
+
+    for a in f.variables:
+        full_shape = f[a].shape
+    return full_shape
+
 def nc_to_tensor(location, opt = None):
     import netCDF4 as nc
     f = nc.Dataset(location)
@@ -412,12 +420,14 @@ def nc_to_tensor(location, opt = None):
         if(opt is None or opt['extents'] is None):
             d = np.array(f[a])
         else:
+            print(f"Loading data with extents {opt['extents']}")
             ext = opt['extents'].split(',')
             ext = [eval(i) for i in ext]
             d = np.array(f[a][ext[0]:ext[1],ext[2]:ext[3],ext[4]:ext[5]])
         channels.append(d)
     d = np.stack(channels)
     d = torch.tensor(d).unsqueeze(0)
+    print(f"Loaded data with shape {d.shape} (full shape: {full_shape})")
     return d, full_shape
         
 def cdf_to_tensor(location, channel_names):

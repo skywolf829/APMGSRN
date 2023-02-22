@@ -21,9 +21,11 @@ class Options():
         opt['hash_max_resolution']                  = 2048         # hash grid: max resolution per dim
         
         opt['data']                                 = 'tornado.nc'
+        opt['ensemble']                             = False
+        opt['ensemble_grid']                        = "1,1,1"
         opt['save_name']                            = 'tornado'
         opt['full_shape']                           = None
-        opt['align_corners']                        = True
+        opt['align_corners']                        = False
         opt['precondition']                         = True
         opt['use_tcnn_if_available']                = True
         opt['n_layers']                             = 2       

@@ -9,7 +9,7 @@ from Other.utility_functions import create_folder, str2bool
 def next_highest_multiple(num:int, base:int):
     return base*int(math.ceil(max(1, num/base)))
 
-def convert_tcnn_to_pytorch(model_name, tcnn_pad_size):
+def convert_tcnn_to_pytorch(model_name, tcnn_pad_size=16):
     project_folder_path = os.path.dirname(os.path.abspath(__file__))
     project_folder_path = os.path.join(project_folder_path, "..")
     save_folder = os.path.join(project_folder_path, "SavedModels")
@@ -95,7 +95,7 @@ def convert_tcnn_to_pytorch(model_name, tcnn_pad_size):
             ckpt['state_dict'][name] = new_weights[i]
         
     opt['requires_padded_feats'] = requires_padding
-    opt["save_name"] = model_name+"_convert_to_pytorch"
+    opt["save_name"] = model_name+"_pytorch"
     
     folder = create_folder(save_folder, opt["save_name"])
     path_to_save = os.path.join(save_folder, folder)
@@ -106,7 +106,7 @@ def convert_tcnn_to_pytorch(model_name, tcnn_pad_size):
         pickle_protocol=4
     )
     save_options(opt, path_to_save)
-    return model_name+"_convert_to_pytorch"
+    return model_name+"_pytorch"
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Loads a model trained using TCNN and converts it to a model that is pure PyTorch.')
