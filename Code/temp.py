@@ -318,7 +318,7 @@ if __name__ == '__main__':
     d.createDimension('z')
     dims = ['x', 'y', 'z']
     d.createVariable("data", np.float32, dims)
-    d["data"][:] = rotstrat[0:1024,0:128,0:128]
+    d["data"][:] = rotstrat[0:4096,0:128,0:128]
     d.close()
     
     quit()
