@@ -295,7 +295,10 @@ if __name__ == '__main__':
     rotstrat = np.fromfile(os.path.join(data_folder, "rotstrat4096.raw"), 
         dtype=np.float32)
     rotstrat = rotstrat.reshape(32768,128,128,128)
-    rotstrat = rotstrat.reshape(32768*128, 128, 128)
+    rotstrat = rotstrat.reshape(4096, -1, 128, 128)
+    rotstrat = rotstrat.reshape(4096, 4096, -1, 128)
+    rotstrat = rotstrat.reshape(4096, 4096, 4096)
+
     #rotstrat = rotstrat.reshape(32,32,32,128,128,128)
     #rotstrat = rotstrat.transpose(0,3,1,4,2,5)
     #rotstrat = rotstrat.reshape(4096,4096,4096)
@@ -318,7 +321,7 @@ if __name__ == '__main__':
     d.createDimension('z')
     dims = ['x', 'y', 'z']
     d.createVariable("data", np.float32, dims)
-    d["data"][:] = rotstrat[0:4096,0:128,0:128]
+    d["data"][:] = rotstrat[0:512,0:512,0:512]
     d.close()
     
     quit()
