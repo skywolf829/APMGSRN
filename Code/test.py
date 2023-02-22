@@ -68,7 +68,7 @@ def feature_density(model, dataset, opt):
     
     data_shape = list(dataset.data.shape[2:])
     grid = make_coord_grid(data_shape, opt['device'], 
-                           flatten=True, align_corners=True)
+                           flatten=True, align_corners=opt['align_corners'])
     with torch.no_grad():
         print(grid.device)
         
@@ -117,7 +117,7 @@ def feature_locations(model, opt):
         feat_grid_shape = [eval(i) for i in feat_grid_shape]
         with torch.no_grad():
             global_points = make_coord_grid(feat_grid_shape, opt['device'], 
-                                flatten=True, align_corners=True)
+                                flatten=True, align_corners=opt['align_corners'])
             
             transformed_points = model.transform(global_points)
             ids = torch.arange(transformed_points.shape[0])
