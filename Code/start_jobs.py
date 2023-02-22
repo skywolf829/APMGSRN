@@ -32,6 +32,7 @@ def build_commands(settings_path):
     commands = []
     command_names = []
     log_locations = []
+    run_number = 0
     for i in range(len(data)):
         
         
@@ -40,9 +41,8 @@ def build_commands(settings_path):
         
         if("test" in script_name and "all" == variables['load_from']):
             all_saves = os.listdir(save_folder)
-            j = 0
             for fold in all_saves:
-                run_name = str(j)
+                run_name = str(run_number)
                 command_names.append(run_name)        
                 
                 command_string = "python Code/" + str(script_name) + " --load_from " + fold + " " + \
@@ -52,7 +52,7 @@ def build_commands(settings_path):
                 log_locations.append(os.path.join(save_folder, fold, "test_log.txt"))
                 create_path(os.path.join(save_folder, fold))
                 
-                j += 1
+                run_number += 1
         
         elif("train" in script_name and "ensemble" in variables.keys() and \
             variables['ensemble']):
@@ -73,8 +73,6 @@ def build_commands(settings_path):
             x_step = full_shape[0] / ensemble_grid[0]
             y_step = full_shape[1] / ensemble_grid[1]
             z_step = full_shape[2] / ensemble_grid[2]
-
-            run_number = 0
 
             for x_ind in range(ensemble_grid[0]):
                 x_start = int(x_ind * x_step)
@@ -121,7 +119,7 @@ def build_commands(settings_path):
 
         else:
             
-            run_name = str(i)
+            run_name = str(run_number)
             command_names.append(run_name)           
             command = "python Code/" + str(script_name) + " "
             
@@ -140,6 +138,7 @@ def build_commands(settings_path):
             else:
                 log_locations.append(os.path.join(save_folder, variables["load_from"], "log.txt"))
                 create_path(os.path.join(save_folder, variables["load_from"]))
+            run_number += 1
     
     
     return command_names, commands, log_locations
