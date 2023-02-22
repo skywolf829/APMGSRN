@@ -163,15 +163,14 @@ def download_with_buffer(save_location,
     z_start, z_end, z_step,
     sim_name, timestep, field, num_components, num_workers):
     
-    with open(save_location,"wb") as f:
-        print(f"Created file {save_location}")
+    start_at = 1
+    with open(save_location,"wb" if start_at == 1 else "ab") as f:
+        print(f"Opened file {save_location}")
         
         x_len = 256
         y_len = 256
-        z_len = 256
+        z_len = 128
         request_no = 1
-        num_downloaded = 0
-        num_written = 0
         threads = []
         with ThreadPoolExecutor(max_workers=num_workers) as executor:
             for k in range(x_start, x_end, x_len):
@@ -180,18 +179,22 @@ def download_with_buffer(save_location,
                         x_stop = min(k+x_len, x_end)
                         y_stop = min(i+y_len, y_end)
                         z_stop = min(j+z_len, z_end)
-                        threads.append(executor.submit(get_frame,
-                                        k, x_stop, x_step,
-                                        i, y_stop, y_step,
-                                        j, z_stop, z_step,
-                                        sim_name, timestep, field, 
-                                        num_components, request_no))
+                        if(request_no>=start_at):
+                            threads.append(executor.submit(get_frame,
+                                            k, x_stop, x_step,
+                                            i, y_stop, y_step,
+                                            j, z_stop, z_step,
+                                            sim_name, timestep, field, 
+                                            num_components, request_no))
                         request_no += 1
             print(f"Submitted {request_no-1} jobs. Beggining fetch in parallel on {num_workers} workers.")
             
             total_requests = request_no-1
             waiting_tasks = {}
-            current_request_no = 1              
+            current_request_no = start_at  
+            
+            num_downloaded = start_at-1
+            num_written = start_at-1          
             
             printProgressBar(num_written, total_requests, prefix=f"{num_downloaded-num_written} waiting to write. {num_written}/{num_downloaded}/{total_requests} written/downloaded")
             for future in as_completed(threads):
