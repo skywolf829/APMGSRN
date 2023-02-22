@@ -295,11 +295,14 @@ if __name__ == '__main__':
     rotstrat = np.fromfile(os.path.join(data_folder, "rotstrat4096.raw"), 
         dtype=np.float32)
     rotstrat = rotstrat.reshape(32768,128,128,128)
-    rotstrat = rotstrat.reshape(32,32,32,128,128,128)
-    rotstrat = rotstrat.transpose(0,3,1,4,2,5)
-    rotstrat = rotstrat.reshape(4096,4096,4096)
+    rotstrat = rotstrat.reshape(32768*128, 128, 128)
+    #rotstrat = rotstrat.reshape(32,32,32,128,128,128)
+    #rotstrat = rotstrat.transpose(0,3,1,4,2,5)
+    #rotstrat = rotstrat.reshape(4096,4096,4096)
+    
     
     import netCDF4 as nc
+    '''
     d = nc.Dataset(os.path.join(data_folder, "rotstrat4096.nc"), 'w')
     d.createDimension('x')
     d.createDimension('y')
@@ -308,7 +311,7 @@ if __name__ == '__main__':
     d.createVariable("data", np.float32, dims)
     d["data"][:] = rotstrat
     d.close()
-
+    '''
     d = nc.Dataset(os.path.join(data_folder, "rotstrat512.nc"), 'w')
     d.createDimension('x')
     d.createDimension('y')
