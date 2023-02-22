@@ -43,7 +43,7 @@ class Ensemble_SRN(nn.Module):
                 model_extents = [float(i) for i in model_extents.split(',')]
                 indices = [eval(i) for i in sub_opt['grid_index'].split(",")]
                 ind = indices[0] + indices[1]*ensemble_grid[0] + indices[2]*ensemble_grid[0]*ensemble_grid[1]
-                print(f"Ensemble grid index {sub_opt['grid_index']} -> {ind}")
+                #print(f"Ensemble grid index {sub_opt['grid_index']} -> {ind}")
                 model_extents[0] = ((model_extents[0] / full_shape[0]) - 0.5) * 2
                 model_extents[1] = ((model_extents[1] / full_shape[0]) - 0.5) * 2
                 model_extents[2] = ((model_extents[2] / full_shape[1]) - 0.5) * 2
