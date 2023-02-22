@@ -54,6 +54,7 @@ def build_commands(settings_path):
                 
                 run_number += 1
         
+        # Handle ensemble training specifically
         elif("train" in script_name and "ensemble" in variables.keys() and \
             variables['ensemble']):
             print(f"Ensemble model being trained - creating jobs")
@@ -73,20 +74,28 @@ def build_commands(settings_path):
             x_step = full_shape[0] / ensemble_grid[0]
             y_step = full_shape[1] / ensemble_grid[1]
             z_step = full_shape[2] / ensemble_grid[2]
+            ghost_cells = base_opt['ensemble_ghost_cells']
 
             for x_ind in range(ensemble_grid[0]):
                 x_start = int(x_ind * x_step)
+                x_start = max(0, x_start-ghost_cells)
                 x_end = int(full_shape[0]) if x_ind == ensemble_grid[0]-1 else \
                      int((x_ind+1) * x_step)
+                x_end = min(full_shape[0], x_end+ghost_cells)
                 
                 for y_ind in range(ensemble_grid[1]):
                     y_start = int(y_ind * y_step)
+                    y_start = max(0, y_start-ghost_cells)
                     y_end = int(full_shape[1]) if y_ind == ensemble_grid[1]-1 else \
                         int((y_ind+1) * y_step)
+                    y_end = min(full_shape[1], y_end+ghost_cells)
+
                     for z_ind in range(ensemble_grid[2]):
                         z_start = int(z_ind * z_step)
+                        z_start = max(0, z_start-ghost_cells)
                         z_end = int(full_shape[2]) if z_ind == ensemble_grid[2]-1 else \
                             int((z_ind+1) * z_step)
+                        z_end = min(full_shape[2], z_end+ghost_cells)
                         extents = f"{x_start},{x_end},{y_start},{y_end},{z_start},{z_end}"
 
                         run_name = str(run_number)
