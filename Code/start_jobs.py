@@ -110,7 +110,7 @@ def build_commands(settings_path):
                                 command = f"{command} --{str(var_name)} {new_save_name} "
                             elif "ensemble" not in var_name:
                                 command = f"{command} --{str(var_name)} {str(variables[var_name])} "
-                        command = f"{command} --extents {extents} "
+                        command = f"{command} --extents {extents} --grid_index {x_ind},{y_ind},{z_ind} "
                         commands.append(command)
 
                         if("train" in script_name):

@@ -24,6 +24,7 @@ class Options():
         opt['ensemble']                             = False
         opt['ensemble_grid']                        = "1,1,1"
         opt['ensemble_ghost_cells']                 = 0
+        opt['grid_index']                           = "1,1,1"
         opt['save_name']                            = 'tornado'
         opt['full_shape']                           = None
         opt['align_corners']                        = False
