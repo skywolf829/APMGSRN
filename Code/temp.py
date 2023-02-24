@@ -289,17 +289,40 @@ def vti_to_nc():
     x = x.reshape(dim,order='F')
     y = y.reshape(dim,order='F')
     z = z.reshape(dim,order='F')
-        
+
+def np_to_nc(data, name):
+    d = nc.Dataset(os.path.join(data_folder, name), 'w')
+    d.createDimension('x')
+    d.createDimension('y')
+    d.createDimension('z')
+    dims = ['x', 'y', 'z']
+    d.createVariable("data", np.float32, dims)
+    d["data"][:] = data
+    d.close()
+    
 if __name__ == '__main__':
 
     channel = np.fromfile(os.path.join(data_folder, "channel5200.raw"), 
         dtype=np.float32)
 
     channel = channel.reshape(14400,256,256,128)
+    '''
+    Wrong ways:
+    
     channel = channel.reshape(40,6,60,256,256,128)
     channel = channel.transpose(2,3,1,4,0,5)
+    
+    '''
+    channel = channel.reshape(14400//4,1024,256,128)
+    np_to_nc(channel[0], "test0.nc")
+    
+    channel = channel.reshape(14400, 256, 256, 128)
+    channel = channel.reshape(60,6,40,256,256,128)
+    channel = channel.transpose(0,3,1,4,2,5)    
     channel = channel.reshape(10240,1536,7680)
-
+    np_to_nc(channel[0:512,0:512,0:512], "test1.nc")
+    
+    channel = channel.reshape()
     
     
     import netCDF4 as nc
@@ -315,13 +338,5 @@ if __name__ == '__main__':
     d.close()
     '''
     
-    d = nc.Dataset(os.path.join(data_folder, "channel512.nc"), 'w')
-    d.createDimension('x')
-    d.createDimension('y')
-    d.createDimension('z')
-    dims = ['x', 'y', 'z']
-    d.createVariable("data", np.float32, dims)
-    d["data"][:] = channel[0:512,0:512,0:512]
-    d.close()
     
     quit()
