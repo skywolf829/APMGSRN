@@ -1,6 +1,6 @@
 #!/bin/sh
 #cd /lus/theta-fs0/projects/DL4VIS/DistributedINR
 
-conda activate DistINR
+conda activate agINR
 python Code/temp.py
 
