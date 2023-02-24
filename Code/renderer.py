@@ -260,7 +260,7 @@ class Camera():
         y = y.flatten().to(self.device)
         
         # move x, y to pixel center, rescale to [-1, 1] and invert y
-        x = (2*(x+0.5)/width - 1) *  torch.tan(torch.deg2rad(self.fov/2))
+        x = (2*(x+0.5)/width - 1) *  torch.tan(torch.deg2rad(self.fov/2))*(width/height)
         y = (1 - 2*(y+0.5)/height) * torch.tan(torch.deg2rad(self.fov/2))
         z = -torch.ones(x.shape).to(self.device)
         camera_dirs = torch.stack([x,y,z],-1) # (height*width, 3)
