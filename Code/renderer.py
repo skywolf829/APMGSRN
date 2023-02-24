@@ -19,6 +19,22 @@ def sync_time():
     torch.cuda.synchronize()
     return time.time()
 
+def imgs_to_video(out_path:str, imgs: np.ndarray, fps:int=15):
+    '''
+    output a img sequence (N, width, height, 3) to an avi video
+    '''
+    width, height = imgs.shape[1:3]
+    video=cv2.VideoWriter(
+                    os.path.join(out_path+".avi"),
+                    cv2.VideoWriter_fourcc(*'DIVX'),
+                    fps,
+                    (width, height)
+                )
+    for img in imgs:
+        frame = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        video.write(frame)
+    video.release()
+
 class TransferFunction():
     def __init__(self, device):
         self.device = device
@@ -94,7 +110,13 @@ class TransferFunction():
         return torch.index_select(self.precomputed_opacity_map, dim=0, index=value_ind)
 
 class Camera():
-    def __init__(self, device):
+    def __init__(self, device,
+                 scene_aabb:torch.Tensor,
+                 coi:torch.Tensor=torch.Tensor([0.,0.,0.]),
+                 azi_deg:float=0.,
+                 polar_deg:float=90.,
+                 dist:float=200.,
+                ):
         self.device = device
         self.fov = torch.tensor([60.0], device=self.device)
         self.transformation_matrix = torch.tensor([[1,0,0,200],
@@ -104,9 +126,22 @@ class Camera():
                                                   dtype=torch.float32,
                                                   device=self.device)
         self.look_at = torch.tensor([0.0,0.0,0.0], device=self.device)
+        # argball camera args
+        self.azi = torch.zeros(1, device=coi.device)
+        self.polar = torch.zeros(1, device=coi.device)
+        self.dist = torch.zeros(1, device=coi.device)
+        self.coi = torch.zeros(3, device=coi.device)
+        self.set_azi(azi_deg, device=coi.device)
+        self.set_polar(polar_deg, device=coi.device)
+        self.set_dist(dist, device=coi.device)
+        self.set_coi(coi)
+        self.set_eye(self.calc_eye())
+        # inital camera: looking at the z direction, with right be x axis, up be y axis
+        self.vMat = self.get_view()
     
     def position(self):
-        return self.transformation_matrix[0:3,3]
+        # return self.transformation_matrix[0:3,3]
+        return self.eye
     
     def up(self):
         dir=self.transformation_matrix@torch.tensor([0,1.0,0,1.0],
@@ -123,17 +158,118 @@ class Camera():
                                                        device=self.device)
         return dir[0:3] / dir[0:3].norm()
   
-    def screen_to_ray_dirs(self, screen_coords):
+    # def screen_to_ray_dirs(self, screen_coords):
         
-        im_width = screen_coords.shape[1]
-        im_height = screen_coords.shape[0]
-        aspect_ratio = im_width/im_height
+    #     im_width = screen_coords.shape[1]
+    #     im_height = screen_coords.shape[0]
+    #     aspect_ratio = im_width/im_height
         
-        z = 1/torch.tan(self.fov*torch.pi/360)
-        screen_coords[:,:,0] *= aspect_ratio
-        screen_coords = torch.cat([screen_coords, 
-            z.unsqueeze(0).unsqueeze(0).repeat(im_height, im_width, 1)],dim=-1)
-        return screen_coords
+    #     z = 1/torch.tan(self.fov*torch.pi/360)
+    #     screen_coords[:,:,0] *= aspect_ratio
+    #     screen_coords = torch.cat([screen_coords, 
+    #         z.unsqueeze(0).unsqueeze(0).repeat(im_height, im_width, 1)],dim=-1)
+    #     return screen_coords
+    
+    def set_azi(self, azi_deg:float, device="cuda:0"):
+        self.azi = torch.deg2rad(torch.tensor(azi_deg, device=device))
+        self.set_eye(self.calc_eye())
+        
+    def set_polar(self, polar_deg:float, device="cuda:0"):
+        self.polar = torch.deg2rad(torch.tensor(polar_deg, device=device))
+        self.set_eye(self.calc_eye())
+        
+    def set_dist(self, dist:float, device="cuda:0"):
+        self.dist = torch.tensor(dist, device=device)
+        self.set_eye(self.calc_eye())
+
+    def set_coi(self, coi:torch.Tensor):
+        self.coi = coi
+        self.set_eye(self.calc_eye())
+    
+    def set_eye(self, eye:torch.Tensor):
+        self.eye = eye
+    
+    def calc_eye(self):
+        '''
+        need 4 vars set: self.azi, self.polar, self.dist, self.coi. (Done once in constructor)
+        '''
+        y = self.dist*torch.cos(self.polar)
+        dist_project_xz = self.dist*torch.sin(self.polar)
+        x = torch.sin(self.azi)*dist_project_xz
+        z = torch.cos(self.azi)*dist_project_xz
+        eye_origin = torch.stack([x,y,z]).to(self.coi) # sync devices
+        return self.coi + eye_origin
+    
+    def get_c2w(self):
+        # print("PRINT C2W and eye: ", self.get_view(), self.eye, sep="\n")
+        return torch.linalg.inv(self.get_view())
+    
+    def update_view_eye(self, dx, dy):
+        '''
+        TODO:
+        arcball camera model: update view matrix and eye based on x,y change in screen
+        '''
+        pass
+    
+    def get_view(self):
+        '''
+        need 2 vars set: self.coi, self.eye
+        '''
+        normalize = lambda x: x / torch.norm(x, dim=-1 , keepdim=True)
+        zaxis = normalize(self.eye - self.coi)
+        
+        up = torch.tensor([0., 1., 0.]).to(zaxis)
+            
+        xaxis = torch.cross(normalize(up), zaxis)
+        xaxis = normalize(xaxis) if xaxis.sum() != 0. else xaxis
+        yaxis = torch.cross(zaxis, xaxis)
+        
+        vMat = torch.tensor([
+            [xaxis[0], xaxis[1], xaxis[2], -torch.dot(self.eye, xaxis)],
+            [yaxis[0], yaxis[1], yaxis[2], -torch.dot(self.eye, yaxis)],
+            [zaxis[0], zaxis[1], zaxis[2], -torch.dot(self.eye, zaxis)],
+            [0.,0.,0.,1.]
+        ], device=self.device)
+        return vMat
+
+    def get_rotate_2d(self, degree:torch.Tensor):
+        cos_val = torch.cos(torch.deg2rad(degree))
+        sin_val = torch.sin(torch.deg2rad(degree))
+        return torch.tensor(
+            [
+                [cos_val, -sin_val],
+                [sin_val, cos_val],
+            ],
+            dtype=torch.float32,
+            device=self.device
+        )
+
+    def generate_dirs(self, width, height):
+        '''
+        generate viewing ray directions of number width x height.
+        instance vars need:
+            self.fov
+        '''
+        x, y = torch.meshgrid(
+            torch.arange(width),
+            torch.arange(height),
+            indexing="xy",
+        )
+        x = x.flatten().to(self.device)
+        y = y.flatten().to(self.device)
+        
+        # move x, y to pixel center, rescale to [-1, 1] and invert y
+        x = (2*(x+0.5)/width - 1) *  torch.tan(torch.deg2rad(self.fov/2))
+        y = (1-2*(y+0.5)/height) * torch.tan(torch.deg2rad(self.fov/2))
+        z = -torch.ones(x.shape).to(self.device)
+        camera_dirs = torch.stack([x,y,z],-1) # (height*width, 3)
+
+        # map camera space dirs to world space
+        c2w = self.get_c2w() # (4,4)
+        directions = (c2w[:3,:3] @ camera_dirs.T).T
+        directions = directions / torch.linalg.norm(directions, dim=-1, keepdims=True)
+        
+        return directions.reshape(width, height, 3)
               
 class Scene(torch.nn.Module):
     def __init__(self, model, opt, 
@@ -175,27 +311,26 @@ class Scene(torch.nn.Module):
         print(f"{100*((grid._binary.numel()-grid._binary.sum())/grid._binary.numel()):0.02f}% of space empty for skipping!")
         return grid
     
-    def generate_viewpoint_rays(self, camera):
+    def generate_viewpoint_rays(self, camera: Camera):
+        width, height = self.image_resolution[:2]
         batch_size = self.image_resolution[0]*self.image_resolution[1]
-        
-        pixel_coords = make_coord_grid([self.image_resolution[1], self.image_resolution[0]],
-            device=self.device, flatten=False, align_corners=True)
-        self.rays_d = camera.screen_to_ray_dirs(pixel_coords).view(-1, 3)
-        self.rays_d = self.rays_d / self.rays_d.norm(dim=-1, keepdim=True)
+
+        self.rays_d = camera.generate_dirs(width, height).view(-1, 3)
         self.rays_o = camera.position().unsqueeze(0).expand(batch_size, 3)
         #self.rays_o = torch.cat([1*torch.ones([batch_size, 1], device=self.device), 
         #                    1*make_coord_grid([self.image_resolution[0], self.image_resolution[1]], device=self.device)], dim=1)
         #self.rays_d = torch.tensor([-1.0, 0, 0], device=device).unsqueeze(0).repeat(batch_size, 1)
         
-        print(self.rays_d.shape)
-        print(self.rays_o.shape)
+        # print(self.rays_d.shape)
+        # print(self.rays_o.shape)
         
         # Ray marching with near far plane.
         ray_indices, t_starts, t_ends = ray_marching(
-            self.rays_o, self.rays_d, 
+            self.rays_o, self.rays_d,
             scene_aabb=self.scene_aabb, 
             render_step_size = 2,
             grid=self.occpancy_grid
+            # grid=None
         )
         return ray_indices, t_starts, t_ends
     
@@ -271,6 +406,29 @@ if __name__ == '__main__':
                         help="Device to load model to")
     parser.add_argument('--tensorrt',default=False,type=str2bool,
                         help="Use TensorRT acceleration")
+    # rendering args ********* ->
+    parser.add_argument(
+        '--azi',
+        default=0.,
+        type=float,
+        help="the azimuth angle around y-axis from 0-360 degree. 0 aligns positive z-axis."
+    )
+    parser.add_argument(
+        '--polar',
+        default=90.,
+        type=float,
+        help="the elevation angle from 0-180 degree. 0 aligns positive y-axis, 180 aligns negative y-axis"
+    )
+    # default radius can be a ratio of AABB's extent
+    parser.add_argument(
+        '--dist',
+        default=None,
+        type=float,
+        help="distance from center of AABB (i.e. COI) to camera"
+    )
+    
+    # rendering args ********* <-
+    
     args = vars(parser.parse_args())
 
     project_folder_path = os.path.dirname(os.path.abspath(__file__))
@@ -340,8 +498,20 @@ if __name__ == '__main__':
         torch.backends.cudnn.benchmark = True
     device = args['device']
     
-    camera = Camera(device)
     scene = Scene(model, opt, [512,512], batch_size=batch_size)
+    if args['dist'] is None:
+        # set default camera distance to COI by a ratio to AABB
+        args['dist'] = (scene.scene_aabb.max(0)[0] - scene.scene_aabb.min(0)[0])*1.5
+        print("Camera distance to center of AABB:", args['dist'])
+    camera = Camera(
+        device,
+        scene_aabb=scene.scene_aabb,
+        coi=scene.scene_aabb.reshape(2,3).mean(0), # camera lookat center of aabb,
+        azi_deg=args['azi'],
+        polar_deg=args['polar'],
+        dist=args['dist']
+    )
+    
     # One warm up is always slower    
     scene.render(camera)
     
