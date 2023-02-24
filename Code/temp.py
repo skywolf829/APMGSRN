@@ -291,6 +291,7 @@ def vti_to_nc():
     z = z.reshape(dim,order='F')
 
 def np_to_nc(data, name):
+    import netCDF4 as nc
     d = nc.Dataset(os.path.join(data_folder, name), 'w')
     d.createDimension('x')
     d.createDimension('y')
@@ -325,7 +326,6 @@ if __name__ == '__main__':
     channel = channel.reshape()
     
     
-    import netCDF4 as nc
     
     '''
     d = nc.Dataset(os.path.join(data_folder, "channel5200.nc"), 'w')
