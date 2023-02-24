@@ -27,8 +27,8 @@ class Options():
         opt['grid_index']                           = "1,1,1"
         opt['save_name']                            = 'tornado'
         opt['full_shape']                           = None
-        opt['align_corners']                        = False
-        opt['precondition']                         = True
+        opt['align_corners']                        = True
+        opt['precondition']                         = False
         opt['use_tcnn_if_available']                = True
         opt['n_layers']                             = 2       
         opt['nodes_per_layer']                      = 64

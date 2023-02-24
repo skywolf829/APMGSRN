@@ -163,7 +163,7 @@ def download_with_buffer(save_location,
     z_start, z_end, z_step,
     sim_name, timestep, field, num_components, num_workers):
     
-    start_at = 1
+    start_at = 0
     with open(save_location,"wb" if start_at == 1 else "ab") as f:
         print(f"Opened file {save_location}")
         
@@ -238,7 +238,7 @@ if __name__ == '__main__':
             0, 1536, 1, #y
             0, 7680, 1, #z
             name, i, 
-            "p", 1, 100)
+            "p", 1, 64)
         
     print(f"Finished in {time.time() - t0} sec.")
 

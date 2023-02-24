@@ -74,7 +74,7 @@ def build_commands(settings_path):
             x_step = full_shape[0] / ensemble_grid[0]
             y_step = full_shape[1] / ensemble_grid[1]
             z_step = full_shape[2] / ensemble_grid[2]
-            ghost_cells = base_opt['ensemble_ghost_cells']
+            ghost_cells = base_opt['ensemble_ghost_cells']+1
 
             for x_ind in range(ensemble_grid[0]):
                 x_start = int(x_ind * x_step)

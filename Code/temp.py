@@ -289,33 +289,52 @@ def vti_to_nc():
     x = x.reshape(dim,order='F')
     y = y.reshape(dim,order='F')
     z = z.reshape(dim,order='F')
-        
+
+def np_to_nc(data, name):
+    import netCDF4 as nc
+    d = nc.Dataset(os.path.join(data_folder, name), 'w')
+    d.createDimension('x')
+    d.createDimension('y')
+    d.createDimension('z')
+    dims = ['x', 'y', 'z']
+    d.createVariable("data", np.float32, dims)
+    d["data"][:] = data
+    d.close()
+    
 if __name__ == '__main__':
 
-    rotstrat = np.fromfile(os.path.join(data_folder, "rotstrat4096.raw"), 
+    channel = np.fromfile(os.path.join(data_folder, "channel5200.raw"), 
         dtype=np.float32)
-    rotstrat = rotstrat.reshape(128,128,128,32768)
-    rotstrat = rotstrat.reshape(128,128,128,32,32,32)
-    rotstrat = rotstrat.transpose(0,3,1,4,2,5)
-    rotstrat = rotstrat.reshape(4096,4096,4096)
-    
-    import netCDF4 as nc
-    d = nc.Dataset(os.path.join(data_folder, "rotstrat4096.nc"), 'w')
-    d.createDimension('x')
-    d.createDimension('y')
-    d.createDimension('z')
-    dims = ['x', 'y', 'z']
-    d.createVariable("data", np.float32, dims)
-    d["data"][:] = rotstrat
-    d.close()
 
-    d = nc.Dataset(os.path.join(data_folder, "rotstrat512.nc"), 'w')
+    channel = channel.reshape(14400,128,256,256)
+    '''
+    Wrong ways:
+    
+    channel = channel.reshape(40,6,60,256,256,128)
+    channel = channel.transpose(2,3,1,4,0,5)
+    
+    '''
+    channel = channel.reshape(14400//8,1024,256,128)
+    np_to_nc(channel[0], "test0.nc")
+    
+    '''
+    channel = channel.reshape(14400, 256, 256, 128)
+    channel = channel.reshape(60,6,40,256,256,128)
+    channel = channel.transpose(0,3,1,4,2,5)    
+    channel = channel.reshape(10240,1536,7680)
+    np_to_nc(channel[0:512,0:512,0:512], "test1.nc")
+    '''
+    
+    '''
+    d = nc.Dataset(os.path.join(data_folder, "channel5200.nc"), 'w')
     d.createDimension('x')
     d.createDimension('y')
     d.createDimension('z')
     dims = ['x', 'y', 'z']
     d.createVariable("data", np.float32, dims)
-    d["data"][:] = rotstrat[0:512,0:512,0:512]
+    d["data"][:] = channel
     d.close()
+    '''
+    
     
     quit()
