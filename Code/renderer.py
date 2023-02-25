@@ -23,12 +23,13 @@ def imgs_to_video(out_path:str, imgs: np.ndarray, fps:int=15):
     '''
     output a img sequence (N, width, height, 3) to an avi video
     '''
-    width, height = imgs.shape[1:3]
+    import cv2
+    height, width = imgs.shape[1:3]
     video=cv2.VideoWriter(
                     os.path.join(out_path+".avi"),
                     cv2.VideoWriter_fourcc(*'DIVX'),
                     fps,
-                    (width, height)
+                    (height, width)
                 )
     for img in imgs:
         frame = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
@@ -259,8 +260,8 @@ class Camera():
         y = y.flatten().to(self.device)
         
         # move x, y to pixel center, rescale to [-1, 1] and invert y
-        x = (2*(x+0.5)/width - 1) *  torch.tan(torch.deg2rad(self.fov/2))
-        y = (1-2*(y+0.5)/height) * torch.tan(torch.deg2rad(self.fov/2))
+        x = (2*(x+0.5)/width - 1) *  torch.tan(torch.deg2rad(self.fov/2))*(width/height)
+        y = (1 - 2*(y+0.5)/height) * torch.tan(torch.deg2rad(self.fov/2))
         z = -torch.ones(x.shape).to(self.device)
         camera_dirs = torch.stack([x,y,z],-1) # (height*width, 3)
 
@@ -269,7 +270,7 @@ class Camera():
         directions = (c2w[:3,:3] @ camera_dirs.T).T
         directions = directions / torch.linalg.norm(directions, dim=-1, keepdims=True)
         
-        return directions.reshape(width, height, 3)
+        return directions.reshape(height, width, 3)
               
 class Scene(torch.nn.Module):
     def __init__(self, model, opt, 
@@ -312,7 +313,7 @@ class Scene(torch.nn.Module):
         return grid
     
     def generate_viewpoint_rays(self, camera: Camera):
-        width, height = self.image_resolution[:2]
+        height, width = self.image_resolution[:2]
         batch_size = self.image_resolution[0]*self.image_resolution[1]
 
         self.rays_d = camera.generate_dirs(width, height).view(-1, 3)
@@ -426,6 +427,12 @@ if __name__ == '__main__':
         type=float,
         help="distance from center of AABB (i.e. COI) to camera"
     )
+    parser.add_argument(
+        '--hw',
+        default="512,512",
+        type=lambda s: [int(item) for item in s.split(",")],
+        help="comma seperated height and width of image. Ex: --hw=512,512"
+    )
     
     # rendering args ********* <-
     
@@ -498,7 +505,7 @@ if __name__ == '__main__':
         torch.backends.cudnn.benchmark = True
     device = args['device']
     
-    scene = Scene(model, opt, [512,512], batch_size=batch_size)
+    scene = Scene(model, opt, args['hw'], batch_size=batch_size)
     if args['dist'] is None:
         # set default camera distance to COI by a ratio to AABB
         args['dist'] = (scene.scene_aabb.max(0)[0] - scene.scene_aabb.min(0)[0])*1.5
@@ -513,7 +520,12 @@ if __name__ == '__main__':
     )
     
     # One warm up is always slower    
-    scene.render(camera)
+    img = scene.render(camera)
+    
+    from imageio import imsave
+    img = img.cpu().numpy()*255
+    img = img.astype(np.uint8)
+    imsave("Output/gt.png", img)
     
     timesteps = 10
     times = np.zeros([timesteps])
