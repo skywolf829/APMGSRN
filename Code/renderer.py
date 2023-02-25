@@ -103,11 +103,11 @@ class TransferFunction():
                 opacity_a * (1-lerp_values) + opacity_b*lerp_values
         
     def color_at_value(self, value):
-        value_ind = (value[:,0]*self.num_dict_entries).long().clamp(0,self.num_dict_entries)
+        value_ind = (value[:,0]*self.num_dict_entries).long().clamp(0,self.num_dict_entries-1)
         return torch.index_select(self.precomputed_color_map, dim=0, index=value_ind)
     
     def opacity_at_value(self, value):
-        value_ind = (value[:,0]*self.num_dict_entries).long().clamp(0,self.num_dict_entries)
+        value_ind = (value[:,0]*self.num_dict_entries).long().clamp(0,self.num_dict_entries-1)
         return torch.index_select(self.precomputed_opacity_map, dim=0, index=value_ind)
 
 class Camera():
@@ -290,7 +290,7 @@ class Scene(torch.nn.Module):
         self.batch_size : int= batch_size
         
         self.transfer_function = TransferFunction(self.device)
-        self.occpancy_grid = self.precompute_occupancy_grid()
+        # self.occpancy_grid = self.precompute_occupancy_grid()
         torch.cuda.empty_cache()
    
     def precompute_occupancy_grid(self, grid_res:List[int]=[64, 64, 64]):
@@ -330,8 +330,8 @@ class Scene(torch.nn.Module):
             self.rays_o, self.rays_d,
             scene_aabb=self.scene_aabb, 
             render_step_size = 2,
-            grid=self.occpancy_grid
-            # grid=None
+            # grid=self.occpancy_grid
+            grid=None
         )
         return ray_indices, t_starts, t_ends
     
@@ -358,10 +358,10 @@ class Scene(torch.nn.Module):
         output = torch.empty(output_shape, 
             dtype=torch.float32, 
             device=self.device)
-        
-        for start in range(0, coords.shape[0], self.batch_size):
-            output[start:min(start+self.batch_size, coords.shape[0])] = \
-                model(coords[start:min(start+self.batch_size, coords.shape[0])])
+        with torch.no_grad():
+            for start in range(0, coords.shape[0], self.batch_size):
+                output[start:min(start+self.batch_size, coords.shape[0])] = \
+                    model(coords[start:min(start+self.batch_size, coords.shape[0])])
         return output
 
     def render_rays(self, t_starts, t_ends, ray_indices):
@@ -508,7 +508,7 @@ if __name__ == '__main__':
     scene = Scene(model, opt, args['hw'], batch_size=batch_size)
     if args['dist'] is None:
         # set default camera distance to COI by a ratio to AABB
-        args['dist'] = (scene.scene_aabb.max(0)[0] - scene.scene_aabb.min(0)[0])*1.5
+        args['dist'] = (scene.scene_aabb.max(0)[0] - scene.scene_aabb.min(0)[0])*1.8
         print("Camera distance to center of AABB:", args['dist'])
     camera = Camera(
         device,
@@ -521,34 +521,33 @@ if __name__ == '__main__':
     
     # One warm up is always slower    
     img = scene.render(camera)
-    
     from imageio import imsave
     img = img.cpu().numpy()*255
     img = img.astype(np.uint8)
     imsave("Output/gt.png", img)
     
-    timesteps = 10
-    times = np.zeros([timesteps])
-    for i in range(timesteps):
-        t0 = sync_time()
-        img = scene.render(camera).cpu().numpy()     
-        t1 = sync_time()
-        times[i] = t1-t0
-    print(times)
+    # timesteps = 10
+    # times = np.zeros([timesteps])
+    # for i in range(timesteps):
+    #     t0 = sync_time()
+    #     img = scene.render(camera).cpu().numpy()     
+    #     t1 = sync_time()
+    #     times[i] = t1-t0
+    # print(times)
     
-    print(f"Average frame time: {times.mean():0.04f}")
-    print(f"Min frame time: {times.min():0.04f}")
-    print(f"Max frame time: {times.max():0.04f}")
-    print(f"Average FPS: {1/times.mean():0.02f}")
-    #plt.imshow(np.flip(img, 0))
-    #plt.show()
+    # print(f"Average frame time: {times.mean():0.04f}")
+    # print(f"Min frame time: {times.min():0.04f}")
+    # print(f"Max frame time: {times.max():0.04f}")
+    # print(f"Average FPS: {1/times.mean():0.02f}")
+    # #plt.imshow(np.flip(img, 0))
+    # #plt.show()
     
-    app = QApplication([])
+    # app = QApplication([])
 
-    window = MainWindow()
-    img = img*255
-    img = img.astype(np.uint8)
-    window.set_render_image(img)
-    window.show()
+    # window = MainWindow()
+    # img = img*255
+    # img = img.astype(np.uint8)
+    # window.set_render_image(img)
+    # window.show()
 
-    app.exec()
+    # app.exec()
