@@ -23,10 +23,7 @@ class Ensemble_SRN(nn.Module):
         super().__init__()
         self.opt = opt
         ensemble_grid = [eval(i) for i in opt['ensemble_grid'].split(',')]
-        full_shape = get_data_size(os.path.join(data_folder, opt['data']))
-        steps = [full_shape[0] / ensemble_grid[0], 
-            full_shape[1] / ensemble_grid[1],
-            full_shape[2] / ensemble_grid[2]]
+        full_shape = opt['full_shape']
         
         models = []
         unsorted_model_dict = {}
