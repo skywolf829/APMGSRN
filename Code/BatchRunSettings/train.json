@@ -1,18 +1,20 @@
 [
     [ "train.py",
         {        
-            "save_name": "temp",
+            "save_name": "Supernova_AMGSRN_ensemble",
             "model": "AMGSRN",
+            "ensemble": true,
+            "ensemble_grid": "2,2,2",
+            "ensemble_ghost_cells": 0,
             "data": "Supernova.nc",
             "n_features": 1,
-            "n_grids": 16,
-            "feature_grid_shape": "16,16,16",
+            "n_grids": 8,
+            "feature_grid_shape": "64,64,64",
             "n_layers": 2,
-            "nodes_per_layer": 32,
+            "nodes_per_layer": 64,
             "precondition": false,
-            "log_features_every": 100,
+            "log_features_every": 0,
             "lr": 0.01,
-            "iterations": 10000,
-            "points_per_iteration": 100000
-    }]
+            "iterations": 50000
+    }],
 ]
