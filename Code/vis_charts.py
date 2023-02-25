@@ -226,7 +226,7 @@ def model_size_performance_chart():
         "isotropic_2**24": 41.646,
         "nyx_2**24": 47.054,
         "plume_2**24": 59.358,
-        "supernova_2**24": 52.402 # need to fix
+        "supernova_2**24": 50.414 # need to fix
     }
 
     data_to_figure(supernova_results, "Supernova")    
