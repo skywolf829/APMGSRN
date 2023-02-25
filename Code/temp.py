@@ -314,9 +314,9 @@ if __name__ == '__main__':
     channel = channel.transpose(2,3,1,4,0,5)
     
     '''
-    channel = channel.reshape(30,6,80,128,256,256)
-    channel = channel.transpose(2,3,1,4,0,5)    
-    channel = channel.reshape(10240,1536,7680)
+    channel = channel.reshape(80,6,30,128,256,256)
+    channel = channel.transpose(0,3,1,4,2,5)    
+    channel = channel.reshape(7680,1536, 10240)
     np_to_nc(channel[0:512,0:512,0:512], "test1.nc")
     
     
