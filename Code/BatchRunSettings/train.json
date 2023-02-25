@@ -16,5 +16,5 @@
             "log_features_every": 0,
             "lr": 0.01,
             "iterations": 50000
-    }],
+    }]
 ]
