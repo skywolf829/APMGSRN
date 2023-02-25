@@ -706,3 +706,16 @@ def visualize_traces(traces):
     ax.set_zlim([-1, 1])
     plt.title("Streamline traces")
     plt.show()
+    
+def report_gpumem(device=0):
+  toGb = 1024*1024*1024
+  totalm = torch.cuda.get_device_properties(0).total_memory / toGb
+  max_alloc = torch.cuda.max_memory_allocated() / toGb
+  max_rsv = torch.cuda.max_memory_reserved() / toGb
+
+  palloc = 100*max_alloc / totalm
+  prsv = 100*max_rsv / totalm
+
+  print(f'total GPU Mem: {totalm:.4}Gb')
+  print(f'max allocated percentage: {palloc:8.4}% --- usage: {max_alloc:.4}Gb')
+  print(f'max allocated percentage: {prsv:8.4}% --- usage: {max_rsv:.4}Gb')
