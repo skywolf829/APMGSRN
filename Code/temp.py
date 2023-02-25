@@ -314,16 +314,11 @@ if __name__ == '__main__':
     channel = channel.transpose(2,3,1,4,0,5)
     
     '''
-    channel = channel.reshape(14400//8,1024,256,128)
-    np_to_nc(channel[0], "test0.nc")
-    
-    '''
-    channel = channel.reshape(14400, 256, 256, 128)
-    channel = channel.reshape(60,6,40,256,256,128)
+    channel = channel.reshape(80,6,30,128,256,256)
     channel = channel.transpose(0,3,1,4,2,5)    
     channel = channel.reshape(10240,1536,7680)
     np_to_nc(channel[0:512,0:512,0:512], "test1.nc")
-    '''
+    
     
     '''
     d = nc.Dataset(os.path.join(data_folder, "channel5200.nc"), 'w')
