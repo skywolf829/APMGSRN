@@ -78,17 +78,16 @@ class fVSRN(nn.Module):
                 self.decoder = init_decoder_pytorch()
         else:
             self.decoder = init_decoder_pytorch()
-
-    def set_min_max(self, min, max):   
+            
         self.register_buffer(
             "volume_min",
-            torch.tensor([min], requires_grad=False),
-            persistent=True
+            torch.tensor([self.opt['data_min']], requires_grad=False, dtype=torch.float32),
+            persistent=False
         )
         self.register_buffer(
             "volume_max",
-            torch.tensor([max], requires_grad=False),
-            persistent=True
+            torch.tensor([self.opt['data_max']], requires_grad=False, dtype=torch.float32),
+            persistent=False
         )
                             
     def forward(self, x):     

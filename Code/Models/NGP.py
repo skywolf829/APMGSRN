@@ -137,17 +137,15 @@ class NGP(nn.Module):
             *[LinearLayer(self.decoder_dim, self.decoder_dim) for i in range(self.decoder_layers-1)],
             nn.Linear(self.decoder_dim, self.decoder_outdim)
         )
-     
-    def set_min_max(self, min, max):   
         self.register_buffer(
             "volume_min",
-            torch.tensor([min], requires_grad=False),
-            persistent=True
+            torch.tensor([self.opt['data_min']], requires_grad=False, dtype=torch.float32),
+            persistent=False
         )
         self.register_buffer(
             "volume_max",
-            torch.tensor([max], requires_grad=False),
-            persistent=True
+            torch.tensor([self.opt['data_max']], requires_grad=False, dtype=torch.float32),
+            persistent=False
         )
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -193,16 +191,15 @@ class NGP_TCNN(nn.Module):
                 "n_hidden_layers": self.decoder_layers,
             },
         )
-    def set_min_max(self, min, max):   
         self.register_buffer(
             "volume_min",
-            torch.tensor([min], requires_grad=False),
-            persistent=True
+            torch.tensor([self.opt['data_min']], requires_grad=False, dtype=torch.float32),
+            persistent=False
         )
         self.register_buffer(
             "volume_max",
-            torch.tensor([max], requires_grad=False),
-            persistent=True
+            torch.tensor([self.opt['data_max']], requires_grad=False, dtype=torch.float32),
+            persistent=False
         )
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:

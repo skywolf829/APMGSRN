@@ -249,18 +249,17 @@ class AMGSRN(nn.Module):
 
         self.reset_parameters()
     
-    def set_min_max(self, min, max):   
         self.register_buffer(
             "volume_min",
-            torch.tensor([min], requires_grad=False),
-            persistent=True
+            torch.tensor([self.opt['data_min']], requires_grad=False, dtype=torch.float32),
+            persistent=False
         )
         self.register_buffer(
             "volume_max",
-            torch.tensor([max], requires_grad=False),
-            persistent=True
+            torch.tensor([self.opt['data_max']], requires_grad=False, dtype=torch.float32),
+            persistent=False
         )
-        
+
     def reset_parameters(self):
         with torch.no_grad():
             feat_grid_shape = self.feature_grid_shape
