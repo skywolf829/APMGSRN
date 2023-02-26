@@ -248,16 +248,19 @@ class AMGSRN(nn.Module):
             self.decoder = init_decoder_pytorch()
               
         
-        self.volume_min = self.register_buffer(
-            torch.tensor([0], requires_grad=False),
+        self.register_buffer(
+            "volume_min",
+            torch.tensor([0.0], requires_grad=False),
             persistent=True
         )
-        self.volume_max = self.register_buffer(
-            torch.tensor([1], requires_grad=False),
+        self.register_buffer(
+            "volume_max",
+            torch.tensor([1.0], requires_grad=False),
             persistent=True
         )
 
         self.reset_parameters()
+    
               
     def reset_parameters(self):
         with torch.no_grad():
@@ -411,7 +414,7 @@ class AMGSRN(nn.Module):
         if(self.requires_padded_feats):
             feats = F.pad(feats, (0, self.padding_size), value=1.0) 
         y = self.decoder(feats).float()
-        y = y * (self.volume_min - self.volume_max) + self.volume_min
+        y = y * (self.volume_max - self.volume_min + 1e-8) + self.volume_min
         return y
 
         
