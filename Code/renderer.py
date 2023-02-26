@@ -37,11 +37,77 @@ def imgs_to_video(out_path:str, imgs: np.ndarray, fps:int=15):
     video.release()
 
 class TransferFunction():
-    def __init__(self, device):
+    def __init__(self, device, 
+                 min_value = 0.0, max_value = 1.0, colormap=None):
         self.device = device
         
+        self.color_controlpoint_min_value = min_value
+        self.color_controlpoint_max_value = max_value
+        self.opacity_controlpoint_min_value = min_value
+        self.opacity_controlpoint_max_value = max_value
         self.num_dict_entries = 4096
-        self.coolwarm()
+        if(colormap is None):
+            self.coolwarm()
+        else:
+            self.loadColormap(colormap)
+    
+    def loadColormap(self, colormapname):
+        '''
+        Loads a colormap exported from Paraview. Assumes colormapname is a 
+        file path to the json to be loaded
+        '''
+        project_folder_path = os.path.dirname(os.path.abspath(__file__))
+        project_folder_path = os.path.join(project_folder_path, "..")
+        colormaps_folder = os.path.join(project_folder_path, "Colormaps")
+        file_location = os.path.join(colormaps_folder, colormapname)
+        import json
+        if(os.path.exists(file_location)):
+            color_data = json.load(file_location)
+        else:
+            print("Colormap file doesn't exist, reverting to coolwarm")
+            self.coolwarm()
+            return
+        
+        # Load all RGB data
+        rgb_data = color_data['RGBPoints']
+        self.rgb_conrtol_points = torch.tensor(rgb_data[0::4],
+                                dtype=torch.float32,
+                                device=self.device)
+        self.rgb_conrtol_points -= self.rgb_conrtol_points[0]
+        self.rgb_conrtol_points /= self.rgb_conrtol_points[-1]
+        r = torch.tensor(rgb_data[1::4],
+                        dtype=torch.float32,
+                        device=self.device)
+        g = torch.tensor(rgb_data[2::4],
+                        dtype=torch.float32,
+                        device=self.device)
+        b = torch.tensor(rgb_data[3::4],
+                        dtype=torch.float32,
+                        device=self.device)
+        self.color_values = torch.stack([r,g,b], dim=1)
+        
+        
+        # If alpha points set, load those, otherwise ramp opacity  
+        if("Points" in color_data.keys()):
+            a_data = color_data['Points']
+            self.opacity_conrtol_points = torch.tensor(a_data[0::4],
+                                    dtype=torch.float32,
+                                    device=self.device)            
+            self.opacity_conrtol_points -= self.opacity_conrtol_points[0]
+            self.opacity_conrtol_points /= self.opacity_conrtol_points[-1]
+            self.opacity_values = torch.tensor(a_data[1::4],
+                                    dtype=torch.float32,
+                                    device=self.device)
+
+        else:
+            self.opacity_control_points = torch.tensor([0.0, 1.0],
+                                dtype=torch.float32,
+                                device=self.device)
+            self.opacity_values = torch.tensor([0.0, 1.0],
+                                dtype=torch.float32,
+                                device=self.device)
+            
+        self.precompute_maps()
              
     def coolwarm(self):
         self.color_control_points = torch.tensor([0.0, 0.5, 1.0],
@@ -59,7 +125,9 @@ class TransferFunction():
         self.opacity_values = torch.tensor([0.0, 1.0],
                                 dtype=torch.float32,
                                 device=self.device)
+        self.precompute_maps()
         
+    def precompute_maps(self):
         self.precomputed_color_map = torch.zeros([self.num_dict_entries, 3],
                                 dtype=torch.float32,
                                 device=self.device)
@@ -101,12 +169,14 @@ class TransferFunction():
             
             self.precomputed_opacity_map[start_ind:start_ind+num_elements] =\
                 opacity_a * (1-lerp_values) + opacity_b*lerp_values
-        
+
     def color_at_value(self, value):
+        value = (value - self.min_value) / (self.max_value - self.min_value)
         value_ind = (value[:,0]*self.num_dict_entries).long().clamp(0,self.num_dict_entries-1)
         return torch.index_select(self.precomputed_color_map, dim=0, index=value_ind)
     
     def opacity_at_value(self, value):
+        value = (value - self.min_value) / (self.max_value - self.min_value)
         value_ind = (value[:,0]*self.num_dict_entries).long().clamp(0,self.num_dict_entries-1)
         return torch.index_select(self.precomputed_opacity_map, dim=0, index=value_ind)
 
@@ -274,7 +344,8 @@ class Camera():
               
 class Scene(torch.nn.Module):
     def __init__(self, model, opt, 
-        image_resolution:Tuple[int], batch_size : int):
+        image_resolution:Tuple[int], 
+        batch_size : int, transfer_function:TransferFunction):
         super().__init__()
         self.model = model
         self.opt : Dict = opt
@@ -289,7 +360,7 @@ class Scene(torch.nn.Module):
         self.image_resolution : Tuple[int]= image_resolution
         self.batch_size : int= batch_size
         
-        self.transfer_function = TransferFunction(self.device)
+        self.transfer_function = transfer_function
         # self.occpancy_grid = self.precompute_occupancy_grid()
         torch.cuda.empty_cache()
    
@@ -407,6 +478,8 @@ if __name__ == '__main__':
                         help="Device to load model to")
     parser.add_argument('--tensorrt',default=False,type=str2bool,
                         help="Use TensorRT acceleration")
+    parser.add_argument('--colormap',default=None,type=str,
+                        help="The colormap file to use for visualization.")
     # rendering args ********* ->
     parser.add_argument(
         '--azi',
@@ -505,7 +578,8 @@ if __name__ == '__main__':
         torch.backends.cudnn.benchmark = True
     device = args['device']
     
-    scene = Scene(model, opt, args['hw'], batch_size=batch_size)
+    tf = TransferFunction(device, model.min(), model.max(), args['colormap'])
+    scene = Scene(model, opt, args['hw'], batch_size, tf)
     if args['dist'] is None:
         # set default camera distance to COI by a ratio to AABB
         args['dist'] = (scene.scene_aabb.max(0)[0] - scene.scene_aabb.min(0)[0])*1.8

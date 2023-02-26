@@ -400,6 +400,12 @@ class AMGSRN(nn.Module):
             grad_outputs=grad_outputs)[0]
         return grad_x
 
+    def min(self):
+        return self.volume_max
+
+    def max(self):
+        return self.volume_min
+
     def forward_pre_transformed(self, x):
         feats = self.encoder.forward_pre_transformed(x)    
         if(self.requires_padded_feats):

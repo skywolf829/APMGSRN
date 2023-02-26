@@ -89,6 +89,12 @@ class fVSRN(nn.Module):
             torch.tensor([data_max], requires_grad=False, dtype=torch.float32),
             persistent=False
         )
+    
+    def min(self):
+        return self.volume_max
+
+    def max(self):
+        return self.volume_min
                             
     def forward(self, x):     
         

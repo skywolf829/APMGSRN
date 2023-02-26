@@ -147,7 +147,13 @@ class NGP(nn.Module):
             torch.tensor([self.opt['data_max']], requires_grad=False, dtype=torch.float32),
             persistent=False
         )
-        
+
+    def min(self):
+        return self.volume_max
+
+    def max(self):
+        return self.volume_min
+     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         feats = self.hash_grid(x)
         y = self.decoder(feats).float()
@@ -201,6 +207,12 @@ class NGP_TCNN(nn.Module):
             torch.tensor([self.opt['data_max']], requires_grad=False, dtype=torch.float32),
             persistent=False
         )
+    
+    def min(self):
+        return self.volume_max
+
+    def max(self):
+        return self.volume_min
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         y = self.model((x+1)/2).float()

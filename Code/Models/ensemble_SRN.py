@@ -77,7 +77,18 @@ class Ensemble_SRN(nn.Module):
             persistent=False)
         self.models = torch.nn.ModuleList(models)
 
+    def min(self):
+        val = self.models[0].min()
+        for i in range(1, len(self.models)):
+            val = torch.min(val, self.models[i].min())
+        return val
 
+    def max(self):
+        val = self.models[0].max()
+        for i in range(1, len(self.models)):
+            val = torch.max(val, self.models[i].max())
+        return val
+    
     def forward(self, x):    
 
         # divide by slightly larger than 2
