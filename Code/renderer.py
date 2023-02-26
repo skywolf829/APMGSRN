@@ -41,10 +41,8 @@ class TransferFunction():
                  min_value = 0.0, max_value = 1.0, colormap=None):
         self.device = device
         
-        self.color_controlpoint_min_value = min_value
-        self.color_controlpoint_max_value = max_value
-        self.opacity_controlpoint_min_value = min_value
-        self.opacity_controlpoint_max_value = max_value
+        self.min_value = min_value
+        self.max_value = max_value
         self.num_dict_entries = 4096
         if(colormap is None):
             self.coolwarm()
