@@ -193,14 +193,15 @@ class NGP_TCNN(nn.Module):
                 "n_hidden_layers": self.decoder_layers,
             },
         )
+    def set_min_max(self, min, max):   
         self.register_buffer(
             "volume_min",
-            torch.tensor([0], requires_grad=False),
+            torch.tensor([min], requires_grad=False),
             persistent=True
         )
         self.register_buffer(
             "volume_max",
-            torch.tensor([1], requires_grad=False),
+            torch.tensor([max], requires_grad=False),
             persistent=True
         )
     
