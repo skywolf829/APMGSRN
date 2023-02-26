@@ -476,6 +476,8 @@ if __name__ == '__main__':
 
         dataset = Dataset(opt)
         model = create_model(opt)
+        model.volume_min = dataset.min()
+        model.volume_max = dataset.max()
     else:        
         opt = load_options(os.path.join(save_folder, args["load_from"]))
         opt["device"] = args["device"]

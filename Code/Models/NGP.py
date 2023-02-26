@@ -178,6 +178,16 @@ class NGP_TCNN(nn.Module):
                 "n_hidden_layers": self.decoder_layers,
             },
         )
+        self.volume_min = self.register_buffer(
+            torch.tensor([0], requires_grad=False),
+            persistent=True
+        )
+        self.volume_max = self.register_buffer(
+            torch.tensor([1], requires_grad=False),
+            persistent=True
+        )
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.model((x+1)/2).float()
+        y = self.model((x+1)/2).float()
+        y = y * (self.volume_min - self.volume_max) + self.volume_min
+        return y
