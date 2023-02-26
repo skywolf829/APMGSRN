@@ -475,8 +475,8 @@ if __name__ == '__main__':
                 opt[k] = args[k]
 
         dataset = Dataset(opt)
-        opt['data_min'] = dataset.min()
-        opt['data_max'] = dataset.max()
+        opt['data_min'] = dataset.min().item()
+        opt['data_max'] = dataset.max().item()
         model = create_model(opt)
         model = model.to(opt['device'])
     else:        
