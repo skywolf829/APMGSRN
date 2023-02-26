@@ -133,14 +133,16 @@ def create_model(opt):
             opt['n_dims'], opt['n_outputs'], opt['nodes_per_layer'], 
             opt['n_layers'], 
             opt['num_positional_encoding_terms'], opt['use_tcnn_if_available'],
-            opt['use_bias'], opt['requires_padded_feats'])
+            opt['use_bias'], opt['requires_padded_feats'],
+            opt['data_min'], opt['data_max'])
         elif(opt['model'] == "AMGSRN"):
             from Models.AMGSRN import AMGSRN
             return AMGSRN(opt['n_grids'], opt['n_features'], 
             [eval(i) for i in opt['feature_grid_shape'].split(",")], 
             opt['n_dims'], opt['n_outputs'], opt['nodes_per_layer'], 
             opt['n_layers'], opt['use_tcnn_if_available'], opt['use_bias'],
-            opt['requires_padded_feats'])
+            opt['requires_padded_feats'],
+            opt['data_min'], opt['data_max'])
         elif(opt['model'] == "NGP"):
             from Models.NGP import NGP
             return NGP(opt)

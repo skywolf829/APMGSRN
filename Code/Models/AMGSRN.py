@@ -179,7 +179,8 @@ class AMGSRN(nn.Module):
     def __init__(self, n_grids: int, n_features: int, 
         feature_grid_shape: List[int], n_dims : int, 
         n_outputs: int, nodes_per_layer: int, n_layers: int, 
-        use_tcnn:bool,use_bias:bool,requires_padded_feats:bool):
+        use_tcnn:bool,use_bias:bool,requires_padded_feats:bool,
+        data_min:float, data_max:float):
         super().__init__()
         
         self.n_grids : int = n_grids
@@ -251,12 +252,12 @@ class AMGSRN(nn.Module):
     
         self.register_buffer(
             "volume_min",
-            torch.tensor([self.opt['data_min']], requires_grad=False, dtype=torch.float32),
+            torch.tensor([data_min], requires_grad=False, dtype=torch.float32),
             persistent=False
         )
         self.register_buffer(
             "volume_max",
-            torch.tensor([self.opt['data_max']], requires_grad=False, dtype=torch.float32),
+            torch.tensor([data_max], requires_grad=False, dtype=torch.float32),
             persistent=False
         )
 
