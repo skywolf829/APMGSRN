@@ -149,10 +149,10 @@ class NGP(nn.Module):
         )
 
     def min(self):
-        return self.volume_max
+        return self.volume_min
 
     def max(self):
-        return self.volume_min
+        return self.volume_max
      
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         feats = self.hash_grid(x)

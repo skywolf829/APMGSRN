@@ -60,7 +60,8 @@ class TransferFunction():
         file_location = os.path.join(colormaps_folder, colormapname)
         import json
         if(os.path.exists(file_location)):
-            color_data = json.load(file_location)
+            with open(file_location) as f:
+                color_data = json.load(f)[0]
         else:
             print("Colormap file doesn't exist, reverting to coolwarm")
             self.coolwarm()
@@ -68,11 +69,11 @@ class TransferFunction():
         
         # Load all RGB data
         rgb_data = color_data['RGBPoints']
-        self.rgb_conrtol_points = torch.tensor(rgb_data[0::4],
+        self.color_control_points = torch.tensor(rgb_data[0::4],
                                 dtype=torch.float32,
                                 device=self.device)
-        self.rgb_conrtol_points -= self.rgb_conrtol_points[0]
-        self.rgb_conrtol_points /= self.rgb_conrtol_points[-1]
+        self.color_control_points = self.color_control_points - self.color_control_points[0]
+        self.color_control_points = self.color_control_points / self.color_control_points[-1]
         r = torch.tensor(rgb_data[1::4],
                         dtype=torch.float32,
                         device=self.device)
@@ -88,11 +89,11 @@ class TransferFunction():
         # If alpha points set, load those, otherwise ramp opacity  
         if("Points" in color_data.keys()):
             a_data = color_data['Points']
-            self.opacity_conrtol_points = torch.tensor(a_data[0::4],
+            self.opacity_control_points = torch.tensor(a_data[0::4],
                                     dtype=torch.float32,
                                     device=self.device)            
-            self.opacity_conrtol_points -= self.opacity_conrtol_points[0]
-            self.opacity_conrtol_points /= self.opacity_conrtol_points[-1]
+            self.opacity_control_points = self.opacity_control_points - self.opacity_control_points[0]
+            self.opacity_control_points = self.opacity_control_points / self.opacity_control_points[-1]
             self.opacity_values = torch.tensor(a_data[1::4],
                                     dtype=torch.float32,
                                     device=self.device)
@@ -163,8 +164,7 @@ class TransferFunction():
             
             lerp_values = torch.arange(0.0, 1.0, step=(1/num_elements),
                             dtype=torch.float32,
-                            device=self.device).unsqueeze(1)
-            
+                            device=self.device).unsqueeze(1)[0:num_elements]
             self.precomputed_opacity_map[start_ind:start_ind+num_elements] =\
                 opacity_a * (1-lerp_values) + opacity_b*lerp_values
 
@@ -577,6 +577,7 @@ if __name__ == '__main__':
     device = args['device']
     
     tf = TransferFunction(device, model.min(), model.max(), args['colormap'])
+    
     scene = Scene(model, opt, args['hw'], batch_size, tf)
     if args['dist'] is None:
         # set default camera distance to COI by a ratio to AABB
