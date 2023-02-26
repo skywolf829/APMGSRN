@@ -390,7 +390,8 @@ class Camera():
 class Scene(torch.nn.Module):
     def __init__(self, model, full_shape, 
         image_resolution:Tuple[int], 
-        batch_size : int, transfer_function:TransferFunction,
+        batch_size : int, spp : int,
+        transfer_function:TransferFunction,
         device):
         super().__init__()
         self.model = model
@@ -403,8 +404,8 @@ class Scene(torch.nn.Module):
             device=self.device)
         print(f"Bounding box: {self.scene_aabb}")
         self.image_resolution : Tuple[int]= image_resolution
-        self.batch_size : int= batch_size
-        
+        self.batch_size : int = batch_size
+        self.spp = spp
         self.transfer_function = transfer_function
         self.occupancy_grid = self.precompute_occupancy_grid()
         torch.cuda.empty_cache()
@@ -450,7 +451,7 @@ class Scene(torch.nn.Module):
         )
         return ray_indices, t_starts, t_ends
     
-    def generate_viewpoint_rays_batch(self, camera: Camera, stride_x = 1, stride_y = 1):
+    def generate_viewpoint_rays_batch(self, camera: Camera):
         height, width = self.image_resolution[:2]
         batch_size = self.image_resolution[0]*self.image_resolution[1]
 
@@ -466,9 +467,8 @@ class Scene(torch.nn.Module):
         ray_indices, t_starts, t_ends = ray_marching(
             self.rays_o, self.rays_d,
             scene_aabb=self.scene_aabb, 
-            render_step_size = torch.max(self.scene_aabb)/1024.0,
+            render_step_size = torch.max(self.scene_aabb)/self.spp,
             grid=self.occupancy_grid
-            #grid=None
         )
         return ray_indices, t_starts, t_ends
     
@@ -539,7 +539,7 @@ class Scene(torch.nn.Module):
             colors = self.render_rays(t_starts, t_ends, ray_indices, self.image_resolution[0]*self.image_resolution[1])
         return colors.reshape(self.image_resolution[0], self.image_resolution[1], 3)
 
-    def render_batch(self, camera):
+    def render_checkerboard(self, camera):
         height, width = self.image_resolution[:2]
         colors = torch.empty([height, width, 3], device=self.device, dtype=torch.float32)
         
@@ -567,7 +567,7 @@ class Scene(torch.nn.Module):
                     ray_indices, t_starts, t_ends = ray_marching(
                         self.rays_o, self.rays_d,
                         scene_aabb=self.scene_aabb, 
-                        render_step_size = torch.max(self.scene_aabb)/1024.0,
+                        render_step_size = torch.max(self.scene_aabb)/self.spp,
                         grid=self.occupancy_grid
                     )
                     colors[y::y_stride,x::x_stride,:] = self.render_rays(
@@ -628,6 +628,12 @@ if __name__ == '__main__':
         default=None,
         type=float,
         help="distance from center of AABB (i.e. COI) to camera"
+    )
+    parser.add_argument(
+        '--spp',
+        default=256,
+        type=int,
+        help="(max) samples per pixel"
     )
     parser.add_argument(
         '--hw',
@@ -713,12 +719,13 @@ if __name__ == '__main__':
     device = args['device']
     
     tf = TransferFunction(device, model.min(), model.max(), args['colormap'])
-    
-    scene = Scene(model, full_shape, args['hw'], batch_size, tf, device)
+        
+    scene = Scene(model, full_shape, args['hw'], batch_size, args['spp'], tf, device)
     if args['dist'] is None:
         # set default camera distance to COI by a ratio to AABB
         args['dist'] = (scene.scene_aabb.max(0)[0] - scene.scene_aabb.min(0)[0])*1.8
         print("Camera distance to center of AABB:", args['dist'])
+        
     camera = Camera(
         device,
         scene_aabb=scene.scene_aabb,
@@ -729,7 +736,7 @@ if __name__ == '__main__':
     )
     
     # One warm up is always slower    
-    img = scene.render_batch(camera)
+    img = scene.render_checkerboard(camera)
     from imageio import imsave
     img = img.cpu().numpy()*255
     img = img.astype(np.uint8)
@@ -741,7 +748,7 @@ if __name__ == '__main__':
     for i in range(timesteps):
         torch.cuda.empty_cache()
         t0 = sync_time()
-        img = scene.render_batch(camera).cpu().numpy()     
+        img = scene.render_checkerboard(camera).cpu().numpy()     
         t1 = sync_time()
         times[i] = t1-t0
     print(times)
