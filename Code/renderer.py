@@ -359,7 +359,7 @@ class Scene(torch.nn.Module):
         self.batch_size : int= batch_size
         
         self.transfer_function = transfer_function
-        # self.occpancy_grid = self.precompute_occupancy_grid()
+        self.occpancy_grid = self.precompute_occupancy_grid()
         torch.cuda.empty_cache()
    
     def precompute_occupancy_grid(self, grid_res:List[int]=[64, 64, 64]):
@@ -398,9 +398,9 @@ class Scene(torch.nn.Module):
         ray_indices, t_starts, t_ends = ray_marching(
             self.rays_o, self.rays_d,
             scene_aabb=self.scene_aabb, 
-            render_step_size = 2,
-            # grid=self.occpancy_grid
-            grid=None
+            render_step_size = 1,
+            grid=self.occpancy_grid
+            #grid=None
         )
         return ray_indices, t_starts, t_ends
     
@@ -421,7 +421,6 @@ class Scene(torch.nn.Module):
         return rgbs, torch.log(1+alphas)
 
     def forward_maxpoints(self, model, coords):
-        print(coords.shape)
         output_shape = list(coords.shape)
         output_shape[-1] = 1
         output = torch.empty(output_shape, 
