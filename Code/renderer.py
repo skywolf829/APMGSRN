@@ -442,10 +442,11 @@ class Scene(torch.nn.Module):
         # print(self.rays_d.shape)
         # print(self.rays_o.shape)
         
+        max_view_dist = (self.scene_aabb[3]**2 + self.scene_aabb[4]**2 + self.scene_aabb[5]**2)**0.5
         ray_indices, t_starts, t_ends = ray_marching(
             self.rays_o, self.rays_d,
             scene_aabb=self.scene_aabb, 
-            render_step_size = torch.max(self.scene_aabb)/1024.0,
+            render_step_size = max_view_dist/self.spp,
             grid=self.occupancy_grid
             #grid=None
         )
@@ -463,11 +464,11 @@ class Scene(torch.nn.Module):
         
         # print(self.rays_d.shape)
         # print(self.rays_o.shape)
-        
+        max_view_dist = (self.scene_aabb[3]**2 + self.scene_aabb[4]**2 + self.scene_aabb[5]**2)**0.5
         ray_indices, t_starts, t_ends = ray_marching(
             self.rays_o, self.rays_d,
             scene_aabb=self.scene_aabb, 
-            render_step_size = torch.max(self.scene_aabb)/self.spp,
+            render_step_size = max_view_dist/self.spp,
             grid=self.occupancy_grid
         )
         return ray_indices, t_starts, t_ends
@@ -549,7 +550,8 @@ class Scene(torch.nn.Module):
         
         y_leftover = height % y_stride
         x_leftover = width % x_stride
-                    
+        
+        max_view_dist = (self.scene_aabb[3]**2 + self.scene_aabb[4]**2 + self.scene_aabb[5]**2)**0.5
         with torch.no_grad():
             all_rays = camera.generate_dirs(width, height)
             cam_origin = camera.position().unsqueeze(0)
@@ -567,7 +569,7 @@ class Scene(torch.nn.Module):
                     ray_indices, t_starts, t_ends = ray_marching(
                         self.rays_o, self.rays_d,
                         scene_aabb=self.scene_aabb, 
-                        render_step_size = torch.max(self.scene_aabb)/self.spp,
+                        render_step_size = max_view_dist/self.spp,
                         grid=self.occupancy_grid
                     )
                     colors[y::y_stride,x::x_stride,:] = self.render_rays(
