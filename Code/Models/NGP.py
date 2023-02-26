@@ -137,14 +137,16 @@ class NGP(nn.Module):
             *[LinearLayer(self.decoder_dim, self.decoder_dim) for i in range(self.decoder_layers-1)],
             nn.Linear(self.decoder_dim, self.decoder_outdim)
         )
+     
+    def set_min_max(self, min, max):   
         self.register_buffer(
             "volume_min",
-            torch.tensor([0.0], requires_grad=False),
+            torch.tensor([min], requires_grad=False),
             persistent=True
         )
         self.register_buffer(
             "volume_max",
-            torch.tensor([1.0], requires_grad=False),
+            torch.tensor([max], requires_grad=False),
             persistent=True
         )
         
