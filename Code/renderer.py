@@ -36,6 +36,32 @@ def imgs_to_video(out_path:str, imgs: np.ndarray, fps:int=15):
         video.write(frame)
     video.release()
 
+class RawData(torch.nn.Module):
+    def __init__(self, data_name, device):
+        super().__init__()
+        self.device = device
+        project_folder_path = os.path.dirname(os.path.abspath(__file__))
+        project_folder_path = os.path.join(project_folder_path, "..")
+        data_folder = os.path.join(project_folder_path, "Data")
+        from Other.utility_functions import nc_to_tensor
+        self.data, self.shape = nc_to_tensor(os.path.join(data_folder, data_name))
+        self.data = self.data.to(device)
+        
+        
+    def min(self):
+        return self.data.min()
+
+    def max(self):
+        return self.data.max()
+    
+    def forward(self, x):
+        x_device = x.device
+        x = x.to(self.device)
+        y = F.grid_sample(self.data,
+                x.reshape(([1]*x.shape[-1]) + list(x.shape)),
+                mode='bilinear', align_corners=True).squeeze().unsqueeze(1)
+        return y.to(x_device)
+
 class TransferFunction():
     def __init__(self, device, 
                  min_value = 0.0, max_value = 1.0, colormap=None):
@@ -168,15 +194,37 @@ class TransferFunction():
             self.precomputed_opacity_map[start_ind:start_ind+num_elements] =\
                 opacity_a * (1-lerp_values) + opacity_b*lerp_values
 
-    def color_at_value(self, value):
-        value = (value - self.min_value) / (self.max_value - self.min_value)
-        value_ind = (value[:,0]*self.num_dict_entries).long().clamp(0,self.num_dict_entries-1)
+    def color_at_value(self, value:torch.Tensor):
+        value_ind = (value[:,0] - self.min_value) / (self.max_value - self.min_value)
+        value_ind *= self.num_dict_entries
+        value_ind = value_ind.long()
+        value_ind.clamp_(0,self.num_dict_entries-1)
         return torch.index_select(self.precomputed_color_map, dim=0, index=value_ind)
     
-    def opacity_at_value(self, value):
-        value = (value - self.min_value) / (self.max_value - self.min_value)
-        value_ind = (value[:,0]*self.num_dict_entries).long().clamp(0,self.num_dict_entries-1)
+    def opacity_at_value(self, value:torch.Tensor):
+        value_ind = (value[:,0] - self.min_value) / (self.max_value - self.min_value)
+        value_ind *= self.num_dict_entries
+        value_ind = value_ind.type(torch.long)
+        value_ind.clamp_(0,self.num_dict_entries-1)
         return torch.index_select(self.precomputed_opacity_map, dim=0, index=value_ind)
+
+    def color_opacity_at_value(self, value:torch.Tensor):
+        value_ind = (value[:,0] - self.min_value) / (self.max_value - self.min_value)
+        value_ind *= self.num_dict_entries
+        value_ind = value_ind.type(torch.long)
+        value_ind.clamp_(0,self.num_dict_entries-1)
+        return (torch.index_select(self.precomputed_color_map, dim=0, index=value_ind),
+            torch.index_select(self.precomputed_opacity_map, dim=0, index=value_ind))
+    
+    def color_opacity_at_value_inplace(self, value:torch.Tensor, rgbs, alphas, start_ind):
+        value_ind = (value[:,0] - self.min_value) / (self.max_value - self.min_value)
+        value_ind *= self.num_dict_entries
+        value_ind = value_ind.type(torch.long)
+        value_ind.clamp_(0,self.num_dict_entries-1)
+        rgbs[start_ind:start_ind+value.shape[0]] = \
+            torch.index_select(self.precomputed_color_map, dim=0, index=value_ind)
+        alphas[start_ind:start_ind+value.shape[0]] = \
+            torch.index_select(self.precomputed_opacity_map, dim=0, index=value_ind)
 
 class Camera():
     def __init__(self, device,
@@ -332,7 +380,6 @@ class Camera():
         y = (1 - 2*(y+0.5)/height) * torch.tan(torch.deg2rad(self.fov/2))
         z = -torch.ones(x.shape).to(self.device)
         camera_dirs = torch.stack([x,y,z],-1) # (height*width, 3)
-
         # map camera space dirs to world space
         c2w = self.get_c2w() # (4,4)
         directions = (c2w[:3,:3] @ camera_dirs.T).T
@@ -341,25 +388,25 @@ class Camera():
         return directions.reshape(height, width, 3)
               
 class Scene(torch.nn.Module):
-    def __init__(self, model, opt, 
+    def __init__(self, model, full_shape, 
         image_resolution:Tuple[int], 
-        batch_size : int, transfer_function:TransferFunction):
+        batch_size : int, transfer_function:TransferFunction,
+        device):
         super().__init__()
         self.model = model
-        self.opt : Dict = opt
-        self.device : str = opt['device']
+        self.device : str = device
         self.scene_aabb = \
             torch.tensor([0.0, 0.0, 0.0, 
-                        self.opt['full_shape'][0],
-                        self.opt['full_shape'][1],
-                        self.opt['full_shape'][2]], 
+                        full_shape[0]-1,
+                        full_shape[1]-1,
+                        full_shape[2]-1], 
             device=self.device)
         print(f"Bounding box: {self.scene_aabb}")
         self.image_resolution : Tuple[int]= image_resolution
         self.batch_size : int= batch_size
         
         self.transfer_function = transfer_function
-        self.occpancy_grid = self.precompute_occupancy_grid()
+        self.occupancy_grid = self.precompute_occupancy_grid()
         torch.cuda.empty_cache()
    
     def precompute_occupancy_grid(self, grid_res:List[int]=[64, 64, 64]):
@@ -372,9 +419,9 @@ class Scene(torch.nn.Module):
             output_density = self.transfer_function.opacity_at_value(output)
             output_density = output_density.reshape(sample_grid)
             output_density = F.max_pool3d(output_density.unsqueeze(0).unsqueeze(0), kernel_size=4)
-            filter_size : int = 16
+            filter_size : int = 17
             output_density = F.max_pool3d(output_density,
-                kernel_size = filter_size, stride=1, padding = int(filter_size/2))
+                kernel_size = filter_size, stride=1, padding = filter_size//2)
             output_density = output_density.squeeze()
             output_density = (output_density>0.01)
             grid._binary = output_density.clone()
@@ -394,12 +441,33 @@ class Scene(torch.nn.Module):
         # print(self.rays_d.shape)
         # print(self.rays_o.shape)
         
-        # Ray marching with near far plane.
         ray_indices, t_starts, t_ends = ray_marching(
             self.rays_o, self.rays_d,
             scene_aabb=self.scene_aabb, 
-            render_step_size = 1,
-            grid=self.occpancy_grid
+            render_step_size = torch.max(self.scene_aabb)/1024.0,
+            grid=self.occupancy_grid
+            #grid=None
+        )
+        return ray_indices, t_starts, t_ends
+    
+    def generate_viewpoint_rays_batch(self, camera: Camera, stride_x = 1, stride_y = 1):
+        height, width = self.image_resolution[:2]
+        batch_size = self.image_resolution[0]*self.image_resolution[1]
+
+        self.rays_d = camera.generate_dirs(width, height).view(-1, 3)
+        self.rays_o = camera.position().unsqueeze(0).expand(batch_size, 3)
+        #self.rays_o = torch.cat([1*torch.ones([batch_size, 1], device=self.device), 
+        #                    1*make_coord_grid([self.image_resolution[0], self.image_resolution[1]], device=self.device)], dim=1)
+        #self.rays_d = torch.tensor([-1.0, 0, 0], device=device).unsqueeze(0).repeat(batch_size, 1)
+        
+        # print(self.rays_d.shape)
+        # print(self.rays_o.shape)
+        
+        ray_indices, t_starts, t_ends = ray_marching(
+            self.rays_o, self.rays_d,
+            scene_aabb=self.scene_aabb, 
+            render_step_size = torch.max(self.scene_aabb)/1024.0,
+            grid=self.occupancy_grid
             #grid=None
         )
         return ray_indices, t_starts, t_ends
@@ -411,14 +479,35 @@ class Scene(torch.nn.Module):
         return alphas
     
     def rgb_alpha_fn(self, t_starts, t_ends, ray_indices):
+        
         sample_locs = self.rays_o[ray_indices] + self.rays_d[ray_indices] * (t_starts + t_ends) / 2.0
         sample_locs /= self.scene_aabb[3:]
         sample_locs *= 2 
         sample_locs -= 1
-        densities = self.forward_maxpoints(model, sample_locs)
-        rgbs = self.transfer_function.color_at_value(densities)
-        alphas = self.transfer_function.opacity_at_value(densities)
-        return rgbs, torch.log(1+alphas)
+        densities = model(sample_locs)
+        rgbs, alphas = self.transfer_function.color_opacity_at_value(densities)
+        alphas += 1
+        alphas.log_()
+        
+        return rgbs, alphas
+    
+    def rgb_alpha_fn_batch(self, t_starts, t_ends, ray_indices):
+        
+        rgbs = torch.empty([t_starts.shape[0], 3], device=self.device, dtype=torch.float32)
+        alphas = torch.empty([t_starts.shape[0], 1], device=self.device, dtype=torch.float32)
+        for ray_ind_start in range(0, t_starts.shape[0], self.batch_size):
+            ray_ind_end = min(ray_ind_start+self.batch_size, t_starts.shape[0])
+            sample_locs = self.rays_o[ray_indices[ray_ind_start:ray_ind_end]] + \
+                self.rays_d[ray_indices[ray_ind_start:ray_ind_end]] * \
+                    (t_starts[ray_ind_start:ray_ind_end] + t_ends[ray_ind_start:ray_ind_end]) / 2
+            sample_locs /= self.scene_aabb[3:]
+            sample_locs *= 2
+            sample_locs -= 1
+            densities = model(sample_locs)
+            self.transfer_function.color_opacity_at_value_inplace(densities, rgbs, alphas, ray_ind_start)
+        alphas += 1
+        alphas.log_()
+        return rgbs, alphas
 
     def forward_maxpoints(self, model, coords):
         output_shape = list(coords.shape)
@@ -432,20 +521,61 @@ class Scene(torch.nn.Module):
                     model(coords[start:min(start+self.batch_size, coords.shape[0])])
         return output
 
-    def render_rays(self, t_starts, t_ends, ray_indices):
-        colors, opacities, depths = rendering(
-            t_starts, t_ends, ray_indices, n_rays=self.image_resolution[0]*self.image_resolution[1], 
+    def render_rays(self, t_starts, t_ends, ray_indices, n_rays):
+        
+        colors, _, _ = rendering(
+            t_starts, t_ends, ray_indices, n_rays, 
             rgb_alpha_fn=self.rgb_alpha_fn,
-            render_bkgd=torch.tensor([1.0, 1.0, 1.0],dtype=torch.float32,device=self.device))
-        colors = colors.reshape(self.image_resolution[0], self.image_resolution[1], 3).clip(0.0,1.0)
+            render_bkgd=torch.tensor([1.0, 1.0, 1.0],
+                dtype=torch.float32,device=self.device))
+        colors.clip_(0.0, 1.0)
+        
         #print(f"Renderer {ray_indices.shape[0]} samples on {self.image_resolution[0]*self.image_resolution[1]} rays.")
         return colors
       
     def render(self, camera):
         with torch.no_grad():
             ray_indices, t_starts, t_ends = self.generate_viewpoint_rays(camera)
-            colors = self.render_rays(t_starts, t_ends, ray_indices)
+            colors = self.render_rays(t_starts, t_ends, ray_indices, self.image_resolution[0]*self.image_resolution[1])
+        return colors.reshape(self.image_resolution[0], self.image_resolution[1], 3)
+
+    def render_batch(self, camera):
+        height, width = self.image_resolution[:2]
+        colors = torch.empty([height, width, 3], device=self.device, dtype=torch.float32)
+        
+        # stride rendering, effectively rendering 1/4 the image at a time
+        x_stride = 2
+        y_stride = 2
+        
+        y_leftover = height % y_stride
+        x_leftover = width % x_stride
+                    
+        with torch.no_grad():
+            all_rays = camera.generate_dirs(width, height)
+            cam_origin = camera.position().unsqueeze(0)
+            
+            for y in range(y_stride):
+                for x in range(x_stride):
+                    y_extra = 1 if y < y_leftover else 0
+                    x_extra = 1 if x < x_leftover else 0
+                    
+                    rays_this_iter = all_rays[y::y_stride,x::y_stride].clone().view(-1, 3)
+                    self.rays_d = rays_this_iter
+                    num_rays = rays_this_iter.shape[0]
+                    self.rays_o = cam_origin.expand(num_rays, 3)
+                    
+                    ray_indices, t_starts, t_ends = ray_marching(
+                        self.rays_o, self.rays_d,
+                        scene_aabb=self.scene_aabb, 
+                        render_step_size = torch.max(self.scene_aabb)/1024.0,
+                        grid=self.occupancy_grid
+                    )
+                    colors[y::y_stride,x::x_stride,:] = self.render_rays(
+                        t_starts, t_ends, 
+                        ray_indices, 
+                        num_rays).view(height//y_stride + y_extra, width//x_stride+x_extra, 3)
         return colors
+    
 
 # Subclass QMainWindow to customize your application's main window
 class MainWindow(QMainWindow):
@@ -477,6 +607,8 @@ if __name__ == '__main__':
                         help="Use TensorRT acceleration")
     parser.add_argument('--colormap',default=None,type=str,
                         help="The colormap file to use for visualization.")
+    parser.add_argument('--raw_data',default="false",type=str2bool,
+                        help="Render raw data instead of neural rendering")
     # rendering args ********* ->
     parser.add_argument(
         '--azi',
@@ -515,10 +647,15 @@ if __name__ == '__main__':
     save_folder = os.path.join(project_folder_path, "SavedModels")
 
     # Load the model
-    opt = load_options(os.path.join(save_folder, args['load_from']))
-    opt['device'] = args['device']
-    model = load_model(opt, args['device']).to(opt['device'])
-    model.eval()
+    if(not args['raw_data']):
+        opt = load_options(os.path.join(save_folder, args['load_from']))
+        opt['device'] = args['device']
+        model = load_model(opt, args['device']).to(opt['device'])
+        full_shape = opt['full_shape']
+        model.eval()
+    else:
+        model = RawData(args['load_from'], args['device'])
+        full_shape = model.shape
     
     batch_size = 2**20 # just over 1 million, 1048576
     
@@ -577,7 +714,7 @@ if __name__ == '__main__':
     
     tf = TransferFunction(device, model.min(), model.max(), args['colormap'])
     
-    scene = Scene(model, opt, args['hw'], batch_size, tf)
+    scene = Scene(model, full_shape, args['hw'], batch_size, tf, device)
     if args['dist'] is None:
         # set default camera distance to COI by a ratio to AABB
         args['dist'] = (scene.scene_aabb.max(0)[0] - scene.scene_aabb.min(0)[0])*1.8
@@ -592,25 +729,32 @@ if __name__ == '__main__':
     )
     
     # One warm up is always slower    
-    img = scene.render(camera)
+    img = scene.render_batch(camera)
     from imageio import imsave
     img = img.cpu().numpy()*255
     img = img.astype(np.uint8)
     imsave("Output/gt.png", img)
     
-    # timesteps = 10
-    # times = np.zeros([timesteps])
-    # for i in range(timesteps):
-    #     t0 = sync_time()
-    #     img = scene.render(camera).cpu().numpy()     
-    #     t1 = sync_time()
-    #     times[i] = t1-t0
-    # print(times)
     
-    # print(f"Average frame time: {times.mean():0.04f}")
-    # print(f"Min frame time: {times.min():0.04f}")
-    # print(f"Max frame time: {times.max():0.04f}")
-    # print(f"Average FPS: {1/times.mean():0.02f}")
+    timesteps = 10
+    times = np.zeros([timesteps])
+    for i in range(timesteps):
+        torch.cuda.empty_cache()
+        t0 = sync_time()
+        img = scene.render_batch(camera).cpu().numpy()     
+        t1 = sync_time()
+        times[i] = t1-t0
+    print(times)
+    
+    print(f"Average frame time: {times.mean():0.04f}")
+    print(f"Min frame time: {times.min():0.04f}")
+    print(f"Max frame time: {times.max():0.04f}")
+    print(f"Average FPS: {1/times.mean():0.02f}")
+    
+    GBytes = (torch.cuda.max_memory_allocated(device=device) \
+                / (1024**3))
+    print(f"{GBytes : 0.02f}GB of memory used (max reserved) during render.")
+    
     # #plt.imshow(np.flip(img, 0))
     # #plt.show()
     
