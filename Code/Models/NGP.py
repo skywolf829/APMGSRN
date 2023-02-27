@@ -216,5 +216,5 @@ class NGP_TCNN(nn.Module):
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         y = self.model((x+1)/2).float()
-        y = y * (self.volume_max - self.volume_min + 1e-8) + self.volume_min
+        y = y * (self.volume_max - self.volume_min) + self.volume_min
         return y
