@@ -93,13 +93,14 @@ class Ensemble_SRN(nn.Module):
 
         # divide by slightly larger than 2
         # to avoid the result equaling 1
+        
         indices = (x+1)/(2+1e-6)
-        indices *= self.model_grid_shape.flip(0)
-        indices = indices.type(torch.long)
-        indices = indices.flip(-1)
+        indices *= self.model_grid_shape.flip(0)        
+        indices = indices.long()
+        indices = indices.flip(-1)        
         indices = indices[:,0] + indices[:,1]*self.model_grid_shape[0] + \
             indices[:,2]*(self.model_grid_shape[0]*self.model_grid_shape[1])
-       
+        
         y = torch.empty([x.shape[0], 1], 
             device=x.device, dtype=x.dtype)
 

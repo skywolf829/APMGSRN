@@ -209,11 +209,13 @@ class TransferFunction():
         return torch.index_select(self.precomputed_opacity_map, dim=0, index=value_ind)
 
     def color_opacity_at_value(self, value:torch.Tensor):
-        value_ind = (value[:,0] - self.min_value) / (self.max_value - self.min_value)
-        value_ind = value_ind.type(torch.long)
-        value_ind.clamp_(0,self.num_dict_entries-1)
-        return (torch.index_select(self.precomputed_color_map, dim=0, index=value_ind),
-            torch.index_select(self.precomputed_opacity_map, dim=0, index=value_ind))
+        value -= self.min_value
+        value /= (self.max_value-self.min_value)
+        value *= self.num_dict_entries
+        value = value.type(torch.long)
+        value.clamp_(0,self.num_dict_entries-1)
+        return (torch.index_select(self.precomputed_color_map, dim=0, index=value),
+            torch.index_select(self.precomputed_opacity_map, dim=0, index=value))
     
     def color_opacity_at_value_inplace(self, value:torch.Tensor, rgbs, alphas, start_ind):
         value_ind = (value[:,0] - self.min_value) / (self.max_value - self.min_value)
@@ -458,7 +460,7 @@ class Scene(torch.nn.Module):
         sample_locs *= 2 
         sample_locs -= 1
         densities = model(sample_locs)
-        rgbs, alphas = self.transfer_function.color_opacity_at_value(densities)
+        rgbs, alphas = self.transfer_function.color_opacity_at_value(densities[:,0])
         alphas += 1
         alphas.log_()
         
@@ -535,7 +537,7 @@ class Scene(torch.nn.Module):
                     y_extra = 1 if y < y_leftover else 0
                     x_extra = 1 if x < x_leftover else 0
                     
-                    rays_this_iter = all_rays[y::y_stride,x::y_stride].clone().view(-1, 3)
+                    rays_this_iter = all_rays[y::y_stride,x::x_stride].clone().view(-1, 3)
                     self.rays_d = rays_this_iter
                     num_rays = rays_this_iter.shape[0]
                     self.rays_o = cam_origin.expand(num_rays, 3)
@@ -718,7 +720,7 @@ if __name__ == '__main__':
     
     y_stride = 1
     x_stride = 1
-    est_mem_req = (((args['hw'][0]/y_stride)*(args['hw'][1]/x_stride)*args['spp']*4.0)*4.5)/(1024**3)
+    est_mem_req = (((args['hw'][0]/y_stride)*(args['hw'][1]/x_stride)*args['spp']*4.0)*7.5)/(1024**3)
     #print(f"Estimated memory required: {est_mem_req:0.02f}GB")
     
     x_turn = True
@@ -728,7 +730,7 @@ if __name__ == '__main__':
         else:
             y_stride += 1
         x_turn = not x_turn
-        est_mem_req = (((args['hw'][0]/y_stride)*(args['hw'][1]/x_stride)*args['spp']*4.0)*4.5)/(1024**3)
+        est_mem_req = (((args['hw'][0]/y_stride)*(args['hw'][1]/x_stride)*args['spp']*4.0)*7.5)/(1024**3)
     print(f"Using strides {y_stride} {x_stride} for an estimated memory use of: {est_mem_req:0.02f}GB")
     
     # One warm up is always slower    
