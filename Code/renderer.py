@@ -167,15 +167,15 @@ class TransferFunction():
             section_range = self.color_control_points[ind+1]-self.color_control_points[ind]
             start_ind = int(self.num_dict_entries*self.color_control_points[ind])
             num_elements = int(self.num_dict_entries*section_range)
-            
-            color_a = color_a.unsqueeze(0).repeat(num_elements, 1)
-            color_b = color_b.unsqueeze(0).repeat(num_elements, 1)
-            
-            lerp_values = torch.arange(0.0, 1.0, step=(1/num_elements),
-                            dtype=torch.float32,
-                            device=self.device).unsqueeze(1).repeat(1, 3)
-            self.precomputed_color_map[start_ind:start_ind+num_elements] =\
-                color_a * (1-lerp_values) + color_b*lerp_values
+            if(num_elements > 0):
+                color_a = color_a.unsqueeze(0).repeat(num_elements, 1)
+                color_b = color_b.unsqueeze(0).repeat(num_elements, 1)
+                
+                lerp_values = torch.arange(0.0, 1.0, step=(1/num_elements),
+                                dtype=torch.float32,
+                                device=self.device).unsqueeze(1).repeat(1, 3)
+                self.precomputed_color_map[start_ind:start_ind+num_elements] =\
+                    color_a * (1-lerp_values) + color_b*lerp_values
         
         for ind in range(self.opacity_control_points.shape[0]-1):
             opacity_a = self.opacity_values[ind]
@@ -184,15 +184,15 @@ class TransferFunction():
             section_range = self.opacity_control_points[ind+1]-self.opacity_control_points[ind]
             start_ind = int(self.num_dict_entries*self.opacity_control_points[ind])
             num_elements = int(self.num_dict_entries*section_range)
-            
-            opacity_a = opacity_a.unsqueeze(0).repeat(num_elements, 1)
-            opacity_b = opacity_b.unsqueeze(0).repeat(num_elements, 1)
-            
-            lerp_values = torch.arange(0.0, 1.0, step=(1/num_elements),
-                            dtype=torch.float32,
-                            device=self.device).unsqueeze(1)[0:num_elements]
-            self.precomputed_opacity_map[start_ind:start_ind+num_elements] =\
-                opacity_a * (1-lerp_values) + opacity_b*lerp_values
+            if(num_elements > 0):
+                opacity_a = opacity_a.unsqueeze(0).repeat(num_elements, 1)
+                opacity_b = opacity_b.unsqueeze(0).repeat(num_elements, 1)
+                
+                lerp_values = torch.arange(0.0, 1.0, step=(1/num_elements),
+                                dtype=torch.float32,
+                                device=self.device).unsqueeze(1)[0:num_elements]
+                self.precomputed_opacity_map[start_ind:start_ind+num_elements] =\
+                    opacity_a * (1-lerp_values) + opacity_b*lerp_values
 
     def color_at_value(self, value:torch.Tensor):
         value_ind = (value[:,0] - self.min_value) / (self.max_value - self.min_value)
@@ -739,7 +739,7 @@ if __name__ == '__main__':
     for i in range(timesteps):
         torch.cuda.empty_cache()
         t0 = sync_time()
-        img = scene.render_checkerboard(camera, y_stride, x_stride).cpu().numpy()     
+        img = scene.render_checkerboard(camera).cpu().numpy()     
         t1 = sync_time()
         times[i] = t1-t0
     print(times)

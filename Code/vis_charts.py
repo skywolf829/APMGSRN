@@ -25,8 +25,120 @@ project_folder_path = os.path.join(project_folder_path, "..",)
 save_folder = os.path.join(project_folder_path, "Output", "Charts")
 output_folder = os.path.join(project_folder_path, "Output")
    
+asteroid_results = {
+    "Ours": {
+        2**16 : 35.319,
+        2**20 : 39.645,
+        2**24 : 42.825
+    },
+    "NGP": {
+        2**16 : 35.806,
+        2**20 : 41.626,
+        2**24 : 45.248
+    },
+    "fVSRN": {
+        2**16 : 33.058,
+        2**20 : 35.407,
+        2**24 : 40.413
+    }
+}
 
-def data_to_figure(data, name):
+isotropic_results = {
+    "Ours": {
+        2**16 : 27.703, 
+        2**20 : 32.206, 
+        2**24 : 38.604
+    },
+    "NGP": {
+        2**16 : 27.006,
+        2**20 : 30.776,
+        2**24 : 37.199
+    },
+    "fVSRN": {
+        2**16 : 27.417,
+        2**20 : 31.780,
+        2**24 : 38.468
+    }
+}
+
+nyx_results = {
+    "Ours": {
+        2**16 : 29.616,
+        2**20 : 38.294,
+        2**24 : 44.302 
+    },
+    "NGP": {
+        2**16 : 28.381,
+        2**20 : 35.147,
+        2**24 : 42.696
+    },
+    "fVSRN": {
+        2**16 : 29.204,
+        2**20 : 37.741,
+        2**24 : 43.923
+    }
+}
+
+plume_results = {
+    "Ours": {
+        2**16 : 50.195, 
+        2**20 : 57.344,
+        2**24 : 59.154
+    },
+    "NGP": {
+        2**16 : 46.895,
+        2**20 : 50.031,
+        2**24 : 53.283
+    },
+    "fVSRN": {
+        2**16 : 44.667,
+        2**20 : 52.520,
+        2**24 : 55.297
+    }
+}
+
+supernova_results = {
+    "Ours": {
+        2**16 : 41.990,
+        2**20 : 46.594,
+        2**24 : 48.260
+    },
+    "NGP": {
+        2**16 : 41.544,
+        2**20 : 44.828,
+        2**24 : 47.831
+    },
+    "fVSRN": {
+        2**16 : 39.467,
+        2**20 : 43.507,
+        2**24 : 47.494
+    }
+}
+
+ensemble_results = {
+    "Asteroid": {
+        "Ensemble": 45.164,
+        "Single": 42.825
+        },
+    "Isotropic": {
+        "Ensemble": 41.646,
+        "Single": 38.604
+        },
+    "Nyx": {
+        "Ensemble": 47.054,
+        "Single": 44.302
+        },
+    "Plume": {
+        "Ensemble": 59.358,
+        "Single": 59.154
+        },
+    "Supernova": {
+        "Ensemble": 50.414,
+        "Single": 48.260
+        }
+}
+    
+def architecture_comparison(data, name):
     
     create_path(os.path.join(output_folder, "Charts"))
     markers = ['o', 'v', 's']
@@ -53,6 +165,34 @@ def data_to_figure(data, name):
     plt.ylabel("PSNR")
     plt.title(name + " Model Performance")
     plt.savefig(os.path.join(save_folder, name + ".png"),
+                bbox_inches='tight',
+                dpi=200)
+    plt.clf()
+
+def ensemble_comparison(data):
+    
+    create_path(os.path.join(output_folder, "Charts"))
+    markers = ['o', 'v']
+    x_labels = []
+    y_ensemble = []
+    y_single = []
+    for dataset in data.keys():
+        method_data = data[dataset]        
+        x_labels.append(dataset)
+        y_ensemble.append(method_data["Ensemble"])
+        y_single.append(method_data["Single"])
+    plt.plot(np.arange(len(y_ensemble)), y_ensemble, 
+             label="Ensemble", marker=markers[0])
+    plt.plot(np.arange(len(y_ensemble)), y_single, 
+             label="Single network", marker=markers[1])
+    
+    plt.minorticks_off()
+    plt.xticks(np.arange(len(y_ensemble)), labels=x_labels)
+    plt.legend()
+    plt.xlabel("Dataset")
+    plt.ylabel("PSNR")
+    plt.title("Ensemble Model Comparison")
+    plt.savefig(os.path.join(save_folder, "Ensemble.png"),
                 bbox_inches='tight',
                 dpi=200)
     plt.clf()
@@ -131,110 +271,14 @@ def rotation_performance_chart():
     
 def model_size_performance_chart():
     
-    asteroid_results = {
-        "Ours": {
-            2**16 : 35.319,
-            2**20 : 39.645,
-            2**24 : 42.825
-        },
-        "NGP": {
-            2**16 : 35.806,
-            2**20 : 41.626,
-            2**24 : 45.248
-        },
-        "fVSRN": {
-            2**16 : 33.058,
-            2**20 : 35.407,
-            2**24 : 40.413
-        }
-    }
-    
-    isotropic_results = {
-        "Ours": {
-            2**16 : 27.703, 
-            2**20 : 32.206, 
-            2**24 : 38.604
-        },
-        "NGP": {
-            2**16 : 27.006,
-            2**20 : 30.776,
-            2**24 : 37.199
-        },
-        "fVSRN": {
-            2**16 : 27.417,
-            2**20 : 31.780,
-            2**24 : 38.468
-        }
-    }
-    
-    nyx_results = {
-        "Ours": {
-            2**16 : 29.616,
-            2**20 : 38.294,
-            2**24 : 44.302 
-        },
-        "NGP": {
-            2**16 : 28.381,
-            2**20 : 35.147,
-            2**24 : 42.696
-        },
-        "fVSRN": {
-            2**16 : 29.204,
-            2**20 : 37.741,
-            2**24 : 43.923
-        }
-    }
-    
-    plume_results = {
-        "Ours": {
-            2**16 : 50.195, 
-            2**20 : 57.344,
-            2**24 : 59.154
-        },
-        "NGP": {
-            2**16 : 46.895,
-            2**20 : 50.031,
-            2**24 : 53.283
-        },
-        "fVSRN": {
-            2**16 : 44.667,
-            2**20 : 52.520,
-            2**24 : 55.297
-        }
-    }
-    
-    supernova_results = {
-        "Ours": {
-            2**16 : 41.990,
-            2**20 : 46.594,
-            2**24 : 48.260
-        },
-        "NGP": {
-            2**16 : 41.544,
-            2**20 : 44.828,
-            2**24 : 47.831
-        },
-        "fVSRN": {
-            2**16 : 39.467,
-            2**20 : 43.507,
-            2**24 : 47.494
-        }
-    }
+    architecture_comparison(supernova_results, "Supernova")    
+    architecture_comparison(asteroid_results, "Asteroid")    
+    architecture_comparison(plume_results, "Plume")    
+    architecture_comparison(isotropic_results, "Isotropic")    
+    architecture_comparison(nyx_results, "Nyx")
 
-    ensemble_results = {
-        "asteroid_2**24": 45.164,
-        "isotropic_2**24": 41.646,
-        "nyx_2**24": 47.054,
-        "plume_2**24": 59.358,
-        "supernova_2**24": 50.414
-    }
-
-    data_to_figure(supernova_results, "Supernova")    
-    data_to_figure(asteroid_results, "Asteroid")    
-    data_to_figure(plume_results, "Plume")    
-    data_to_figure(isotropic_results, "Isotropic")    
-    data_to_figure(nyx_results, "Nyx")
-
+def ensemble_performance_chart():
+    ensemble_comparison(ensemble_results)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Test a trained SSR model')
@@ -245,5 +289,6 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
 
     model_size_performance_chart()
-    rotation_performance_chart()
+    ensemble_performance_chart()
+    
     quit()
