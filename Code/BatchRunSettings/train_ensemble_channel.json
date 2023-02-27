@@ -5,7 +5,7 @@
             "model": "AMGSRN",
             "ensemble": true,
             "ensemble_grid": "4,1,6",
-            "ensemble_ghost_cells": 0,
+            "ensemble_ghost_cells": 16,
             "data": "channel5200.nc",
             "n_features": 1,
             "n_grids": 32,

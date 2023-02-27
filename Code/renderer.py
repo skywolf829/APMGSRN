@@ -408,6 +408,7 @@ class Scene(torch.nn.Module):
         self.batch_size : int = batch_size
         self.spp = spp
         self.transfer_function = transfer_function
+        self.amount_empty = 0.0
         self.occupancy_grid = self.precompute_occupancy_grid()
         torch.cuda.empty_cache()
    
@@ -427,7 +428,8 @@ class Scene(torch.nn.Module):
             output_density = output_density.squeeze()
             output_density = (output_density>0.01)
             grid._binary = output_density.clone()
-        print(f"{100*((grid._binary.numel()-grid._binary.sum())/grid._binary.numel()):0.02f}% of space empty for skipping!")
+        self.amount_empty = ((grid._binary.numel()-grid._binary.sum())/grid._binary.numel())
+        print(f"{100*self.amount_empty:0.02f}% of space empty for skipping!")
         return grid
     
     def generate_viewpoint_rays(self, camera: Camera):
@@ -520,24 +522,30 @@ class Scene(torch.nn.Module):
             colors = self.render_rays(t_starts, t_ends, ray_indices, self.image_resolution[0]*self.image_resolution[1])
         return colors.reshape(self.image_resolution[0], self.image_resolution[1], 3)
 
-    def render_checkerboard(self, camera, y_stride, x_stride):
+    def render_checkerboard(self, camera):
         height, width = self.image_resolution[:2]
         colors = torch.empty([height, width, 3], device=self.device, dtype=torch.float32)
                 
-        y_leftover = height % y_stride
-        x_leftover = width % x_stride
         
         max_view_dist = (self.scene_aabb[3]**2 + self.scene_aabb[4]**2 + self.scene_aabb[5]**2)**0.5
+        
         with torch.no_grad():
             all_rays = camera.generate_dirs(width, height)
             cam_origin = camera.position().unsqueeze(0)
             
-            for y in range(y_stride):
-                for x in range(x_stride):
+            n_point_evals = width * height * self.spp * (1-self.amount_empty)
+            n_passes = n_point_evals / self.batch_size
+            strides = int(n_passes**0.5) + 1
+            y_leftover = height % strides
+            x_leftover = width % strides
+            
+            print(f"Using strides {strides}")
+            for y in range(strides):
+                for x in range(strides):
                     y_extra = 1 if y < y_leftover else 0
                     x_extra = 1 if x < x_leftover else 0
                     
-                    rays_this_iter = all_rays[y::y_stride,x::x_stride].clone().view(-1, 3)
+                    rays_this_iter = all_rays[y::strides,x::strides].clone().view(-1, 3)
                     self.rays_d = rays_this_iter
                     num_rays = rays_this_iter.shape[0]
                     self.rays_o = cam_origin.expand(num_rays, 3)
@@ -548,10 +556,10 @@ class Scene(torch.nn.Module):
                         render_step_size = max_view_dist/self.spp,
                         grid=self.occupancy_grid
                     )
-                    colors[y::y_stride,x::x_stride,:] = self.render_rays(
+                    colors[y::strides,x::strides,:] = self.render_rays(
                         t_starts, t_ends, 
                         ray_indices, 
-                        num_rays).view(height//y_stride + y_extra, width//x_stride+x_extra, 3)
+                        num_rays).view(height//strides + y_extra, width//strides+x_extra, 3)
         return colors
     
 
@@ -641,7 +649,7 @@ if __name__ == '__main__':
         model = RawData(args['load_from'], args['device'])
         full_shape = model.shape
     
-    batch_size = 2**20 # just over 1 million, 1048576
+    batch_size = 2**23 # just over 1 million, 1048576
     
     if(args['tensorrt']):
         import torch_tensorrt as torchtrt
@@ -718,23 +726,8 @@ if __name__ == '__main__':
     total_mem /= (1024)**3
     print(f"GPU memory free/total {free_mem:0.02f}GB/{total_mem:0.02f}GB")
     
-    y_stride = 1
-    x_stride = 1
-    est_mem_req = (((args['hw'][0]/y_stride)*(args['hw'][1]/x_stride)*args['spp']*4.0)*32)/(1024**3)
-    #print(f"Estimated memory required: {est_mem_req:0.02f}GB")
-    
-    x_turn = True
-    while(free_mem < est_mem_req):
-        if(x_turn):
-            x_stride += 1
-        else:
-            y_stride += 1
-        x_turn = not x_turn
-        est_mem_req = (((args['hw'][0]/y_stride)*(args['hw'][1]/x_stride)*args['spp']*4.0)*32)/(1024**3)
-    print(f"Using strides {y_stride} {x_stride} for an estimated memory use of: {est_mem_req:0.02f}GB")
-    
     # One warm up is always slower    
-    img = scene.render_checkerboard(camera, y_stride, x_stride)
+    img = scene.render_checkerboard(camera)
     from imageio import imsave
     img = img.cpu().numpy()*255
     img = img.astype(np.uint8)
