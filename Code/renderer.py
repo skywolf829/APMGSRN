@@ -210,7 +210,6 @@ class TransferFunction():
 
     def color_opacity_at_value(self, value:torch.Tensor):
         value_ind = (value[:,0] - self.min_value) / (self.max_value - self.min_value)
-        value_ind *= self.num_dict_entries
         value_ind = value_ind.type(torch.long)
         value_ind.clamp_(0,self.num_dict_entries-1)
         return (torch.index_select(self.precomputed_color_map, dim=0, index=value_ind),
@@ -451,34 +450,7 @@ class Scene(torch.nn.Module):
             #grid=None
         )
         return ray_indices, t_starts, t_ends
-    
-    def generate_viewpoint_rays_batch(self, camera: Camera):
-        height, width = self.image_resolution[:2]
-        batch_size = self.image_resolution[0]*self.image_resolution[1]
-
-        self.rays_d = camera.generate_dirs(width, height).view(-1, 3)
-        self.rays_o = camera.position().unsqueeze(0).expand(batch_size, 3)
-        #self.rays_o = torch.cat([1*torch.ones([batch_size, 1], device=self.device), 
-        #                    1*make_coord_grid([self.image_resolution[0], self.image_resolution[1]], device=self.device)], dim=1)
-        #self.rays_d = torch.tensor([-1.0, 0, 0], device=device).unsqueeze(0).repeat(batch_size, 1)
         
-        # print(self.rays_d.shape)
-        # print(self.rays_o.shape)
-        max_view_dist = (self.scene_aabb[3]**2 + self.scene_aabb[4]**2 + self.scene_aabb[5]**2)**0.5
-        ray_indices, t_starts, t_ends = ray_marching(
-            self.rays_o, self.rays_d,
-            scene_aabb=self.scene_aabb, 
-            render_step_size = max_view_dist/self.spp,
-            grid=self.occupancy_grid
-        )
-        return ray_indices, t_starts, t_ends
-    
-    def alpha_fn(self, t_starts, t_ends, ray_indices):
-        sample_locs = self.rays_o[ray_indices] + self.rays_d[ray_indices] * (t_starts + t_ends) / 2.0
-        densities = self.forward_maxpoints(model, sample_locs)
-        alphas = self.transfer_function.opacity_at_value(densities)
-        return alphas
-    
     def rgb_alpha_fn(self, t_starts, t_ends, ray_indices):
         
         sample_locs = self.rays_o[ray_indices] + self.rays_d[ray_indices] * (t_starts + t_ends) / 2.0
@@ -493,7 +465,10 @@ class Scene(torch.nn.Module):
         return rgbs, alphas
     
     def rgb_alpha_fn_batch(self, t_starts, t_ends, ray_indices):
-        
+        '''
+        A batched version of rgb_alpha_fn that may help not expand memory use by
+        only creating the sample locations as they are needed for evaluation.
+        '''
         rgbs = torch.empty([t_starts.shape[0], 3], device=self.device, dtype=torch.float32)
         alphas = torch.empty([t_starts.shape[0], 1], device=self.device, dtype=torch.float32)
         for ray_ind_start in range(0, t_starts.shape[0], self.batch_size):
@@ -511,6 +486,9 @@ class Scene(torch.nn.Module):
         return rgbs, alphas
 
     def forward_maxpoints(self, model, coords):
+        '''
+        Batches forward passes in chunks to reduce memory overhead.
+        '''
         output_shape = list(coords.shape)
         output_shape[-1] = 1
         output = torch.empty(output_shape, 
@@ -540,14 +518,10 @@ class Scene(torch.nn.Module):
             colors = self.render_rays(t_starts, t_ends, ray_indices, self.image_resolution[0]*self.image_resolution[1])
         return colors.reshape(self.image_resolution[0], self.image_resolution[1], 3)
 
-    def render_checkerboard(self, camera):
+    def render_checkerboard(self, camera, y_stride, x_stride):
         height, width = self.image_resolution[:2]
         colors = torch.empty([height, width, 3], device=self.device, dtype=torch.float32)
-        
-        # stride rendering, effectively rendering 1/4 the image at a time
-        x_stride = 2
-        y_stride = 2
-        
+                
         y_leftover = height % y_stride
         x_leftover = width % x_stride
         
@@ -737,20 +711,40 @@ if __name__ == '__main__':
         dist=args['dist']
     )
     
+    free_mem, total_mem = torch.cuda.mem_get_info(device)
+    free_mem /= (1024)**3
+    total_mem /= (1024)**3
+    print(f"GPU memory free/total {free_mem:0.02f}GB/{total_mem:0.02f}GB")
+    
+    y_stride = 1
+    x_stride = 1
+    est_mem_req = (((args['hw'][0]/y_stride)*(args['hw'][1]/x_stride)*args['spp']*4.0)*4.5)/(1024**3)
+    #print(f"Estimated memory required: {est_mem_req:0.02f}GB")
+    
+    x_turn = True
+    while(free_mem < est_mem_req):
+        if(x_turn):
+            x_stride += 1
+        else:
+            y_stride += 1
+        x_turn = not x_turn
+        est_mem_req = (((args['hw'][0]/y_stride)*(args['hw'][1]/x_stride)*args['spp']*4.0)*4.5)/(1024**3)
+    print(f"Using strides {y_stride} {x_stride} for an estimated memory use of: {est_mem_req:0.02f}GB")
+    
     # One warm up is always slower    
-    img = scene.render_checkerboard(camera)
+    img = scene.render_checkerboard(camera, y_stride, x_stride)
     from imageio import imsave
     img = img.cpu().numpy()*255
     img = img.astype(np.uint8)
     imsave("Output/gt.png", img)
     
-    
-    timesteps = 10
+    '''
+    timesteps = 5
     times = np.zeros([timesteps])
     for i in range(timesteps):
         torch.cuda.empty_cache()
         t0 = sync_time()
-        img = scene.render_checkerboard(camera).cpu().numpy()     
+        img = scene.render_checkerboard(camera, y_stride, x_stride).cpu().numpy()     
         t1 = sync_time()
         times[i] = t1-t0
     print(times)
@@ -759,7 +753,7 @@ if __name__ == '__main__':
     print(f"Min frame time: {times.min():0.04f}")
     print(f"Max frame time: {times.max():0.04f}")
     print(f"Average FPS: {1/times.mean():0.02f}")
-    
+    '''
     GBytes = (torch.cuda.max_memory_allocated(device=device) \
                 / (1024**3))
     print(f"{GBytes : 0.02f}GB of memory used (max reserved) during render.")

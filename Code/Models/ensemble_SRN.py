@@ -61,7 +61,7 @@ class Ensemble_SRN(nn.Module):
         
         local_extents = torch.tensor(local_extents)
 
-        print(f"Loaded {len(models)} models in ensemble model")
+        #print(f"Loaded {len(models)} models in ensemble model")
 
         self.register_buffer("model_grid_shape",
             torch.tensor(ensemble_grid, dtype=torch.long),
@@ -94,8 +94,9 @@ class Ensemble_SRN(nn.Module):
         # divide by slightly larger than 2
         # to avoid the result equaling 1
         indices = (x+1)/(2+1e-6)
-        indices = indices.flip(-1)*self.model_grid_shape 
+        indices *= self.model_grid_shape.flip(0)
         indices = indices.type(torch.long)
+        indices = indices.flip(-1)
         indices = indices[:,0] + indices[:,1]*self.model_grid_shape[0] + \
             indices[:,2]*(self.model_grid_shape[0]*self.model_grid_shape[1])
        
