@@ -720,7 +720,7 @@ if __name__ == '__main__':
     
     y_stride = 1
     x_stride = 1
-    est_mem_req = (((args['hw'][0]/y_stride)*(args['hw'][1]/x_stride)*args['spp']*4.0)*7.5)/(1024**3)
+    est_mem_req = (((args['hw'][0]/y_stride)*(args['hw'][1]/x_stride)*args['spp']*4.0)*32)/(1024**3)
     #print(f"Estimated memory required: {est_mem_req:0.02f}GB")
     
     x_turn = True
@@ -730,7 +730,7 @@ if __name__ == '__main__':
         else:
             y_stride += 1
         x_turn = not x_turn
-        est_mem_req = (((args['hw'][0]/y_stride)*(args['hw'][1]/x_stride)*args['spp']*4.0)*7.5)/(1024**3)
+        est_mem_req = (((args['hw'][0]/y_stride)*(args['hw'][1]/x_stride)*args['spp']*4.0)*32)/(1024**3)
     print(f"Using strides {y_stride} {x_stride} for an estimated memory use of: {est_mem_req:0.02f}GB")
     
     # One warm up is always slower    
