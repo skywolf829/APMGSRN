@@ -10,10 +10,10 @@ from math import log2
 from Other.utility_functions import create_path
 
 #plt.style.use('Solarize_Light2')
-plt.style.use('fivethirtyeight')
+#plt.style.use('fivethirtyeight')
 #plt.style.use('ggplot')
 #plt.style.use('seaborn')
-#plt.style.use('seaborn-paper')
+plt.style.use('seaborn-paper')
 font = {#'font.family' : 'normal',
     #'font.weight' : 'bold',
     'font.size'   : 16,
@@ -269,6 +269,26 @@ def rotation_performance_chart():
     data_to_figure(isotropic_results, "Isotropic_rotation")    
     data_to_figure(nyx_results, "Nyx_rotation")
     
+def flat_top_chart():
+    create_path(os.path.join(output_folder, "Charts"))
+
+    x = np.arange(-2.0, 2.0, 0.01)
+    
+    y_gaussian = np.exp(-np.power(np.power(x, 2), 1))
+    y_flat_top_5 = np.exp(-np.power(np.power(x, 2), 5))
+    y_flat_top_10 = np.exp(-np.power(np.power(x, 2), 10))
+    y_box = x**2 < 1.0
+
+    plt.plot(x, y_box, label="Box")
+    plt.plot(x, y_gaussian, label="Gaussian")
+    plt.plot(x, y_flat_top_5, label="Flat-top, p=5")
+    plt.plot(x, y_flat_top_10, label="Flat-top, p=10")
+    plt.legend()
+    plt.savefig(os.path.join(save_folder,"Flattop.png"),
+                bbox_inches='tight',
+                dpi=200)
+    plt.clf()
+
 def model_size_performance_chart():
     
     architecture_comparison(supernova_results, "Supernova")    
@@ -288,7 +308,6 @@ if __name__ == '__main__':
     
     args = vars(parser.parse_args())
 
-    model_size_performance_chart()
-    ensemble_performance_chart()
+    flat_top_chart()
     
     quit()
