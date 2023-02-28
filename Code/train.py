@@ -221,6 +221,8 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
             first_250 = early_stopping_losses[iteration-500:iteration-250].mean()
             last_250 = early_stopping_losses[iteration-250:iteration].mean()
             early_stop = last_250*1.025 > first_250
+            if(early_stop):
+                print(f"Early stopping as grid loss has converged.")
 
     else:
         density_loss = None
