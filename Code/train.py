@@ -219,8 +219,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         if(iteration >= 500):
             first_250 = early_stopping_losses[iteration-500:iteration-250].mean()
             last_250 = early_stopping_losses[iteration-250:].mean()
-            if(last_250 > first_250):
-                early_stop = True
+            early_stop = last_250*1.025 > first_250
 
     else:
         density_loss = None
@@ -233,7 +232,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
             {"Fitting loss": loss, 
              "Grid loss": density_loss}, 
             model, opt, dataset.data.shape[2:], dataset, preconditioning='grid')
-    return early_stop
+    return early_stop, early_stopping_losses
 
 def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, writer,
                        early_stopping_losses=None, early_stop=False):
@@ -329,11 +328,11 @@ def train( model, dataset, opt):
             gamma=0.33)
        
     
+    early_stop = False
     early_stopping_losses = torch.zeros([opt['iterations']], 
         dtype=torch.float32, device=opt['device'])
-    early_stop = False
     for (iteration, batch) in enumerate(dataloader):
-        early_stop = train_step(opt,
+        early_stop, early_stopping_losses = train_step(opt,
                 iteration,
                 batch,
                 dataset,
@@ -343,8 +342,6 @@ def train( model, dataset, opt):
                 writer,
                 early_stopping_losses=early_stopping_losses,
                 early_stop = early_stop)
-        if(early_stop is not None):
-            early_stop = early_stop
 
     
     #writer.add_graph(model, torch.zeros([1, 3], device=opt['device'], dtype=torch.float32))
