@@ -180,7 +180,8 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     early_stop_grid = early_stopping_data[1]
     early_stopping_grid_losses = early_stopping_data[2]
     if(early_stop_reconstruction and early_stop_grid):
-        return
+        return (early_stop_reconstruction, early_stop_grid, 
+            early_stopping_grid_losses)
     optimizer[0].zero_grad()                  
     x, y = batch
     
@@ -303,8 +304,8 @@ def train( model, dataset, opt):
         ]        
         scheduler = [
             torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer[0],
-                mode="min", patience=500, threshold=1e-2, cooldown=250,
-                factor=0.1),
+                mode="min", patience=500, threshold=1e-4, threshold_mode="rel",
+                cooldown=250,factor=0.1),
             torch.optim.lr_scheduler.LinearLR(optimizer[1], 
                 start_factor=1, end_factor=0.5)
         ]      
