@@ -1,0 +1,7 @@
+[
+    [ "test.py",
+        {        
+        "load_from": "Channel_AMGSRN_ensemble",
+        "tests": "psnr"
+    }]
+]
