@@ -178,7 +178,8 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
                       early_stopping_data=None):
     early_stop_reconstruction = early_stopping_data[0]
     early_stop_grid = early_stopping_data[1]
-    early_stopping_grid_losses = early_stopping_data[2]
+    early_stopping_reconstruction_losses = early_stopping_data[3]
+    early_stopping_grid_losses = early_stopping_data[3]
     if(early_stop_reconstruction and early_stop_grid):
         return (early_stop_reconstruction, early_stop_grid, 
             early_stopping_grid_losses)
@@ -195,8 +196,8 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     loss = loss.sum(dim=1, keepdim=True)
     
     loss.mean().backward()
-
-    early_stop_reconstruction = optimizer[0].param_groups[0]['lr'] < opt['lr'] * 1e-3
+    early_stopping_reconstruction_losses[iteration] = loss.mean()
+    early_stop_reconstruction = optimizer[0].param_groups[0]['lr'] < opt['lr'] * 1e-2
 
     if(iteration < opt['iterations']*0.8 and not early_stop_grid):
         optimizer[1].zero_grad() 
@@ -234,7 +235,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     
     optimizer[0].step()
     if(early_stop_grid):
-        scheduler[0].step(loss.mean())   
+        scheduler[0].step(early_stopping_reconstruction_losses[iteration-500:iteration].mean())   
     
     if(opt['log_every'] != 0):
         logging(writer, iteration, 
@@ -242,6 +243,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
              "Grid loss": density_loss}, 
             model, opt, dataset.data.shape[2:], dataset, preconditioning='grid')
     return (early_stop_reconstruction, early_stop_grid, 
+            early_stopping_reconstruction_losses,
             early_stopping_grid_losses)
 
 def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, writer,
@@ -310,7 +312,9 @@ def train( model, dataset, opt):
         ]      
         early_stopping_data = (False, False,
             torch.zeros([opt['iterations']], 
-            dtype=torch.float32, device=opt['device'])
+                dtype=torch.float32, device=opt['device']),
+            torch.zeros([opt['iterations']], 
+                dtype=torch.float32, device=opt['device'])
             )
     else:
         train_step = train_step_vanilla
