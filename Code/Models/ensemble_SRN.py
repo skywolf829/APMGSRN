@@ -95,12 +95,10 @@ class Ensemble_SRN(nn.Module):
         # to avoid the result equaling 1
         
         indices = (x+1)/2.0
+        indices.clamp_(0.0, 0.99)
         indices *= self.model_grid_shape.flip(0)        
         indices = indices.long()
         indices = indices.flip(-1)        
-        indices[:,0].clamp_(0, self.model_grid_shape[0])
-        indices[:,1].clamp_(0, self.model_grid_shape[1])
-        indices[:,2].clamp_(0, self.model_grid_shape[2])
         indices = indices[:,0] + indices[:,1]*self.model_grid_shape[0] + \
             indices[:,2]*(self.model_grid_shape[0]*self.model_grid_shape[1])
         
