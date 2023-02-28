@@ -145,8 +145,16 @@ ghostcell_results = {
     "8 ghost cell": 41.046,
     "16 ghost cell": 40.558
 }
-     
-    
+
+largescale_results = {
+    "Channel": {
+        "97 MB": 41.604
+    },
+    "Rotstrat": {
+        "864 MB": 41.325
+    }
+}     
+
 def architecture_comparison(data, name):
     
     create_path(os.path.join(output_folder, "Charts"))

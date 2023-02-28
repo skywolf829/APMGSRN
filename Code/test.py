@@ -51,11 +51,11 @@ def test_psnr(model, dataset, opt):
             output = model(coord_grid[start:end_ind].to(opt['device']).float()).to(opt['data_device'])
             dataset.data[start:end_ind] -= output
         
-    dataset.data **= 2
-    y = dataset.data.mean()
-    y = torch.log10(y)
-    y *= 10.0
-    y = 20.0 * torch.log10(data_max-data_min) - y
+        dataset.data **= 2
+        y : torch.Tensor = dataset.data.mean()
+        y.log10_()
+        y *= 10.0
+        y = 20.0 * torch.log10(data_max-data_min) - y
     
     print(f"PSNR: {y : 0.03f}")
 
