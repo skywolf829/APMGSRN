@@ -50,9 +50,9 @@ class AMG_encoder(nn.Module):
             n_dims = self.transformation_matrices.shape[-1]-1
             self.transformation_matrices[:] = torch.eye(n_dims+1, 
                 device=d, dtype=torch.float32)
-            self.transformation_matrices[:,0:n_dims,:] += torch.rand_like(
+            self.transformation_matrices[:,0:n_dims,:] += torch.randn_like(
                 self.transformation_matrices[:,0:n_dims,:],
-                device=d, dtype=torch.float32) * 0.1
+                device=d, dtype=torch.float32) * 0.05
             self.transformation_matrices = torch.nn.Parameter(
                 self.transformation_matrices @ \
                 self.transformation_matrices.transpose(-1, -2),

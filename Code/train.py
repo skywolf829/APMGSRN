@@ -210,7 +210,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         density /= density.sum().detach()
         target = torch.exp(torch.log(density+1e-16) * \
             (loss.mean()/loss))
-        #target /= target.sum()
+        target /= target.sum()
         
         
         density_loss = F.kl_div(
@@ -226,10 +226,23 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         scheduler[1].step()   
 
         early_stopping_grid_losses[iteration] = density_loss.mean().detach()
-        if(iteration >= 2000):
-            first_250 = early_stopping_grid_losses[iteration-1500:iteration-750].mean()
-            last_250 = early_stopping_grid_losses[iteration-750:iteration].mean()
-            early_stop_grid = last_250 > first_250*(1-1e-2)
+        if(iteration >= 2500):
+            prev_avg = early_stopping_grid_losses[iteration-2000:iteration-1000].mean()
+            current_avg = early_stopping_grid_losses[iteration-1000:iteration].mean()
+            
+            thresh = prev_avg * 1e-4
+            momentum_needed = 1
+            
+            # See if the slope is under the threshold
+            thresh_met = prev_avg - current_avg < thresh
+            
+            # a let the momentum of the grids finish for 1k more iterations
+            if(thresh_met):
+                early_stopping_grid_losses[-1] += 1
+            else:
+                early_stopping_grid_losses[-1] = 0
+                
+            early_stop_grid = thresh_met and early_stopping_grid_losses[-1] > momentum_needed 
             if(early_stop_grid):
                 print(f"Grid has converged. Setting early stopping flag.")
 
