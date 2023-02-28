@@ -234,7 +234,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         density_loss = None
     
     optimizer[0].step()
-    scheduler[0].step()   
+    scheduler[0].step(loss.mean())   
     
     if(opt['log_every'] != 0):
         logging(writer, iteration, 
