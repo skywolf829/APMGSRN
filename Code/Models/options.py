@@ -14,19 +14,26 @@ class Options():
         opt['n_grids']                              = 64
         opt['num_positional_encoding_terms']        = 6
         opt['extents']                              = None
+        opt['use_bias']                             = False
         opt['use_global_position']                  = False
         opt['hash_log2_size']                       = 19           # hash grid: table size
         opt['hash_base_resolution']                 = 16           # hash grid: min resolution per dim
         opt['hash_max_resolution']                  = 2048         # hash grid: max resolution per dim
         
         opt['data']                                 = 'tornado.nc'
+        opt['ensemble']                             = False
+        opt['ensemble_grid']                        = "1,1,1"
+        opt['ensemble_ghost_cells']                 = 0
+        opt['grid_index']                           = "1,1,1"
         opt['save_name']                            = 'tornado'
         opt['full_shape']                           = None
         opt['align_corners']                        = True
-        opt['precondition']                         = True
+        opt['precondition']                         = False
+        opt['use_tcnn_if_available']                = True
         opt['n_layers']                             = 2       
         opt['nodes_per_layer']                      = 64
         opt['interpolate']                          = True
+        opt['requires_padded_feats']                = False
         
         opt['iters_to_train_new_layer']             = 1000
         opt['iters_since_new_layer']                = 0

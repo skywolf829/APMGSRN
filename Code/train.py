@@ -80,12 +80,12 @@ def log_feature_points(model, dataset, opt, iteration):
     # Just use [2,2,2]
     global_points = make_coord_grid(feat_grid_shape, opt['device'], 
                     flatten=True, align_corners=True)
-    transformed_points = model.inverse_transform(global_points)
+    transformed_points = model.inverse_transform(global_points).detach().cpu()
 
     transformed_points += 1.0
     transformed_points *= 0.5 
-    transformed_points *= (torch.tensor(list(dataset.data.shape[2:]))-1)
-    transformed_points = transformed_points.detach().cpu()
+    transformed_points *= (torch.tensor(list(dataset.data.shape[2:]))-1).flip(0)
+    transformed_points = transformed_points.detach().cpu()#.flip(-1)
 
     ids = torch.arange(transformed_points.shape[0])
     ids = ids.unsqueeze(1).unsqueeze(1)
@@ -108,7 +108,8 @@ def log_feature_grids(model, dataset, opt, iteration):
     transformed_points = model.transform(global_points)
 
     transformed_points += 1.0
-    transformed_points *= 0.5 * (torch.tensor(dataset.data.shape)-1)
+    transformed_points *= 0.5 * (torch.tensor(dataset.data.shape)-1).flip(0)
+    #transformed_points = transformed_points.flip(-1)
     ids = torch.arange(transformed_points.shape[0])
     ids = ids.unsqueeze(1).unsqueeze(1)
     ids = ids.repeat([1, transformed_points.shape[1], 1])
@@ -173,35 +174,35 @@ def train_step_AMGSRN_precondition(opt, iteration, batch, dataset, model, optimi
             {"Fitting loss": loss}, 
             model, opt, dataset.data.shape[2:], dataset)
 
-def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, writer):
+def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
     opt['iteration_number'] = iteration
     optimizer[0].zero_grad() 
                  
     x, y = batch
-    torch.cuda.synchronize()
+    
     x = x.to(opt['device'])
     y = y.to(opt['device'])
-    torch.cuda.synchronize()
+    
     
     transformed_x = model.transform(x)    
-    model_output = model(transformed_x, transformed=True)
-    torch.cuda.synchronize()
+    model_output = model.forward_pre_transformed(transformed_x)
+    
     loss = F.mse_loss(model_output, y, reduction='none')
     loss = loss.sum(dim=1, keepdim=True)
-    torch.cuda.synchronize()
+    
     loss.mean().backward()
        
     
-    if(iteration < opt['iterations']*0.9):
+    if(iteration < opt['iterations']*0.8):
         optimizer[1].zero_grad() 
-        torch.cuda.synchronize()
-        density = model.feature_density_gaussian(transformed_x, transformed=True) 
-        torch.cuda.synchronize()
+        
+        density = model.feature_density_pre_transformed(transformed_x) 
+        
         density /= density.sum().detach()  
         target = torch.exp(torch.log(density+1e-16) / \
             (loss/loss.mean()))
         target /= target.sum()
-        torch.cuda.synchronize()
+        
         
         density_loss = F.kl_div(
             torch.log(density+1e-16), 
@@ -209,22 +210,22 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
                 reduction='none', 
                 log_target=True)
         
-        torch.cuda.synchronize()
+        
         density_loss.mean().backward()
-        torch.cuda.synchronize()
+        
         optimizer[1].step()
         scheduler[1].step()   
     else:
         density_loss = None
-    torch.cuda.synchronize()     
+         
     regularization_loss = 10e-6 * (torch.cat([x.view(-1) for x in model.parameters()])**2).mean()
     regularization_loss.backward()
-    torch.cuda.synchronize()
+    
     optimizer[0].step()
     scheduler[0].step()   
-    torch.cuda.synchronize()     
-    #profiler.step()
-    torch.cuda.synchronize()
+         
+    profiler.step()
+    
     if(opt['log_every'] != 0):
         logging(writer, iteration, 
             {"Fitting loss": loss, 
@@ -268,9 +269,9 @@ def train( model, dataset, opt):
     writer = SummaryWriter(os.path.join('tensorboard',opt['save_name']))
     dataloader = DataLoader(dataset, 
                             batch_size=None, 
-                            num_workers=0 if "cuda" in opt['data_device'] else 4,
-                            pin_memory=True if "cpu" in opt['data_device'] else False,
-                            pin_memory_device=opt['device'])
+                            num_workers=4 if ("cpu" in opt['data_device'] and "cuda" in opt['device']) else 0,
+                            pin_memory=True if ("cpu" in opt['data_device'] and "cuda" in opt['device']) else False,
+                            pin_memory_device=opt['device'] if ("cpu" in opt['data_device'] and "cuda" in opt['device']) else "")
     
     model.train(True)
 
@@ -307,15 +308,16 @@ def train( model, dataset, opt):
                 ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
                 optim.Adam(
                     model.encoder.get_transform_parameters(), 
-                    lr=opt['lr'] * 0.1, 
+                    lr=opt['lr'] * 0.05, 
                     betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15
                     )
             ]        
             scheduler = [
-                torch.optim.lr_scheduler.LinearLR(optimizer[0],
-                    start_factor=1, end_factor=1),
+                torch.optim.lr_scheduler.MultiStepLR(optimizer[0],
+                    [opt['iterations']*(9/10)],
+                    gamma=0.1),
                 torch.optim.lr_scheduler.LinearLR(optimizer[1], 
-                    start_factor=1, end_factor=1)
+                    start_factor=1, end_factor=0.5)
             ]      
     else:
         optimizer = optim.Adam(model.parameters(), lr=opt["lr"], 
@@ -323,11 +325,13 @@ def train( model, dataset, opt):
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
             [opt['iterations']*(2/5), opt['iterations']*(3/5), opt['iterations']*(4/5)],
             gamma=0.33)
-    '''    
+       
     with torch.profiler.profile(
         activities=[
             torch.profiler.ProfilerActivity.CPU,
             torch.profiler.ProfilerActivity.CUDA,
+        ] if torch.cuda.is_available() else [
+            torch.profiler.ProfilerActivity.CPU
         ],
         schedule=torch.profiler.schedule(
             wait=2,
@@ -340,19 +344,18 @@ def train( model, dataset, opt):
         with_modules=True,
         on_trace_ready=torch.profiler.tensorboard_trace_handler(
             os.path.join('tensorboard',opt['save_name']))) as profiler:
-    '''
-    for (iteration, batch) in enumerate(dataloader):
-        train_step(opt,
+        for (iteration, batch) in enumerate(dataloader):
+            train_step(opt,
                     iteration,
                     batch,
                     dataset,
                     model,
                     optimizer,
                     scheduler,
-                    #profiler,
+                    profiler,
                     writer)
     
-    writer.add_graph(model, torch.zeros([1, 3], device=opt['device'], dtype=torch.float32))
+    #writer.add_graph(model, torch.zeros([1, 3], device=opt['device'], dtype=torch.float32))
     writer.close()
     save_model(model, opt)
 
@@ -373,8 +376,12 @@ if __name__ == '__main__':
         help='Number of positional encoding terms')   
     parser.add_argument('--extents',default=None,type=str,
         help='Spatial extents to use for this model from the data')   
+    parser.add_argument('--bias',default=None,type=str2bool,
+        help='Use bias in linear layers or not')
     parser.add_argument('--use_global_position',default=None,type=str2bool,
         help='For the fourier featuers, whether to use the global position or local.')
+    parser.add_argument('--use_tcnn_if_available',default=None,type=str2bool,
+        help='Whether to use TCNN if available on the machine training.')
     
     # Hash Grid (NGP model) hyperparameters
     parser.add_argument('--hash_log2_size',default=None,type=int,
@@ -400,7 +407,12 @@ if __name__ == '__main__':
     parser.add_argument('--nodes_per_layer',default=None,type=int,
         help='Nodes per layer in the model')    
     parser.add_argument('--interpolate',default=None,type=str2bool,
-        help='Whether or not to use interpolation during training')    
+        help='Whether or not to use interpolation during training')  
+    parser.add_argument('--requires_padded_feats',default=None,type=str2bool,
+        help='Pads features to next multiple of 16 for TCNN.')      
+    parser.add_argument('--grid_index',default=None,type=str,
+        help='Index for this network in an ensemble of networks')      
+    
     
     parser.add_argument('--iters_to_train_new_layer',default=None,type=int,
         help='Number of iterations to fine tune a new layer')    
@@ -450,7 +462,7 @@ if __name__ == '__main__':
     
     os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
     torch.manual_seed(42)
-    
+    torch.backends.cuda.matmul.allow_tf32 = True
 
     if(args['load_from'] is None):
         # Init models
@@ -463,7 +475,10 @@ if __name__ == '__main__':
                 opt[k] = args[k]
 
         dataset = Dataset(opt)
+        opt['data_min'] = dataset.min().item()
+        opt['data_max'] = dataset.max().item()
         model = create_model(opt)
+        model = model.to(opt['device'])
     else:        
         opt = load_options(os.path.join(save_folder, args["load_from"]))
         opt["device"] = args["device"]

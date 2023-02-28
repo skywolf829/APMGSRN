@@ -1,18 +1,22 @@
 [
-    
     [ "test.py",
         {        
-        "load_from": "Isotropic_NGP",
-        "tests": "reconstruction,error_volume"
+        "load_from": "temp_tcnn_fVSRN",
+        "tests": "reconstruction"
     }],
     [ "test.py",
         {        
-        "load_from": "Isotropic_fVSRN",
-        "tests": "reconstruction,error_volume"
+        "load_from": "temp_tcnn_AMGSRN",
+        "tests": "reconstruction"
     }],
     [ "test.py",
         {        
-        "load_from": "Isotropic_AMRSRN",
-        "tests": "reconstruction,error_volume"
+        "load_from": "temp_tcnn_fVSRN_convert_to_pytorch",
+        "tests": "reconstruction"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "temp_tcnn_AMGSRN_convert_to_pytorch",
+        "tests": "reconstruction"
     }]
 ]

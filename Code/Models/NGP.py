@@ -137,9 +137,28 @@ class NGP(nn.Module):
             *[LinearLayer(self.decoder_dim, self.decoder_dim) for i in range(self.decoder_layers-1)],
             nn.Linear(self.decoder_dim, self.decoder_outdim)
         )
-        
+        self.register_buffer(
+            "volume_min",
+            torch.tensor([self.opt['data_min']], requires_grad=False, dtype=torch.float32),
+            persistent=False
+        )
+        self.register_buffer(
+            "volume_max",
+            torch.tensor([self.opt['data_max']], requires_grad=False, dtype=torch.float32),
+            persistent=False
+        )
+
+    def min(self):
+        return self.volume_min
+
+    def max(self):
+        return self.volume_max
+     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.decoder(self.hash_grid(x)).float()
+        feats = self.hash_grid(x)
+        y = self.decoder(feats).float()
+        y = y * (self.volume_max - self.volume_min + 1e-8) + self.volume_min
+        return y
 
 class NGP_TCNN(nn.Module):
     def __init__(self, opt) -> None:
@@ -178,6 +197,24 @@ class NGP_TCNN(nn.Module):
                 "n_hidden_layers": self.decoder_layers,
             },
         )
+        self.register_buffer(
+            "volume_min",
+            torch.tensor([self.opt['data_min']], requires_grad=False, dtype=torch.float32),
+            persistent=False
+        )
+        self.register_buffer(
+            "volume_max",
+            torch.tensor([self.opt['data_max']], requires_grad=False, dtype=torch.float32),
+            persistent=False
+        )
+    
+    def min(self):
+        return self.volume_max
+
+    def max(self):
+        return self.volume_min
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.model(x).float()
+        y = self.model((x+1)/2).float()
+        y = y * (self.volume_max - self.volume_min) + self.volume_min
+        return y

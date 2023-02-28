@@ -15,7 +15,7 @@
             "nodes_per_layer": 64,
             "n_outputs": 1,
 
-            "lr": 0.02,
+            "lr": 0.01,
             "iterations": 10000,
             "points_per_iteration": 100000,
             "interpolate": true,
@@ -47,7 +47,7 @@
             "nodes_per_layer": 64,
             "n_outputs": 1,
 
-            "lr": 0.02,
+            "lr": 0.01,
             "iterations": 10000,
             "points_per_iteration": 100000,
             "interpolate": true,
@@ -81,7 +81,7 @@
             "nodes_per_layer": 64,
             "n_outputs": 1,
 
-            "lr": 0.02,
+            "lr": 0.01,
             "iterations": 10000,
             "points_per_iteration": 100000,
             "interpolate": true,
@@ -113,7 +113,7 @@
             "nodes_per_layer": 64,
             "n_outputs": 1,
 
-            "lr": 0.02,
+            "lr": 0.01,
             "iterations": 10000,
             "points_per_iteration": 100000,
             "interpolate": true,
@@ -145,7 +145,7 @@
             "nodes_per_layer": 64,
             "n_outputs": 1,
 
-            "lr": 0.02,
+            "lr": 0.01,
             "iterations": 10000,
             "points_per_iteration": 100000,
             "interpolate": true,

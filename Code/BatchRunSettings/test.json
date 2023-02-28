@@ -1,7 +1,7 @@
 [
     [ "test.py",
     {        
-    "load_from": "temp",
-    "tests": "reconstruction,error_volume,feature_density"
+    "load_from": "Supernova_AMGSRN_ensemble",
+    "tests": "reconstruction,error_volume"
     }]
 ]

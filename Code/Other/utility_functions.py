@@ -402,6 +402,14 @@ def tensor_to_cdf(t, location, channel_names=None):
         d[ch][:] = t[0,i].detach().cpu().numpy()
     d.close()
 
+def get_data_size(location):
+    import netCDF4 as nc
+    f = nc.Dataset(location)
+
+    for a in f.variables:
+        full_shape = f[a].shape
+    return full_shape
+
 def nc_to_tensor(location, opt = None):
     import netCDF4 as nc
     f = nc.Dataset(location)
@@ -412,12 +420,14 @@ def nc_to_tensor(location, opt = None):
         if(opt is None or opt['extents'] is None):
             d = np.array(f[a])
         else:
+            print(f"Loading data with extents {opt['extents']}")
             ext = opt['extents'].split(',')
             ext = [eval(i) for i in ext]
             d = np.array(f[a][ext[0]:ext[1],ext[2]:ext[3],ext[4]:ext[5]])
         channels.append(d)
     d = np.stack(channels)
     d = torch.tensor(d).unsqueeze(0)
+    print(f"Loaded data with shape {d.shape} (full shape: {full_shape})")
     return d, full_shape
         
 def cdf_to_tensor(location, channel_names):
@@ -696,3 +706,16 @@ def visualize_traces(traces):
     ax.set_zlim([-1, 1])
     plt.title("Streamline traces")
     plt.show()
+    
+def report_gpumem(device=0):
+  toGb = 1024*1024*1024
+  totalm = torch.cuda.get_device_properties(0).total_memory / toGb
+  max_alloc = torch.cuda.max_memory_allocated() / toGb
+  max_rsv = torch.cuda.max_memory_reserved() / toGb
+
+  palloc = 100*max_alloc / totalm
+  prsv = 100*max_rsv / totalm
+
+  print(f'total GPU Mem: {totalm:.4}Gb')
+  print(f'max allocated percentage: {palloc:8.4}% --- usage: {max_alloc:.4}Gb')
+  print(f'max allocated percentage: {prsv:8.4}% --- usage: {max_rsv:.4}Gb')

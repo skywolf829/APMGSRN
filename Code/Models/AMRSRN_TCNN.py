@@ -183,13 +183,18 @@ class AMRSRN_TCNN(nn.Module):
             #self.grid_translations.clamp_(-max_deviation, max_deviation)
         return
 
-    def forward(self, x):   
+    def forward(self, x):
         transformed_points = self.transform(x)
-        feats = torch.cat(
-            [grid(points) for grid, points in zip(self.feature_grids, transformed_points)],
-            dim=-1,
-        )
+        
+        # rescale [-1, 1] to [0, 1] for TCNN's hash grid
+        transformed_points = (transformed_points + 1) / 2 
+        feats = []
+        for grid, points in zip(self.feature_grids, transformed_points):
+            # zero out out-of-bound points' features for each local grid
+            inbound_selector = ((points > 0.0) & (points < 1.0)).all(dim=-1)
+            feat = grid(points)*inbound_selector[...,None]
+            feats.append(feat)
+        feats = torch.cat(feats, dim=-1)
+        
         y = self.decoder(feats).float()
         return y
-
-        

@@ -289,9 +289,28 @@ def vti_to_nc():
     x = x.reshape(dim,order='F')
     y = y.reshape(dim,order='F')
     z = z.reshape(dim,order='F')
-        
+
+def np_to_nc(data, name):
+    import netCDF4 as nc
+    d = nc.Dataset(os.path.join(data_folder, name), 'w')
+    d.createDimension('x')
+    d.createDimension('y')
+    d.createDimension('z')
+    dims = ['x', 'y', 'z']
+    d.createVariable("data", np.float32, dims)
+    d["data"][:] = data
+    d.close()
+    
 if __name__ == '__main__':
 
-    vti_to_nc()
+    channel = np.fromfile(os.path.join(data_folder, "channel5200.raw"), 
+        dtype=np.float32)
+
+    channel = channel.reshape(14400,128,256,256)
+    channel = channel.reshape(40,6,60,128,256,256)
+    channel = channel.transpose(2,3,1,4,0,5)    
+    channel = channel.reshape(7680, 1536, 10240)
+    np_to_nc(channel, "channel5200.nc")
+    
     
     quit()

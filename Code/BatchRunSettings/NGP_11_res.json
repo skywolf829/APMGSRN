@@ -1,119 +1,21 @@
 [
     [ "train.py",
-    {
-            "save_name": "Supernova_test_TCNN_2feats_16grids_8_2-16",
+        {
+            "save_name": "Supernova_test_TCNN_2feats_16grids_11_4-128",
             "model": "NGP_TCNN",
             "data": "Supernova_test.nc",
 
             "n_dims": 3,
             "n_features": 2,
             "n_grids": 16,
-            "hash_log2_size": 8,
-            "hash_base_resolution": 2,
-            "hash_max_resolution": 16,
-            "n_layers": 2,
-            "nodes_per_layer": 64,
-            "n_outputs": 1,
-
-            "lr": 0.02,
-            "iterations": 10000,
-            "points_per_iteration": 100000,
-            "interpolate": true,
-            "log_every": 25,
-            "log_image": false,
-            "log_image_every": 2000
-        }
-    ],
-    [ "test.py",
-        {
-            "load_from": "Supernova_test_TCNN_2feats_16grids_8_2-16",
-            "tests": "reconstruction"
-        }
-    ],
-
-    [ "train.py",
-        {
-            "save_name": "Supernova_test_TCNN_2feats_16grids_8_2-32",
-            "model": "NGP_TCNN",
-            "data": "Supernova_test.nc",
-
-            "n_dims": 3,
-            "n_features": 2,
-            "n_grids": 16,
-            "hash_log2_size": 8,
-            "hash_base_resolution": 2,
-            "hash_max_resolution": 32,
-            "n_layers": 2,
-            "nodes_per_layer": 64,
-            "n_outputs": 1,
-
-            "lr": 0.02,
-            "iterations": 10000,
-            "points_per_iteration": 100000,
-            "interpolate": true,
-            "log_every": 25,
-            "log_image": false,
-            "log_image_every": 2000
-        }
-    ],
-    [ "test.py",
-        {
-            "load_from": "Supernova_test_TCNN_2feats_16grids_8_2-32",
-            "tests": "reconstruction"
-        }
-    ],
-
-
-
-    [ "train.py",
-        {
-            "save_name": "Supernova_test_TCNN_2feats_16grids_8_2-64",
-            "model": "NGP_TCNN",
-            "data": "Supernova_test.nc",
-
-            "n_dims": 3,
-            "n_features": 2,
-            "n_grids": 16,
-            "hash_log2_size": 8,
-            "hash_base_resolution": 2,
-            "hash_max_resolution": 64,
-            "n_layers": 2,
-            "nodes_per_layer": 64,
-            "n_outputs": 1,
-
-            "lr": 0.02,
-            "iterations": 10000,
-            "points_per_iteration": 100000,
-            "interpolate": true,
-            "log_every": 25,
-            "log_image": false,
-            "log_image_every": 2000
-        }
-    ],
-    [ "test.py",
-        {
-            "load_from": "Supernova_test_TCNN_2feats_16grids_8_2-64",
-            "tests": "reconstruction"
-        }
-    ],
-
-    [ "train.py",
-        {
-            "save_name": "Supernova_test_TCNN_2feats_16grids_8_4-16",
-            "model": "NGP_TCNN",
-            "data": "Supernova_test.nc",
-
-            "n_dims": 3,
-            "n_features": 2,
-            "n_grids": 16,
-            "hash_log2_size": 8,
+            "hash_log2_size": 11,
             "hash_base_resolution": 4,
-            "hash_max_resolution": 16,
+            "hash_max_resolution": 128,
             "n_layers": 2,
             "nodes_per_layer": 64,
             "n_outputs": 1,
 
-            "lr": 0.02,
+            "lr": 0.01,
             "iterations": 10000,
             "points_per_iteration": 100000,
             "interpolate": true,
@@ -124,28 +26,28 @@
     ],
     [ "test.py",
         {
-            "load_from": "Supernova_test_TCNN_2feats_16grids_8_4-16",
+            "load_from": "Supernova_test_TCNN_2feats_16grids_11_4-128",
             "tests": "reconstruction"
         }
     ],
 
     [ "train.py",
         {
-            "save_name": "Supernova_test_TCNN_2feats_16grids_8_4-32",
+            "save_name": "Supernova_test_TCNN_2feats_16grids_11_8-128",
             "model": "NGP_TCNN",
             "data": "Supernova_test.nc",
 
             "n_dims": 3,
             "n_features": 2,
             "n_grids": 16,
-            "hash_log2_size": 8,
-            "hash_base_resolution": 4,
-            "hash_max_resolution": 32,
+            "hash_log2_size": 11,
+            "hash_base_resolution": 8,
+            "hash_max_resolution": 128,
             "n_layers": 2,
             "nodes_per_layer": 64,
             "n_outputs": 1,
 
-            "lr": 0.02,
+            "lr": 0.01,
             "iterations": 10000,
             "points_per_iteration": 100000,
             "interpolate": true,
@@ -156,28 +58,28 @@
     ],
     [ "test.py",
         {
-            "load_from": "Supernova_test_TCNN_2feats_16grids_8_4-32",
+            "load_from": "Supernova_test_TCNN_2feats_16grids_11_8-128",
             "tests": "reconstruction"
         }
     ],
 
     [ "train.py",
         {
-            "save_name": "Supernova_test_TCNN_2feats_16grids_8_4-64",
+            "save_name": "Supernova_test_TCNN_2feats_16grids_11_8-512",
             "model": "NGP_TCNN",
             "data": "Supernova_test.nc",
 
             "n_dims": 3,
             "n_features": 2,
             "n_grids": 16,
-            "hash_log2_size": 8,
-            "hash_base_resolution": 4,
-            "hash_max_resolution": 64,
+            "hash_log2_size": 11,
+            "hash_base_resolution": 8,
+            "hash_max_resolution": 512,
             "n_layers": 2,
             "nodes_per_layer": 64,
             "n_outputs": 1,
 
-            "lr": 0.02,
+            "lr": 0.01,
             "iterations": 10000,
             "points_per_iteration": 100000,
             "interpolate": true,
@@ -188,8 +90,137 @@
     ],
     [ "test.py",
         {
-            "load_from": "Supernova_test_TCNN_2feats_16grids_8_4-64",
+            "load_from": "Supernova_test_TCNN_2feats_16grids_11_8-512",
+            "tests": "reconstruction"
+        }
+    ],
+
+    [ "train.py",
+        {
+            "save_name": "Supernova_test_TCNN_2feats_16grids_11_8-1024",
+            "model": "NGP_TCNN",
+            "data": "Supernova_test.nc",
+
+            "n_dims": 3,
+            "n_features": 2,
+            "n_grids": 16,
+            "hash_log2_size": 11,
+            "hash_base_resolution": 8,
+            "hash_max_resolution": 1024,
+            "n_layers": 2,
+            "nodes_per_layer": 64,
+            "n_outputs": 1,
+
+            "lr": 0.01,
+            "iterations": 10000,
+            "points_per_iteration": 100000,
+            "interpolate": true,
+            "log_every": 25,
+            "log_image": false,
+            "log_image_every": 2000
+        }
+    ],
+    [ "test.py",
+        {
+            "load_from": "Supernova_test_TCNN_2feats_16grids_11_8-1024",
+            "tests": "reconstruction"
+        }
+    ],
+
+    [ "train.py",
+        {
+            "save_name": "Supernova_test_TCNN_2feats_16grids_11_16-256",
+            "model": "NGP_TCNN",
+            "data": "Supernova_test.nc",
+
+            "n_dims": 3,
+            "n_features": 2,
+            "n_grids": 16,
+            "hash_log2_size": 11,
+            "hash_base_resolution": 16,
+            "hash_max_resolution": 256,
+            "n_layers": 2,
+            "nodes_per_layer": 64,
+            "n_outputs": 1,
+
+            "lr": 0.01,
+            "iterations": 10000,
+            "points_per_iteration": 100000,
+            "interpolate": true,
+            "log_every": 25,
+            "log_image": false,
+            "log_image_every": 2000
+        }
+    ],
+    [ "test.py",
+        {
+            "load_from": "Supernova_test_TCNN_2feats_16grids_11_16-256",
+            "tests": "reconstruction"
+        }
+    ],
+
+    [ "train.py",
+        {
+            "save_name": "Supernova_test_TCNN_2feats_16grids_11_16-512",
+            "model": "NGP_TCNN",
+            "data": "Supernova_test.nc",
+
+            "n_dims": 3,
+            "n_features": 2,
+            "n_grids": 16,
+            "hash_log2_size": 11,
+            "hash_base_resolution": 16,
+            "hash_max_resolution": 512,
+            "n_layers": 2,
+            "nodes_per_layer": 64,
+            "n_outputs": 1,
+
+            "lr": 0.01,
+            "iterations": 10000,
+            "points_per_iteration": 100000,
+            "interpolate": true,
+            "log_every": 25,
+            "log_image": false,
+            "log_image_every": 2000
+        }
+    ],
+    [ "test.py",
+        {
+            "load_from": "Supernova_test_TCNN_2feats_16grids_11_16-512",
+            "tests": "reconstruction"
+        }
+    ],
+
+    [ "train.py",
+        {
+            "save_name": "Supernova_test_TCNN_2feats_16grids_11_16-1024",
+            "model": "NGP_TCNN",
+            "data": "Supernova_test.nc",
+
+            "n_dims": 3,
+            "n_features": 2,
+            "n_grids": 16,
+            "hash_log2_size": 11,
+            "hash_base_resolution": 16,
+            "hash_max_resolution": 1024,
+            "n_layers": 2,
+            "nodes_per_layer": 64,
+            "n_outputs": 1,
+
+            "lr": 0.01,
+            "iterations": 10000,
+            "points_per_iteration": 100000,
+            "interpolate": true,
+            "log_every": 25,
+            "log_image": false,
+            "log_image_every": 2000
+        }
+    ],
+    [ "test.py",
+        {
+            "load_from": "Supernova_test_TCNN_2feats_16grids_11_16-1024",
             "tests": "reconstruction"
         }
     ]
+
 ]
