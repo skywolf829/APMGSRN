@@ -197,8 +197,6 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     loss.mean().backward()
 
     early_stop_reconstruction = optimizer[0].param_groups[0]['lr'] < opt['lr'] * 1e-3
-    if(early_stop_reconstruction):
-        print(f"Model has converged. Setting early stopping flag.")
 
     if(iteration < opt['iterations']*0.8 and not early_stop_grid):
         optimizer[1].zero_grad() 
@@ -227,7 +225,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         if(iteration >= 1000):
             first_250 = early_stopping_grid_losses[iteration-1000:iteration-500].mean()
             last_250 = early_stopping_grid_losses[iteration-500:iteration].mean()
-            early_stop_grid = last_250 > first_250*0.975
+            early_stop_grid = last_250 > first_250*(1-1e-2)
             if(early_stop_grid):
                 print(f"Grid has converged. Setting early stopping flag.")
 
@@ -235,7 +233,8 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         density_loss = None
     
     optimizer[0].step()
-    scheduler[0].step(loss.mean())   
+    if(early_stop_grid):
+        scheduler[0].step(loss.mean())   
     
     if(opt['log_every'] != 0):
         logging(writer, iteration, 
@@ -305,7 +304,7 @@ def train( model, dataset, opt):
         scheduler = [
             torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer[0],
                 mode="min", patience=500, threshold=1e-4, threshold_mode="rel",
-                cooldown=250,factor=0.1),
+                cooldown=250,factor=0.1,verbose=True),
             torch.optim.lr_scheduler.LinearLR(optimizer[1], 
                 start_factor=1, end_factor=0.5)
         ]      
