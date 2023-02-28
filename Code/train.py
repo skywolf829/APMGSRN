@@ -178,7 +178,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
                       early_stopping_data=None):
     early_stop_reconstruction = early_stopping_data[0]
     early_stop_grid = early_stopping_data[1]
-    early_stopping_reconstruction_losses = early_stopping_data[3]
+    early_stopping_reconstruction_losses = early_stopping_data[2]
     early_stopping_grid_losses = early_stopping_data[3]
     if(early_stop_reconstruction and early_stop_grid):
         return (early_stop_reconstruction, early_stop_grid, 
