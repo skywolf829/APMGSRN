@@ -287,7 +287,7 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
-def make_coord_grid(shape, device, flatten=True, align_corners=False):
+def make_coord_grid(shape, device, flatten=True, align_corners=False, use_half=False):
     """ 
     Make coordinates at grid centers.
     return (shape.prod, 3) matrix with (z,y,x) coordinate
@@ -305,11 +305,13 @@ def make_coord_grid(shape, device, flatten=True, align_corners=False):
 
         else:
             r = (right - left) / (n+1)
-            seq = left + r + r * \
+            seq :torch.Tensor = left + r + r * \
             torch.arange(0, n, 
             device=device, 
             dtype=torch.float32).float()
-
+            
+        if(use_half):
+                seq = seq.half()
         coord_seqs.append(seq)
 
     ret = torch.meshgrid(*coord_seqs, indexing="ij")

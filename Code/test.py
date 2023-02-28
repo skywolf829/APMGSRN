@@ -17,6 +17,8 @@ save_folder = os.path.join(project_folder_path, "SavedModels")
 
 def model_reconstruction(model, dataset, opt):
     grid = list(dataset.data.shape[2:])
+    data_max = dataset.data.max()
+    data_min = dataset.data.min()
     with torch.no_grad():
         result = sample_grid(model, grid, max_points=1000000,
                              align_corners=opt['align_corners'],
@@ -29,8 +31,33 @@ def model_reconstruction(model, dataset, opt):
         os.path.join(output_folder, 
         "Reconstruction", opt['save_name']+".nc"))
     
-    p = PSNR(dataset.data, result, in_place=True)
+    p = PSNR(dataset.data, result, in_place=True, range=data_max-data_min)
     print(f"PSNR: {p : 0.03f}")
+
+def test_psnr(model, dataset, opt):
+    grid = list(dataset.data.shape[2:])
+    dataset.data = dataset.data[0].flatten(1,-1).permute(1,0)
+    data_max = dataset.data.max()
+    data_min = dataset.data.min()
+    print(dataset.data.shape)
+    with torch.no_grad():
+        coord_grid = make_coord_grid(grid, 
+        opt['data_device'], flatten=True,
+        align_corners=opt['align_corners'],
+        use_half=True)
+        
+        for start in range(0, coord_grid.shape[0], 2**20):
+            end_ind = min(coord_grid.shape[0], start+2**20)
+            output = model(coord_grid[start:end_ind].to(opt['device']).float()).to(opt['data_device'])
+            dataset.data[start:end_ind] -= output
+        
+    dataset.data **= 2
+    y = dataset.data.mean()
+    y = torch.log10(y)
+    y *= 10.0
+    y = 20.0 * torch.log10(data_max-data_min) - y
+    
+    print(f"PSNR: {y : 0.03f}")
 
 def error_volume(model, dataset, opt):
     grid = list(dataset.data.shape[2:])
@@ -144,6 +171,8 @@ def perform_tests(model, data, tests, opt):
         scale_distribution(model, opt)
     if("feature_density" in tests):
         feature_density(model, data, opt)
+    if("psnr" in tests):
+        test_psnr(model, data, opt)
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate a model on some tests')

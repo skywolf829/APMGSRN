@@ -13,7 +13,8 @@ from Other.utility_functions import create_path
 #plt.style.use('fivethirtyeight')
 #plt.style.use('ggplot')
 #plt.style.use('seaborn')
-plt.style.use('seaborn-paper')
+#plt.style.use('seaborn-paper')
+plt.style.use('seaborn-v0_8-whitegrid')
 font = {#'font.family' : 'normal',
     #'font.weight' : 'bold',
     'font.size'   : 16,
@@ -26,117 +27,125 @@ save_folder = os.path.join(project_folder_path, "Output", "Charts")
 output_folder = os.path.join(project_folder_path, "Output")
    
 asteroid_results = {
-    "Ours": {
-        2**16 : 35.319,
-        2**20 : 39.645,
-        2**24 : 42.825
-    },
-    "NGP": {
-        2**16 : 35.806,
-        2**20 : 41.626,
-        2**24 : 45.248
+    "AMGSRN": {
+        2**16 : 35.350,
+        2**20 : 39.970,
+        2**24 : 45.004
     },
     "fVSRN": {
-        2**16 : 33.058,
-        2**20 : 35.407,
-        2**24 : 40.413
+        2**16 : 32.992,
+        2**20 : 35.408,
+        2**24 : 40.442
+    },
+    "NGP": {
+        2**16 : 35.848,
+        2**20 : 41.645,
+        2**24 : 45.269
     }
 }
 
 isotropic_results = {
-    "Ours": {
-        2**16 : 27.703, 
-        2**20 : 32.206, 
-        2**24 : 38.604
-    },
-    "NGP": {
-        2**16 : 27.006,
-        2**20 : 30.776,
-        2**24 : 37.199
+    "AMGSRN": {
+        2**16 : 27.679, 
+        2**20 : 32.028, 
+        2**24 : 38.268
     },
     "fVSRN": {
-        2**16 : 27.417,
-        2**20 : 31.780,
-        2**24 : 38.468
+        2**16 : 27.427,
+        2**20 : 31.781,
+        2**24 : 38.464
+    },
+    "NGP": {
+        2**16 : 27.007,
+        2**20 : 30.786,
+        2**24 : 37.198
     }
 }
 
 nyx_results = {
-    "Ours": {
-        2**16 : 29.616,
-        2**20 : 38.294,
-        2**24 : 44.302 
-    },
-    "NGP": {
-        2**16 : 28.381,
-        2**20 : 35.147,
-        2**24 : 42.696
+    "AMGSRN": {
+        2**16 : 29.499,
+        2**20 : 37.864,
+        2**24 : 44.608 
     },
     "fVSRN": {
-        2**16 : 29.204,
-        2**20 : 37.741,
-        2**24 : 43.923
+        2**16 : 29.203,
+        2**20 : 37.761,
+        2**24 : 43.889
+    },
+    "NGP": {
+        2**16 : 28.391,
+        2**20 : 35.142,
+        2**24 : 42.750
     }
 }
 
 plume_results = {
-    "Ours": {
-        2**16 : 50.195, 
-        2**20 : 57.344,
-        2**24 : 59.154
-    },
-    "NGP": {
-        2**16 : 46.895,
-        2**20 : 50.031,
-        2**24 : 53.283
+    "AMGSRN": {
+        2**16 : 49.172, 
+        2**20 : 56.459,
+        2**24 : 57.702
     },
     "fVSRN": {
-        2**16 : 44.667,
-        2**20 : 52.520,
-        2**24 : 55.297
+        2**16 : 44.775,
+        2**20 : 52.580,
+        2**24 : 55.064
+    },
+    "NGP": {
+        2**16 : 46.713,
+        2**20 : 50.847,
+        2**24 : 53.282
     }
 }
 
 supernova_results = {
-    "Ours": {
-        2**16 : 41.990,
-        2**20 : 46.594,
-        2**24 : 48.260
-    },
-    "NGP": {
-        2**16 : 41.544,
-        2**20 : 44.828,
-        2**24 : 47.831
+    "AMGSRN": {
+        2**16 : 41.914,
+        2**20 : 46.787,
+        2**24 : 49.695
     },
     "fVSRN": {
-        2**16 : 39.467,
-        2**20 : 43.507,
-        2**24 : 47.494
-    }
+        2**16 : 39.497,
+        2**20 : 43.513,
+        2**24 : 47.480
+    },
+    "NGP": {
+        2**16 : 41.523,
+        2**20 : 44.811,
+        2**24 : 47.806
+    },
 }
 
 ensemble_results = {
     "Asteroid": {
-        "Ensemble": 45.164,
-        "Single": 42.825
+        "Ensemble": 44.795,
+        "Single": 45.004
         },
     "Isotropic": {
-        "Ensemble": 41.646,
-        "Single": 38.604
+        "Ensemble": 41.067,
+        "Single": 38.268
         },
     "Nyx": {
-        "Ensemble": 47.054,
-        "Single": 44.302
+        "Ensemble": 46.230,
+        "Single": 44.608 
         },
     "Plume": {
-        "Ensemble": 59.358,
-        "Single": 59.154
+        "Ensemble": 58.829,
+        "Single": 57.702
         },
     "Supernova": {
-        "Ensemble": 50.414,
-        "Single": 48.260
+        "Ensemble": 50.991,
+        "Single": 49.695
         }
 }
+    
+ghostcell_results = {
+    "1 ghost cell": 41.604,
+    "4 ghost cell": 41.325,
+    "8 ghost cell": 41.046,
+    "16 ghost cell": 40.558
+}
+     
     
 def architecture_comparison(data, name):
     
@@ -308,6 +317,8 @@ if __name__ == '__main__':
     
     args = vars(parser.parse_args())
 
+    model_size_performance_chart()
+    ensemble_comparison(ensemble_results)
     flat_top_chart()
     
     quit()
