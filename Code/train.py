@@ -174,11 +174,9 @@ def train_step_AMGSRN_precondition(opt, iteration, batch, dataset, model, optimi
             {"Fitting loss": loss}, 
             model, opt, dataset.data.shape[2:], dataset)
 
-def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, writer):
-    if(iteration == 0):
-        early_stopping_losses = torch.zeros([opt['iterations']], 
-            dtype=torch.float32, device=opt['device'])
-        early_stop = False
+def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, writer, 
+                      early_stopping_losses=None, early_stop=False):
+    
     optimizer[0].zero_grad()                  
     x, y = batch
     
@@ -235,8 +233,10 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
             {"Fitting loss": loss, 
              "Grid loss": density_loss}, 
             model, opt, dataset.data.shape[2:], dataset, preconditioning='grid')
+    return early_stop
 
-def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, writer):
+def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, writer,
+                       early_stopping_losses=None, early_stop=False):
     opt['iteration_number'] = iteration
     optimizer.zero_grad()
        
@@ -328,15 +328,24 @@ def train( model, dataset, opt):
             [opt['iterations']*(2/5), opt['iterations']*(3/5), opt['iterations']*(4/5)],
             gamma=0.33)
        
+    
+    early_stopping_losses = torch.zeros([opt['iterations']], 
+        dtype=torch.float32, device=opt['device'])
+    early_stop = False
     for (iteration, batch) in enumerate(dataloader):
-        train_step(opt,
+        early_stop = train_step(opt,
                 iteration,
                 batch,
                 dataset,
                 model,
                 optimizer,
                 scheduler,
-                writer)
+                writer,
+                early_stopping_losses=early_stopping_losses,
+                early_stop = early_stop)
+        if(early_stop is not None):
+            early_stop = early_stop
+
     
     #writer.add_graph(model, torch.zeros([1, 3], device=opt['device'], dtype=torch.float32))
     writer.close()
