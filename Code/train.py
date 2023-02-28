@@ -176,14 +176,16 @@ def train_step_AMGSRN_precondition(opt, iteration, batch, dataset, model, optimi
 
 def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, writer, 
                       early_stopping_data=None):
-    early_stop = early_stopping_data[0]
-    early_stopping_losses = early_stopping_data[1]
+    early_stop_reconstruction = early_stopping_data[0]
+    early_stop_grid = early_stopping_data[1]
+    early_stopping_grid_losses = early_stopping_data[2]
+    if(early_stop_reconstruction and early_stop_grid):
+        return
     optimizer[0].zero_grad()                  
     x, y = batch
     
     x = x.to(opt['device'])
     y = y.to(opt['device'])
-    
     
     transformed_x = model.transform(x)    
     model_output = model.forward_pre_transformed(transformed_x)
@@ -192,8 +194,12 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     loss = loss.sum(dim=1, keepdim=True)
     
     loss.mean().backward()
-    
-    if(iteration < opt['iterations']*0.8 and not early_stop):
+
+    early_stop_reconstruction = optimizer[0].param_groups[0]['lr'] < opt['lr'] * 1e-3
+    if(early_stop_reconstruction):
+        print(f"Model has converged. Setting early stopping flag.")
+
+    if(iteration < opt['iterations']*0.8 and not early_stop_grid):
         optimizer[1].zero_grad() 
         
         density = model.feature_density_pre_transformed(transformed_x) 
@@ -216,13 +222,13 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         optimizer[1].step()
         scheduler[1].step()   
 
-        early_stopping_losses[iteration] = density_loss.mean()
-        if(iteration >= 500):
-            first_250 = early_stopping_losses[iteration-500:iteration-250].mean()
-            last_250 = early_stopping_losses[iteration-250:iteration].mean()
-            early_stop = last_250*1.025 > first_250
-            if(early_stop):
-                print(f"Early stopping as grid loss has converged.")
+        early_stopping_grid_losses[iteration] = density_loss.mean()
+        if(iteration >= 1000):
+            first_250 = early_stopping_grid_losses[iteration-1000:iteration-500].mean()
+            last_250 = early_stopping_grid_losses[iteration-500:iteration].mean()
+            early_stop_grid = last_250 > first_250*0.975
+            if(early_stop_grid):
+                print(f"Grid has converged. Setting early stopping flag.")
 
     else:
         density_loss = None
@@ -235,7 +241,8 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
             {"Fitting loss": loss, 
              "Grid loss": density_loss}, 
             model, opt, dataset.data.shape[2:], dataset, preconditioning='grid')
-    return (early_stop, early_stopping_losses)
+    return (early_stop_reconstruction, early_stop_grid, 
+            early_stopping_grid_losses)
 
 def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, writer,
                        early_stopping_data=None):
@@ -280,61 +287,43 @@ def train( model, dataset, opt):
     model.train(True)
 
     # choose the specific training iteration function based on the model
-    train_step = train_step_vanilla
-    if 'AMGSRN' in opt['model']:
-        if(opt['precondition']):
-            train_step = train_step_AMGSRN_precondition
-            model.precodition_grids(dataset, writer, logging)
-            model.zero_grad()            
-            # Finally, reset the parameters necessary, and keep the grids
-            model.reset_parameters()
-            model.feature_grids.requires_grad_(True)
-            model.decoder.requires_grad_(True)
-            model.grid_scales.requires_grad_(False)
-            model.grid_translations.requires_grad_(False)
-        else:
-            train_step = train_step_AMGSRN
-                
+    
     if("AMGSRN" in opt['model']):
-        if(opt['precondition']):
-            optimizer = optim.Adam([
+        train_step = train_step_AMGSRN
+        optimizer = [
+            optim.Adam([
                 {"params": [model.encoder.feature_grids], "lr": opt["lr"]},
                 {"params": model.decoder.parameters(), "lr": opt["lr"]}
-            ],betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15) 
-            scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
-                [opt['iterations']*(2/5), opt['iterations']*(4/5)],
-                gamma=0.1)
-        else:
-            optimizer = [
-                optim.Adam([
-                    {"params": [model.encoder.feature_grids], "lr": opt["lr"]},
-                    {"params": model.decoder.parameters(), "lr": opt["lr"]}
-                ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
-                optim.Adam(
-                    model.encoder.get_transform_parameters(), 
-                    lr=opt['lr'] * 0.05, 
-                    betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15
-                    )
-            ]        
-            scheduler = [
-                torch.optim.lr_scheduler.MultiStepLR(optimizer[0],
-                    [opt['iterations']*(9/10)],
-                    gamma=0.1),
-                torch.optim.lr_scheduler.LinearLR(optimizer[1], 
-                    start_factor=1, end_factor=0.5)
-            ]      
+            ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
+            optim.Adam(
+                model.encoder.get_transform_parameters(), 
+                lr=opt['lr'] * 0.05, 
+                betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15
+                )
+        ]        
+        scheduler = [
+            torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer[0],
+                mode="min", patience=500, threshold=1e-2, cooldown=250,
+                factor=0.1),
+            torch.optim.lr_scheduler.LinearLR(optimizer[1], 
+                start_factor=1, end_factor=0.5)
+        ]      
+        early_stopping_data = (False, False,
+            torch.zeros([opt['iterations']], 
+            dtype=torch.float32, device=opt['device'])
+            )
     else:
+        train_step = train_step_vanilla
         optimizer = optim.Adam(model.parameters(), lr=opt["lr"], 
             betas=[opt['beta_1'], opt['beta_2']]) 
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
             [opt['iterations']*(2/5), opt['iterations']*(3/5), opt['iterations']*(4/5)],
             gamma=0.33)
-       
+        early_stopping_data = (False,
+            torch.zeros([opt['iterations']], 
+            dtype=torch.float32, device=opt['device'])
+            )
     
-    early_stopping_data = (False,
-        torch.zeros([opt['iterations']], 
-        dtype=torch.float32, device=opt['device'])
-        )
     
     for (iteration, batch) in enumerate(dataloader):
         early_stopping_data = train_step(opt,
