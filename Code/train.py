@@ -219,7 +219,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         if(iteration >= 500):
             first_250 = early_stopping_data[1][iteration-500:iteration-250].mean()
             last_250 = early_stopping_data[1][iteration-250:].mean()
-            early_stop = last_250*1.025 > first_250
+            early_stopping_data[0] = last_250*1.025 > first_250
 
     else:
         density_loss = None
