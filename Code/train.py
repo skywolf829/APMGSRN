@@ -205,10 +205,10 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         
         density = model.feature_density_pre_transformed(transformed_x) 
         
-        density /= density.sum().detach()  
-        target = torch.exp(torch.log(density+1e-16) / \
-            (loss/loss.mean()))
-        target /= target.sum()
+        density /= density.sum().detach()
+        target = torch.exp(torch.log(density+1e-16) * \
+            (loss.mean()/loss))
+        #target /= target.sum()
         
         
         density_loss = F.kl_div(
@@ -224,9 +224,9 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         scheduler[1].step()   
 
         early_stopping_grid_losses[iteration] = density_loss.mean().detach()
-        if(iteration >= 1000):
-            first_250 = early_stopping_grid_losses[iteration-1000:iteration-500].mean()
-            last_250 = early_stopping_grid_losses[iteration-500:iteration].mean()
+        if(iteration >= 1500):
+            first_250 = early_stopping_grid_losses[iteration-1500:iteration-750].mean()
+            last_250 = early_stopping_grid_losses[iteration-750:iteration].mean()
             early_stop_grid = last_250 > first_250*(1-1e-2)
             if(early_stop_grid):
                 print(f"Grid has converged. Setting early stopping flag.")
@@ -236,7 +236,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     
     optimizer[0].step()
     if(early_stop_grid):
-        scheduler[0].step(early_stopping_reconstruction_losses[iteration-500:iteration].mean())   
+        scheduler[0].step(early_stopping_reconstruction_losses[iteration-1000:iteration].mean())   
     
     if(opt['log_every'] != 0):
         logging(writer, iteration, 
