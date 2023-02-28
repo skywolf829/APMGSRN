@@ -174,7 +174,7 @@ def train_step_AMGSRN_precondition(opt, iteration, batch, dataset, model, optimi
             {"Fitting loss": loss}, 
             model, opt, dataset.data.shape[2:], dataset)
 
-def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
+def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, writer):
     if(iteration == 0):
         early_stopping_losses = torch.zeros([opt['iterations']], 
             dtype=torch.float32, device=opt['device'])
@@ -229,8 +229,6 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     
     optimizer[0].step()
     scheduler[0].step()   
-         
-    profiler.step()
     
     if(opt['log_every'] != 0):
         logging(writer, iteration, 
@@ -238,7 +236,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
              "Grid loss": density_loss}, 
             model, opt, dataset.data.shape[2:], dataset, preconditioning='grid')
 
-def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
+def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, writer):
     opt['iteration_number'] = iteration
     optimizer.zero_grad()
        
@@ -251,8 +249,7 @@ def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, schedul
     loss.mean().backward()                   
 
     optimizer.step()
-    scheduler.step()        
-    profiler.step()
+    scheduler.step()   
     
     logging(writer, iteration, 
         {"Fitting loss": loss.mean()}, 
