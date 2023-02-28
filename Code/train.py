@@ -176,7 +176,8 @@ def train_step_AMGSRN_precondition(opt, iteration, batch, dataset, model, optimi
 
 def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, writer, 
                       early_stopping_data=None):
-    
+    early_stop = early_stopping_data[0]
+    early_stopping_losses = early_stopping_data[1]
     optimizer[0].zero_grad()                  
     x, y = batch
     
@@ -192,7 +193,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     
     loss.mean().backward()
     
-    if(iteration < opt['iterations']*0.8 and not early_stopping_data[0]):
+    if(iteration < opt['iterations']*0.8 and not early_stop):
         optimizer[1].zero_grad() 
         
         density = model.feature_density_pre_transformed(transformed_x) 
@@ -215,11 +216,11 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         optimizer[1].step()
         scheduler[1].step()   
 
-        early_stopping_data[1][iteration] = density_loss.mean()
+        early_stopping_losses[iteration] = density_loss.mean()
         if(iteration >= 500):
-            first_250 = early_stopping_data[1][iteration-500:iteration-250].mean()
-            last_250 = early_stopping_data[1][iteration-250:].mean()
-            early_stopping_data[0] = last_250*1.025 > first_250
+            first_250 = early_stopping_losses[iteration-500:iteration-250].mean()
+            last_250 = early_stopping_losses[iteration-250:].mean()
+            early_stop = last_250*1.025 > first_250
 
     else:
         density_loss = None
@@ -232,7 +233,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
             {"Fitting loss": loss, 
              "Grid loss": density_loss}, 
             model, opt, dataset.data.shape[2:], dataset, preconditioning='grid')
-    return early_stopping_data
+    return (early_stop, early_stopping_losses)
 
 def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, writer,
                        early_stopping_data=None):
