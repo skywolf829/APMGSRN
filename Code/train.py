@@ -175,9 +175,11 @@ def train_step_AMGSRN_precondition(opt, iteration, batch, dataset, model, optimi
             model, opt, dataset.data.shape[2:], dataset)
 
 def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
-    opt['iteration_number'] = iteration
-    optimizer[0].zero_grad() 
-                 
+    if(iteration == 0):
+        early_stopping_losses = torch.zeros([opt['iterations']], 
+            dtype=torch.float32, device=opt['device'])
+        early_stop = False
+    optimizer[0].zero_grad()                  
     x, y = batch
     
     x = x.to(opt['device'])
@@ -191,9 +193,8 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     loss = loss.sum(dim=1, keepdim=True)
     
     loss.mean().backward()
-       
     
-    if(iteration < opt['iterations']*0.8):
+    if(iteration < opt['iterations']*0.8 and not early_stop):
         optimizer[1].zero_grad() 
         
         density = model.feature_density_pre_transformed(transformed_x) 
@@ -215,6 +216,14 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         
         optimizer[1].step()
         scheduler[1].step()   
+
+        early_stopping_losses[iteration] = density_loss.mean()
+        if(iteration >= 500):
+            first_250 = early_stopping_losses[iteration-500:iteration-250].mean()
+            last_250 = early_stopping_losses[iteration-250:].mean()
+            if(last_250 > first_250):
+                early_stop = True
+
     else:
         density_loss = None
     
@@ -322,34 +331,15 @@ def train( model, dataset, opt):
             [opt['iterations']*(2/5), opt['iterations']*(3/5), opt['iterations']*(4/5)],
             gamma=0.33)
        
-    with torch.profiler.profile(
-        activities=[
-            torch.profiler.ProfilerActivity.CPU,
-            torch.profiler.ProfilerActivity.CUDA,
-        ] if torch.cuda.is_available() else [
-            torch.profiler.ProfilerActivity.CPU
-        ],
-        schedule=torch.profiler.schedule(
-            wait=2,
-            warmup=8,
-            active=1,
-            repeat=1),
-        record_shapes=True,
-        profile_memory=True,
-        with_stack=True,
-        with_modules=True,
-        on_trace_ready=torch.profiler.tensorboard_trace_handler(
-            os.path.join('tensorboard',opt['save_name']))) as profiler:
-        for (iteration, batch) in enumerate(dataloader):
-            train_step(opt,
-                    iteration,
-                    batch,
-                    dataset,
-                    model,
-                    optimizer,
-                    scheduler,
-                    profiler,
-                    writer)
+    for (iteration, batch) in enumerate(dataloader):
+        train_step(opt,
+                iteration,
+                batch,
+                dataset,
+                model,
+                optimizer,
+                scheduler,
+                writer)
     
     #writer.add_graph(model, torch.zeros([1, 3], device=opt['device'], dtype=torch.float32))
     writer.close()
