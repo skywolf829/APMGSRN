@@ -200,7 +200,9 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     early_stopping_reconstruction_losses[iteration] = loss.mean().detach()
     early_stop_reconstruction = optimizer[0].param_groups[0]['lr'] < opt['lr'] * 1e-2
 
-    if(iteration < opt['iterations']*0.8 and not early_stop_grid):
+    if(iteration > 500 and  # let the network learn a bit first
+        iteration < opt['iterations']*0.8 and  # stop the grid moving to adequately learn at the end
+        not early_stop_grid):
         optimizer[1].zero_grad() 
         
         density = model.feature_density_pre_transformed(transformed_x) 
@@ -224,7 +226,7 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         scheduler[1].step()   
 
         early_stopping_grid_losses[iteration] = density_loss.mean().detach()
-        if(iteration >= 1500):
+        if(iteration >= 2000):
             first_250 = early_stopping_grid_losses[iteration-1500:iteration-750].mean()
             last_250 = early_stopping_grid_losses[iteration-750:iteration].mean()
             early_stop_grid = last_250 > first_250*(1-1e-2)
