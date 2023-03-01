@@ -75,7 +75,7 @@ def test_psnr_chunked(model, opt):
     
     SSE = torch.tensor([0.0], dtype=torch.float32, device=opt['data_device'])
     
-    chunk_size = 1024
+    chunk_size = 512
     
     with torch.no_grad():
         for z_ind in range(0, opt['full_shape'][0], chunk_size):
