@@ -57,10 +57,10 @@ class AMG_encoder(nn.Module):
             tm[:,n_dims,0:n_dims] = 0.0
             tm[:,-1,-1] = 1.0
             
-            self.transformation_matrices = torch.nn.Parameter(
-                tm,                
-                requires_grad=True)
-  
+        self.transformation_matrices = torch.nn.Parameter(
+            tm,                
+            requires_grad=True)
+
     def transform(self, x):
         '''
         Transforms global coordinates x to local coordinates within
