@@ -302,7 +302,7 @@ def np_to_nc(data, name):
     d.close()
 
 def nc_to_raw(name):
-    data = nc_to_tensor(os.path.join(data_folder, name))
+    data, _ = nc_to_tensor(os.path.join(data_folder, name))
     print(data.shape)
     
 if __name__ == '__main__':
