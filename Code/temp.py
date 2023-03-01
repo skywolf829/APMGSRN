@@ -305,7 +305,7 @@ def nc_to_raw(name):
     data, _ = nc_to_tensor(os.path.join(data_folder, name))
     data : np.ndarray = data[0,0].cpu().float().numpy()
     with open(os.path.join(data_folder, f"{name.split('.')[0]}.raw"), 'wb') as f:
-        np.save(f,data)    
+        np.save(f,data.flatten())    
     
 if __name__ == '__main__':
 
