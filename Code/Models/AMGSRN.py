@@ -45,20 +45,21 @@ class AMG_encoder(nn.Module):
             #self.grid_scales.uniform_(1.0,1.2)
             #self.grid_translations.uniform_(-0.1, 0.1)
             #self.grid_rotations.uniform_(-torch.pi/16, torch.pi/16)
-            
-            d = self.transformation_matrices.device
-            n_dims = self.transformation_matrices.shape[-1]-1
-            self.transformation_matrices[:] = torch.eye(n_dims+1, 
-                device=d, dtype=torch.float32)
-            self.transformation_matrices[:,0:n_dims,:] += torch.randn_like(
-                self.transformation_matrices[:,0:n_dims,:],
+            d = self.feature_grids.device
+            n_dims = len(self.feature_grids.shape[2:])
+            n_grids = self.feature_grids.shape[0]
+            tm = torch.eye(n_dims+1, 
+                device=d, dtype=torch.float32).unsqueeze(0).repeat(n_grids,1,1) * 10
+            tm[:,0:n_dims,:] += torch.randn_like(
+                tm[:,0:n_dims,:],
                 device=d, dtype=torch.float32) * 0.05
+            #tm @= tm.transpose(-1, -2)           
+            tm[:,n_dims,0:n_dims] = 0.0
+            tm[:,-1,-1] = 1.0
+            
             self.transformation_matrices = torch.nn.Parameter(
-                self.transformation_matrices @ \
-                self.transformation_matrices.transpose(-1, -2),
+                tm,                
                 requires_grad=True)
-            self.transformation_matrices[:,n_dims,0:n_dims] = 0
-            self.transformation_matrices[:,-1,-1] = 1
   
     def transform(self, x):
         '''
