@@ -140,10 +140,16 @@ ensemble_results = {
 }
     
 ghostcell_results = {
-    "1 ghost cell": 41.604,
-    "4 ghost cell": 41.325,
-    "8 ghost cell": 41.046,
-    "16 ghost cell": 40.558
+    "Isotropic":
+        {
+            "1 ghost cell": 40.616,
+            "16 ghost cells": 39.939
+        },
+    "Supernova":
+        {
+            "1 ghost cell": 50.157,
+            "16 ghost cells": 49.391
+        }
 }
 
 # Sizes in KB:
