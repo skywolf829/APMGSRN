@@ -1,7 +1,17 @@
 [
     [ "test.py",
         {        
-        "load_from": "Rotstrat_AMGSRN_ensemble",
+        "load_from": "Rotstrat_AMGSRN_ensemble_large",
+        "tests": "psnr"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Rotstrat_AMGSRN_ensemble_medium",
+        "tests": "psnr"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Rotstrat_AMGSRN_ensemble_small",
         "tests": "psnr"
     }]
 ]
