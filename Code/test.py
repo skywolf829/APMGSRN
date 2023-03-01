@@ -128,9 +128,10 @@ def test_psnr_chunked(model, opt):
         
                     data **= 2
                     SSE += data.sum()
-                    print(f"Chunk {z_ind},{z_ind_end},{y_ind},{y_ind_end},{x_ind},{x_ind_end} error: {data.sum()}")
+                    print(f"Chunk {z_ind},{z_ind_end},{y_ind},{y_ind_end},{x_ind},{x_ind_end} SSE: {data.sum()}")
         
         MSE = SSE / (opt['full_shape'][0]*opt['full_shape'][1]*opt['full_shape'][2])
+        print(f"MSE: {MSE}, shape {opt['full_shape']}")
         y = 10 * torch.log10(MSE)
         y = 20.0 * torch.log10(data_max-data_min) - y
     print(f"Data min/max: {data_min}/{data_max}")
