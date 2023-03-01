@@ -294,8 +294,11 @@ def train( model, dataset, opt):
     
     if(os.path.exists(os.path.join(output_folder, "FeatureLocations", opt['save_name']))):
         shutil.rmtree(os.path.join(output_folder, "FeatureLocations", opt['save_name']))
-        
-    writer = SummaryWriter(os.path.join('tensorboard',opt['save_name']))
+    
+    if(opt['log_every'] > 0):
+        writer = SummaryWriter(os.path.join('tensorboard',opt['save_name']))
+    else: 
+        writer = None
     dataloader = DataLoader(dataset, 
                             batch_size=None, 
                             num_workers=4 if ("cpu" in opt['data_device'] and "cuda" in opt['device']) else 0,
@@ -344,7 +347,7 @@ def train( model, dataset, opt):
             dtype=torch.float32, device=opt['device'])
             )
     
-    
+    start_time = time.time()
     for (iteration, batch) in enumerate(dataloader):
         early_stopping_data = train_step(opt,
                 iteration,
@@ -355,6 +358,11 @@ def train( model, dataset, opt):
                 scheduler,
                 writer,
                 early_stopping_data=early_stopping_data)
+    end_time = time.time()
+    sec_passed = end_time-start_time
+    mins = sec_passed / 60
+    
+    print(f"Model completed training after {int(mins)}m {int(sec_passed%60)}")
 
     
     #writer.add_graph(model, torch.zeros([1, 3], device=opt['device'], dtype=torch.float32))

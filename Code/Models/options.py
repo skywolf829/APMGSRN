@@ -48,8 +48,8 @@ class Options():
         opt['beta_2']                               = 0.99
 
         opt['iteration_number']                     = 0
-        opt['save_every']                           = 1000
-        opt['log_every']                            = 10
+        opt['save_every']                           = 0
+        opt['log_every']                            = 0
         opt['log_features_every']                   = 0
         opt['log_image_every']                      = 0
         opt['log_image']                            = False
