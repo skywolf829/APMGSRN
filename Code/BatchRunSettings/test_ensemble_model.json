@@ -2,26 +2,26 @@
     [ "test.py",
         {        
         "load_from": "Plume_AMGSRN_ensemble",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Asteroid_AMGSRN_ensemble",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Isotropic_AMGSRN_ensemble",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Nyx_AMGSRN_ensemble",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Supernova_AMGSRN_ensemble",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }]
 ]

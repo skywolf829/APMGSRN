@@ -2,76 +2,76 @@
     [ "test.py",
         {        
         "load_from": "Supernova_NGP_small",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Supernova_fVSRN_small",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Supernova_AMGSRN_small",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Nyx_NGP_small",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Nyx_fVSRN_small",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Nyx_AMGSRN_small",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Plume_NGP_small",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Plume_fVSRN_small",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Plume_AMGSRN_small",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Isotropic_NGP_small",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Isotropic_fVSRN_small",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Isotropic_AMGSRN_small",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Asteroid_NGP_small",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Asteroid_fVSRN_small",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Asteroid_AMGSRN_small",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }]
 ]

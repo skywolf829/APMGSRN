@@ -2,21 +2,21 @@
     [ "test.py",
         {        
         "load_from": "Isotropic_AMGSRN_ensemble_0ghost",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Isotropic_AMGSRN_ensemble_16ghost",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Supernova_AMGSRN_ensemble_0ghost",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }],
     [ "test.py",
         {        
         "load_from": "Supernova_AMGSRN_ensemble_16ghost",
-        "tests": "reconstruction,error_volume"
+        "tests": "psnr"
     }]
 ]

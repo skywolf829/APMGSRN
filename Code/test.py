@@ -287,7 +287,6 @@ if __name__ == '__main__':
     opt['data_device'] = args['data_device']
     model = load_model(opt, args['device'])
     model = model.to(opt['device'])
-    print(f"Moved model to {opt['device']}.")
     model.train(False)
     model.eval()
     
