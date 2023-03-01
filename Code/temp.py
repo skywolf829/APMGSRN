@@ -309,13 +309,10 @@ def nc_to_raw(name):
     
 if __name__ == '__main__':
 
-    nc_to_raw("asteroid_v02.nc")
-    nc_to_raw("asteroid_v03.nc")
-    nc_to_raw("Isotropic.nc")
-    nc_to_raw("Nyx.nc")
-    nc_to_raw("Plume.nc")
-    nc_to_raw("Supernova.nc")
     
-    
+    d, _ = nc_to_tensor(os.path.join(data_folder, "Plume.nc"))
+    d2 = torch.cat([d, d], dim=3)
+    print(d2.shape)
+    tensor_to_cdf(d2, os.path.join(data_folder, "Plume_test.nc"))
     
     quit()
