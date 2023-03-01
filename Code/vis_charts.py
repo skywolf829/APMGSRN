@@ -151,7 +151,7 @@ largescale_results = {
         "97 MB": 41.604
     },
     "Rotstrat": {
-        "864 MB": 41.325
+        "864 MB": 49.160
     }
 }     
 

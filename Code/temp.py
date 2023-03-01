@@ -300,17 +300,20 @@ def np_to_nc(data, name):
     d.createVariable("data", np.float32, dims)
     d["data"][:] = data
     d.close()
+
+def nc_to_raw(name):
+    data = nc_to_tensor(os.path.join(data_folder, name))
+    print(data.shape)
     
 if __name__ == '__main__':
 
-    channel = np.fromfile(os.path.join(data_folder, "channel5200.raw"), 
-        dtype=np.float32)
-
-    channel = channel.reshape(14400,128,256,256)
-    channel = channel.reshape(40,6,60,128,256,256)
-    channel = channel.transpose(2,3,1,4,0,5)    
-    channel = channel.reshape(7680, 1536, 10240)
-    np_to_nc(channel, "channel5200.nc")
+    nc_to_raw("asteroid_v02.nc")
+    nc_to_raw("asteroid_v03.nc")
+    nc_to_raw("Isotropic.nc")
+    nc_to_raw("Nyx.nc")
+    nc_to_raw("Plume.nc")
+    nc_to_raw("Supernova.nc")
+    
     
     
     quit()
