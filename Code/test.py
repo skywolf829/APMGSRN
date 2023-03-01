@@ -101,7 +101,7 @@ def test_psnr_chunked(model, opt):
                     else:
                         data_min = min(data.min(), data_min)
                         
-                    grid = [x_range, y_range, z_range]
+                    grid = [z_range, y_range, x_range]
                     coord_grid = make_coord_grid(grid, 
                         opt['data_device'], flatten=True,
                         align_corners=opt['align_corners'],
