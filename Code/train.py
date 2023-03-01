@@ -362,7 +362,7 @@ def train( model, dataset, opt):
     sec_passed = end_time-start_time
     mins = sec_passed / 60
     
-    print(f"Model completed training after {int(mins)}m {int(sec_passed%60)}")
+    print(f"Model completed training after {int(mins)}m {sec_passed%60:0.02f}s")
 
     
     #writer.add_graph(model, torch.zeros([1, 3], device=opt['device'], dtype=torch.float32))
