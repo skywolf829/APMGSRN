@@ -49,7 +49,7 @@ class AMG_encoder(nn.Module):
             n_dims = len(self.feature_grids.shape[2:])
             n_grids = self.feature_grids.shape[0]
             tm = torch.eye(n_dims+1, 
-                device=d, dtype=torch.float32).unsqueeze(0).repeat(n_grids,1,1) * 10
+                device=d, dtype=torch.float32).unsqueeze(0).repeat(n_grids,1,1)
             tm[:,0:n_dims,:] += torch.randn_like(
                 tm[:,0:n_dims,:],
                 device=d, dtype=torch.float32) * 0.05
