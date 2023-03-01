@@ -366,7 +366,8 @@ def train( model, dataset, opt):
 
     
     #writer.add_graph(model, torch.zeros([1, 3], device=opt['device'], dtype=torch.float32))
-    writer.close()
+    if(opt['log_every'] > 0):
+        writer.close()
     save_model(model, opt)
 
 if __name__ == '__main__':
