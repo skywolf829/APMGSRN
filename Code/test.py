@@ -15,7 +15,10 @@ data_folder = os.path.join(project_folder_path, "Data")
 output_folder = os.path.join(project_folder_path, "Output")
 save_folder = os.path.join(project_folder_path, "SavedModels")
 
-def model_reconstruction(model, dataset, opt):
+def model_reconstruction(model, opt):
+    
+    # Load the reference data
+    dataset = Dataset(opt)
     grid = list(dataset.data.shape[2:])
     data_max = dataset.data.max()
     data_min = dataset.data.min()
@@ -34,33 +37,112 @@ def model_reconstruction(model, dataset, opt):
     p = PSNR(dataset.data, result, in_place=True, range=data_max-data_min)
     print(f"PSNR: {p : 0.03f}")
 
-def test_psnr(model, dataset, opt):
-    grid = list(dataset.data.shape[2:])
-    dataset.data = dataset.data[0].flatten(1,-1).permute(1,0)
-    data_max = dataset.data.max()
-    data_min = dataset.data.min()
-    print(dataset.data.shape)
+def test_psnr(model, opt):
+    
+    # Load the reference data
+    data = Dataset(opt).data
+    
+    grid = list(data.shape[2:])
+    
+    data = data[0].flatten(1,-1).permute(1,0)
+    data_max = data.max()
+    data_min = data.min()
+        
     with torch.no_grad():
         coord_grid = make_coord_grid(grid, 
         opt['data_device'], flatten=True,
         align_corners=opt['align_corners'],
-        use_half=True)
+        use_half=False)
         
         for start in range(0, coord_grid.shape[0], 2**20):
             end_ind = min(coord_grid.shape[0], start+2**20)
             output = model(coord_grid[start:end_ind].to(opt['device']).float()).to(opt['data_device'])
-            dataset.data[start:end_ind] -= output
+            data[start:end_ind] -= output
         
-        dataset.data **= 2
-        y : torch.Tensor = dataset.data.mean()
-        y.log10_()
-        y *= 10.0
+        data **= 2
+        SSE : torch.Tensor = data.sum()
+        MSE = SSE / data.numel()
+        y = 10*torch.log10(MSE)
         y = 20.0 * torch.log10(data_max-data_min) - y
     
     print(f"PSNR: {y : 0.03f}")
+    return y, SSE, MSE, data.numel()
 
-def error_volume(model, dataset, opt):
+def test_psnr_chunked(model, opt):
+    
+    data_max = None
+    data_min = None
+    
+    SSE = torch.tensor([0.0], dtype=torch.float32, device=opt['data_device'])
+    
+    chunk_size = 432//2
+    
+    with torch.no_grad():
+        for z_ind in range(0, opt['full_shape'][0], chunk_size):
+            z_ind_end = min(opt['full_shape'][0], z_ind+chunk_size)
+            z_range = z_ind_end-z_ind
+            for y_ind in range(0, opt['full_shape'][1], chunk_size):
+                y_ind_end = min(opt['full_shape'][1], y_ind+chunk_size)
+                y_range = y_ind_end-y_ind            
+                for x_ind in range(0, opt['full_shape'][2], chunk_size):
+                    x_ind_end = min(opt['full_shape'][2], x_ind+chunk_size)
+                    x_range = x_ind_end-x_ind
+                    
+                    opt['extents'] = f"{z_ind},{z_ind_end},{y_ind},{y_ind_end},{x_ind},{x_ind_end}"
+                    data = Dataset(opt).data
+                    data = data[0].flatten(1,-1).permute(1,0)
+                    
+                    if(data_max is None):
+                        data_max = data.max()
+                    else:
+                        data_max = max(data.max(), data_max)
+                    if(data_min is None):
+                        data_min = data.min()
+                    else:
+                        data_min = min(data.min(), data_min)
+                        
+                    grid = [z_range, y_range, x_range]
+                    coord_grid = make_coord_grid(grid, 
+                        opt['data_device'], flatten=True,
+                        align_corners=opt['align_corners'],
+                        use_half=False)
+                    
+                    coord_grid += 1.0
+                    coord_grid /= 2.0
+                    
+                    coord_grid[:,0] *= (x_range-1) / (opt['full_shape'][2]-1)
+                    coord_grid[:,1] *= (y_range-1) / (opt['full_shape'][1]-1)
+                    coord_grid[:,2] *= (z_range-1) / (opt['full_shape'][0]-1)
+                    
+                    coord_grid[:,0] += x_ind / (opt['full_shape'][2]-1)
+                    coord_grid[:,1] += y_ind / (opt['full_shape'][1]-1)
+                    coord_grid[:,2] += z_ind / (opt['full_shape'][0]-1)
+                    
+                    coord_grid *= 2.0
+                    coord_grid -= 1.0
+                    
+                    for start in range(0, coord_grid.shape[0], 2**20):
+                        end_ind = min(coord_grid.shape[0], start+2**20)
+                        output = model(coord_grid[start:end_ind].to(opt['device']).float()).to(opt['data_device'])
+                        data[start:end_ind] -= output
+        
+                    data **= 2
+                    SSE += data.sum()
+        
+        MSE = SSE / (opt['full_shape'][0]*opt['full_shape'][1]*opt['full_shape'][2])
+        y = 10 * torch.log10(MSE)
+        y = 20.0 * torch.log10(data_max-data_min) - y
+    print(f"Data min/max: {data_min}/{data_max}")
+    print(f"PSNR: {y.item() : 0.03f}")
+
+def error_volume(model, opt):
+    
+    # Load the reference data
+    dataset = Dataset(opt)
+    
     grid = list(dataset.data.shape[2:])
+    
+    
     with torch.no_grad():
         result = sample_grid(model, grid, max_points=1000000,
                              device=opt['device'],
@@ -89,7 +171,10 @@ def scale_distribution(model, opt):
     create_path(os.path.join(output_folder, "ScaleDistributions"))
     plt.savefig(os.path.join(output_folder, "ScaleDistributions", opt['save_name']+'.png'))
 
-def feature_density(model, dataset, opt):
+def feature_density(model, opt):
+    
+    # Load the reference data
+    dataset = Dataset(opt)
     
     create_path(os.path.join(output_folder, "FeatureDensity"))
     
@@ -160,19 +245,19 @@ def feature_locations(model, opt):
         
         print(f"Largest/smallest transformed points: {transformed_points.min()} {transformed_points.max()}")
     
-def perform_tests(model, data, tests, opt):
+def perform_tests(model, tests, opt):
     if("reconstruction" in tests):
-        model_reconstruction(model, data, opt),
+        model_reconstruction(model, opt),
     if("feature_locations" in tests):
         feature_locations(model, opt)
     if("error_volume" in tests):
-        error_volume(model, data, opt)
+        error_volume(model, opt)
     if("scale_distribution" in tests):
         scale_distribution(model, opt)
     if("feature_density" in tests):
-        feature_density(model, data, opt)
+        feature_density(model, opt)
     if("psnr" in tests):
-        test_psnr(model, data, opt)
+        test_psnr_chunked(model, opt)
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate a model on some tests')
@@ -204,11 +289,8 @@ if __name__ == '__main__':
     model.train(False)
     model.eval()
     
-    # Load the reference data
-    data = Dataset(opt)
-    
     # Perform tests
-    perform_tests(model, data, tests_to_run, opt)
+    perform_tests(model, tests_to_run, opt)
     
         
     
