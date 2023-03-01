@@ -1,7 +1,7 @@
 [
     [ "test.py",
     {        
-    "load_from": "Supernova_AMGSRN_small",
+    "load_from": "Supernova_AMGSRN_ensemble",
     "tests": "psnr"
     }]
 ]
