@@ -1,7 +1,7 @@
 [
     [ "test.py",
     {        
-    "load_from": "Channel_AMGSRN_ensemble_large",
+    "load_from": "Plume_AMGSRN_ensemble",
     "tests": "psnr"
     }]
 ]
