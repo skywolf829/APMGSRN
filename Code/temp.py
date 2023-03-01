@@ -303,7 +303,8 @@ def np_to_nc(data, name):
 
 def nc_to_raw(name):
     data, _ = nc_to_tensor(os.path.join(data_folder, name))
-    print(data.shape)
+    data : np.ndarray = data[2:].cpu().numpy()
+    data.tofile(name.split(".")[0]+".raw")
     
 if __name__ == '__main__':
 
