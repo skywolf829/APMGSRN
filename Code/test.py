@@ -128,6 +128,7 @@ def test_psnr_chunked(model, opt):
         
                     data **= 2
                     SSE += data.sum()
+                    print(f"Chunk {z_ind},{z_ind_end},{y_ind},{y_ind_end},{x_ind},{x_ind_end} error: {data.sum()}")
         
         MSE = SSE / (opt['full_shape'][0]*opt['full_shape'][1]*opt['full_shape'][2])
         y = 10 * torch.log10(MSE)
