@@ -39,7 +39,7 @@ class Ensemble_SRN(nn.Module):
                 model_extents = sub_opt['extents']
                 model_extents = [float(i) for i in model_extents.split(',')]
                 indices = [eval(i) for i in sub_opt['grid_index'].split(",")]
-                ind = indices[0] + indices[1]*ensemble_grid[0] + indices[2]*ensemble_grid[0]*ensemble_grid[1]
+                ind = indices[2] + indices[1]*ensemble_grid[2] + indices[0]*ensemble_grid[2]*ensemble_grid[1]
                 #print(f"Ensemble grid index {sub_opt['grid_index']} -> {ind}")
                 model_extents[0] = ((model_extents[0] / (full_shape[0]-1)) - 0.5) * 2
                 model_extents[1] = (((model_extents[1]-1) / (full_shape[0]-1)) - 0.5) * 2
@@ -64,7 +64,7 @@ class Ensemble_SRN(nn.Module):
         #print(f"Loaded {len(models)} models in ensemble model")
 
         self.register_buffer("model_grid_shape",
-            torch.tensor(ensemble_grid, dtype=torch.long),
+            torch.tensor(ensemble_grid, dtype=torch.long).flip(0),
             persistent=False)
         self.register_buffer("full_data_shape",
             torch.tensor(full_shape, dtype=torch.long),
@@ -96,11 +96,11 @@ class Ensemble_SRN(nn.Module):
         
         indices = (x+1)/2.0
         indices.clamp_(0.0, 0.99)
-        indices *= self.model_grid_shape.flip(0)        
+        indices *= self.model_grid_shape     
         indices = indices.long()
-        indices = indices.flip(-1)        
-        indices = indices[:,0] + indices[:,1]*self.model_grid_shape[0] + \
-            indices[:,2]*(self.model_grid_shape[0]*self.model_grid_shape[1])
+        
+        indices = indices[:,0] + indices[:,1]*self.model_grid_shape[2] + \
+            indices[:,2]*(self.model_grid_shape[2]*self.model_grid_shape[1])
         
         y = torch.empty([x.shape[0], 1], 
             device=x.device, dtype=x.dtype)
