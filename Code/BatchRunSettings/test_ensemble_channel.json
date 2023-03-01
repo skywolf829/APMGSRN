@@ -5,13 +5,13 @@
         "tests": "psnr"
     }],
     [ "test.py",
-    {        
-    "load_from": "Channel_AMGSRN_ensemble_medium",
-    "tests": "psnr"
+        {        
+        "load_from": "Channel_AMGSRN_ensemble_medium",
+        "tests": "psnr"
     }],
     [ "test.py",
-    {        
-    "load_from": "Channel_AMGSRN_ensemble_large",
-    "tests": "psnr"
+        {        
+        "load_from": "Channel_AMGSRN_ensemble_large",
+        "tests": "psnr"
     }]
 ]

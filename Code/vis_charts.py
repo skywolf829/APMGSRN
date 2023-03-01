@@ -190,7 +190,7 @@ compression_results = {
     },
     "Rotstrat": {
         "TTHRESH": [
-            [4202.0, 49.160]
+            ["OOM", 49.160]
         ],
         "AMGSRN": [
             [885600.0, 49.160]        
