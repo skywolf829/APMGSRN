@@ -35,16 +35,10 @@ class AMG_encoder(nn.Module):
         self.randomize_grids()
     
     def get_transform_parameters(self) -> List[Dict[str, torch.Tensor]]:
-        #return [{"params": self.grid_scales},
-        #    {"params":self.grid_translations}
-        #]
         return [{"params": self.transformation_matrices}]
         
     def randomize_grids(self):  
         with torch.no_grad():     
-            #self.grid_scales.uniform_(1.0,1.2)
-            #self.grid_translations.uniform_(-0.1, 0.1)
-            #self.grid_rotations.uniform_(-torch.pi/16, torch.pi/16)
             d = self.feature_grids.device
             n_dims = len(self.feature_grids.shape[2:])
             n_grids = self.feature_grids.shape[0]
