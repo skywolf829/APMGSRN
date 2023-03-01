@@ -218,11 +218,10 @@ compression_results = {
     }
 }
 
-
 largescale_results = {
     "Channel": {
         "97 MB": 40.298,            
-        "324 MB": None,
+        "324 MB": 40.320,
         "768 MB": 49.160
     },
     "Rotstrat": {
