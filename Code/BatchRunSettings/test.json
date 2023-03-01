@@ -1,7 +1,7 @@
 [
     [ "test.py",
     {        
-    "load_from": "test",
-    "tests": "psnr"
+        "load_from": "test",
+        "tests": "psnr"
     }]
 ]
