@@ -6,17 +6,17 @@
     }],
     [ "test.py",
         {        
-        "load_from": "Isotropic_AMGSRN_ensemble_4ghost",
-        "tests": "reconstruction,error_volume"
-    }],
-    [ "test.py",
-        {        
-        "load_from": "Isotropic_AMGSRN_ensemble_8ghost",
-        "tests": "reconstruction,error_volume"
-    }],
-    [ "test.py",
-        {        
         "load_from": "Isotropic_AMGSRN_ensemble_16ghost",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_AMGSRN_ensemble_0ghost",
+        "tests": "reconstruction,error_volume"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_AMGSRN_ensemble_16ghost",
         "tests": "reconstruction,error_volume"
     }]
 ]

@@ -1,7 +1,7 @@
 [
     [ "test.py",
     {        
-    "load_from": "Rotstrat_AMGSRN_ensemble",
+    "load_from": "Channel_AMGSRN_ensemble_large",
     "tests": "psnr"
     }]
 ]
