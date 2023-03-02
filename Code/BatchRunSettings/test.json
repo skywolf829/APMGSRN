@@ -1,17 +1,7 @@
 [    
     [ "test.py",
         {        
-        "load_from": "Channel_test_medium",
-        "tests": "psnr"
-    }],
-    [ "test.py",
-        {        
         "load_from": "Channel_test_small",
-        "tests": "psnr"
-    }],
-    [ "test.py",
-        {        
-        "load_from": "Channel_test_large",
-        "tests": "psnr"
+        "tests": "reconstruction,psnr"
     }]
 ]
