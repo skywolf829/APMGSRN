@@ -23,5 +23,35 @@
         {        
         "load_from": "Asteroid_AMGSRN_ensemble",
         "tests": "throughput"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_NGP_medium",
+        "tests": "throughput"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_fVSRN_medium",
+        "tests": "throughput"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_AMGSRN_medium",
+        "tests": "throughput"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_NGP_small",
+        "tests": "throughput"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_fVSRN_small",
+        "tests": "throughput"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Supernova_AMGSRN_small",
+        "tests": "throughput"
     }]
 ]
