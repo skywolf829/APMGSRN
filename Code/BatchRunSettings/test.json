@@ -1,17 +1,7 @@
 [    
     [ "test.py",
         {        
-        "load_from": "Channel512_NGP_medium",
-        "tests": "reconstruction,psnr,error_volume"
-    }],
-    [ "test.py",
-        {        
-        "load_from": "Channel512_fVSRN_medium",
-        "tests": "reconstruction,psnr,error_volume"
-    }],
-    [ "test.py",
-        {        
-        "load_from": "Channel512_AMGSRN_medium",
+        "load_from": "Asteroid_AMGSRN_ensemble",
         "tests": "reconstruction,psnr,error_volume"
     }]
 ]
