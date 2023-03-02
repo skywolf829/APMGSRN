@@ -18,5 +18,10 @@
         {        
         "load_from": "Supernova_AMGSRN_ensemble",
         "tests": "throughput"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Asteroid_AMGSRN_ensemble",
+        "tests": "throughput"
     }]
 ]
