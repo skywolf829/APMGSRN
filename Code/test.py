@@ -182,24 +182,27 @@ def scale_distribution(model, opt):
 def test_throughput(model, opt):
 
     batch = 2**22
-    num_forward = 100
+    num_forward = 10000
 
-    input_data :torch.Tensor = torch.rand([batch, 3], device=opt['device'], dtype=torch.float32)
+    with torch.no_grad():
+        input_data :torch.Tensor = torch.rand([batch, 3], device=opt['device'], dtype=torch.float32)
 
-    import time
-    torch.cuda.synchronize()
-    t0 = time.time()
-    for i in range(num_forward):
-        input_data.random_()
-        model(input_data)
+        import time
+        torch.cuda.synchronize()
+        t0 = time.time()
+        for i in range(num_forward):
+            input_data.random_()
+            model(input_data)
 
-    torch.cuda.synchronize()
-    t1 = time.time()
+        torch.cuda.synchronize()
+        t1 = time.time()
     passed_time = t1 - t0
     points_queried = batch * num_forward
     print(f"Time for {num_forward} passes with batch size {batch}: {passed_time}")
     print(f"Throughput: {points_queried/passed_time} points per second")
-
+    GBytes = (torch.cuda.max_memory_allocated(device=opt['device']) \
+                / (1024**3))
+    print(f"{GBytes : 0.02f}GB of memory used (max reserved) during test.")
 
 def feature_density(model, opt):
     
