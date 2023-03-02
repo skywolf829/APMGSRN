@@ -399,6 +399,6 @@ if __name__ == '__main__':
     #order = checkerboard_render(4,4)
     
     d, _ = nc_to_tensor(os.path.join(data_folder, "asteroid_v03.nc"))
-    num_empty = (d[d == 0.0]).sum()
+    num_empty = (d[d.abs() < 1e-10]).sum()
     print(f"Percent empty = {num_empty/d.numel()}")
     quit()
