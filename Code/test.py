@@ -104,13 +104,13 @@ def test_psnr_chunked(model, opt):
                     coord_grid += 1.0
                     coord_grid /= 2.0
                     
-                    coord_grid[:,0] *= (x_range-1) / (opt['full_shape'][2]-1)
-                    coord_grid[:,1] *= (y_range-1) / (opt['full_shape'][1]-1)
-                    coord_grid[:,2] *= (z_range-1) / (opt['full_shape'][0]-1)
+                    coord_grid[:,0] *= (x_range-1) / (full_shape[2]-1)
+                    coord_grid[:,1] *= (y_range-1) / (full_shape[1]-1)
+                    coord_grid[:,2] *= (z_range-1) / (full_shape[0]-1)
                     
-                    coord_grid[:,0] += x_ind / (opt['full_shape'][2]-1)
-                    coord_grid[:,1] += y_ind / (opt['full_shape'][1]-1)
-                    coord_grid[:,2] += z_ind / (opt['full_shape'][0]-1)
+                    coord_grid[:,0] += x_ind / (full_shape[2]-1)
+                    coord_grid[:,1] += y_ind / (full_shape[1]-1)
+                    coord_grid[:,2] += z_ind / (full_shape[0]-1)
                     
                     coord_grid *= 2.0
                     coord_grid -= 1.0
@@ -124,8 +124,8 @@ def test_psnr_chunked(model, opt):
                     SSE += data.sum()
                     print(f"Chunk {z_ind},{z_ind_end},{y_ind},{y_ind_end},{x_ind},{x_ind_end} SSE: {data.sum()}")
         
-        MSE = SSE / (opt['full_shape'][0]*opt['full_shape'][1]*opt['full_shape'][2])
-        print(f"MSE: {MSE}, shape {opt['full_shape']}")
+        MSE = SSE / (full_shape[0]*full_shape[1]*full_shape[2])
+        print(f"MSE: {MSE}, shape {full_shape}")
         y = 10 * torch.log10(MSE)
         y = 20.0 * torch.log10(data_max-data_min) - y
     print(f"Data min/max: {data_min}/{data_max}")
