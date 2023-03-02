@@ -309,10 +309,8 @@ def nc_to_raw(name):
     
 if __name__ == '__main__':
 
-    
-    d, _ = nc_to_tensor(os.path.join(data_folder, "Plume.nc"))
-    d2 = torch.cat([d, d], dim=3)
-    print(d2.shape)
-    tensor_to_cdf(d2, os.path.join(data_folder, "Plume_test.nc"))
-    
+    from Models.options import load_options
+    opt = load_options(os.path.join(save_folder, "Channel_test_small"))
+    data, _ = nc_to_tensor(os.path.join(data_folder, "channel5200.nc"), opt)
+    print(data.shape)
     quit()
