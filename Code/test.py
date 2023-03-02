@@ -179,6 +179,28 @@ def scale_distribution(model, opt):
     create_path(os.path.join(output_folder, "ScaleDistributions"))
     plt.savefig(os.path.join(output_folder, "ScaleDistributions", opt['save_name']+'.png'))
 
+def test_throughput(model, opt):
+
+    batch = 2**22
+    num_forward = 100
+
+    input_data :torch.Tensor = torch.rand([batch, 3], device=opt['device'], dtype=torch.float32)
+
+    import time
+    torch.cuda.synchronize()
+    t0 = time.time()
+    for i in range(num_forward):
+        input_data.random_()
+        model(input_data)
+
+    torch.cuda.synchronize()
+    t1 = time.time()
+    passed_time = t1 - t0
+    points_queried = batch * num_forward
+    print(f"Time for {num_forward} passes with batch size {batch}: {passed_time}")
+    print(f"Throughput: {points_queried/passed_time} points per second")
+
+
 def feature_density(model, opt):
     
     # Load the reference data
@@ -268,6 +290,8 @@ def perform_tests(model, tests, opt):
         test_psnr_chunked(model, opt)
     if("histogram" in tests):
         data_hist(model, opt)
+    if("throughput" in tests):
+        test_throughput(model, opt)
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate a model on some tests')
