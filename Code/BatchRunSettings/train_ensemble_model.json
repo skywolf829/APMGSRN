@@ -78,7 +78,7 @@
             "ensemble": true,
             "ensemble_grid": "4,4,4",
             "ensemble_ghost_cells": 8,
-            "data": "asteroid_v03.nc",
+            "data": "asteroid.nc",
             "n_features": 1,
             "n_grids": 8,
             "feature_grid_shape": "32,32,32",

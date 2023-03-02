@@ -211,7 +211,7 @@
         {        
             "save_name": "Asteroid_AMGSRN_medium",
             "model": "AMGSRN",
-            "data": "asteroid_v03.nc",
+            "data": "asteroid.nc",
             "n_features": 2,
             "n_grids": 16,
             "feature_grid_shape": "32,32,32",
@@ -226,7 +226,7 @@
         {        
             "save_name": "Asteroid_NGP_medium",
             "model": "NGP_TCNN",
-            "data": "asteroid_v03.nc",
+            "data": "asteroid.nc",
 
             "n_dims": 3,
             "n_features": 2,
@@ -250,7 +250,7 @@
         {        
             "save_name": "Asteroid_fVSRN_medium",
             "model": "fVSRN",
-            "data": "asteroid_v03.nc",
+            "data": "asteroid.nc",
             "n_features": 4,
             "feature_grid_shape": "64,64,64",
             "n_layers": 2,
