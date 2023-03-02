@@ -489,7 +489,7 @@ if __name__ == '__main__':
         #opt['data_min'] = dataset.min().item()
         #opt['data_max'] = dataset.max().item()
         opt['data_min'] = dataset.data.mean().item()
-        opt['data_max'] = dataset.data.std().item()
+        opt['data_max'] = max(dataset.data.mean() - dataset.data.min(), dataset.data.max() - dataset.data.mean())
         model = create_model(opt)
         model = model.to(opt['device'])
     else:        
