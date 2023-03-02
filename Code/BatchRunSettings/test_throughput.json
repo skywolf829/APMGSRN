@@ -54,4 +54,25 @@
         "load_from": "Supernova_AMGSRN_small",
         "tests": "throughput"
     }]
+    ,
+    [ "test.py",
+        {        
+        "load_from": "Rotstrat_AMGSRN_ensemble_large",
+        "tests": "throughput"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Rotstrat_AMGSRN_ensemble_medium",
+        "tests": "throughput"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Rotstrat_AMGSRN_ensemble_small",
+        "tests": "throughput"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Channel_AMGSRN_ensemble_medium",
+        "tests": "throughput"
+    }]
 ]
