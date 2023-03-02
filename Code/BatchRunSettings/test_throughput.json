@@ -17,6 +17,6 @@
     [ "test.py",
         {        
         "load_from": "Supernova_AMGSRN_ensemble",
-        "tests": "psnr"
+        "tests": "throughput"
     }]
 ]
