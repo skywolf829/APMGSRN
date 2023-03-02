@@ -181,7 +181,7 @@ def scale_distribution(model, opt):
 
 def test_throughput(model, opt):
 
-    batch = 2**22
+    batch = 2**25
     num_forward = 10000
 
     with torch.no_grad():
