@@ -3,8 +3,6 @@
         {        
             "save_name": "Channel_test_small",
             "model": "AMGSRN",
-            "ensemble": false,
-            "ensemble_ghost_cells": 0,
             "data": "channel5200.nc",
             "n_features": 1,
             "n_grids": 16,
@@ -21,8 +19,6 @@
         {        
             "save_name": "Channel_test_medium",
             "model": "AMGSRN",
-            "ensemble": false,
-            "ensemble_ghost_cells": 0,
             "data": "channel5200.nc",
             "n_features": 1,
             "n_grids": 32,
@@ -39,8 +35,6 @@
         {        
             "save_name": "Channel_test_large",
             "model": "AMGSRN",
-            "ensemble": false,
-            "ensemble_ghost_cells": 0,
             "data": "channel5200.nc",
             "n_features": 1,
             "n_grids": 16,
