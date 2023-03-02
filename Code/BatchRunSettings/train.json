@@ -3,10 +3,9 @@
         {        
             "save_name": "Channel_test_small",
             "model": "AMGSRN",
-            "data": "channel5200.nc",
+            "data": "channel512.nc",
             "n_features": 1,
             "n_grids": 16,
-            "extents": "0,512,0,512,0,512",
             "feature_grid_shape": "16,16,16",
             "n_layers": 2,
             "nodes_per_layer": 64,
