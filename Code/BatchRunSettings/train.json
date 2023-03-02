@@ -4,15 +4,15 @@
             "save_name": "Channel_test_small",
             "model": "AMGSRN",
             "data": "channel512.nc",
-            "n_features": 1,
+            "n_features": 2,
             "n_grids": 4,
-            "feature_grid_shape": "64,64,64",
+            "feature_grid_shape": "32,32,32",
             "n_layers": 2,
-            "nodes_per_layer": 32,
+            "nodes_per_layer": 64,
             "precondition": false,
             "lr": 0.01,
             "iterations": 50000,
             "log_every": 10,
-            "log_features_every": 100
+            "log_features_every": 0
     }]
 ]

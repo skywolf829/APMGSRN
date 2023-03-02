@@ -2,6 +2,6 @@
     [ "test.py",
         {        
         "load_from": "Channel_test_small",
-        "tests": "reconstruction,psnr"
+        "tests": "reconstruction,psnr,error_volume"
     }]
 ]

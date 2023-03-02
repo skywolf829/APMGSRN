@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F 
-from Models.layers import ReLULayer
+from Models.layers import ReLULayer, PositionalEncoding
 from typing import List, Dict, Optional
 import math
 
@@ -192,10 +192,11 @@ class AMGSRN(nn.Module):
             
         self.encoder = AMG_encoder(n_grids, n_features, 
             feature_grid_shape, n_dims)
+        #self.pe = PositionalEncoding(6, n_dims)
         
         def init_decoder_tcnn():
             import tinycudann as tcnn 
-            input_size:int = n_features*n_grids
+            input_size:int = n_features*n_grids # + 6*3*2
             if(requires_padded_feats):
                 input_size = n_features*n_grids + self.padding_size
                 
@@ -216,7 +217,7 @@ class AMGSRN(nn.Module):
         def init_decoder_pytorch():
             decoder = nn.ModuleList()   
             
-            first_layer_input_size:int = n_features*n_grids
+            first_layer_input_size:int = n_features*n_grids # + 6*3*2
             if(requires_padded_feats):
                 first_layer_input_size = n_features*n_grids + self.padding_size
                                            
@@ -283,107 +284,6 @@ class AMGSRN(nn.Module):
     def inverse_transform(self, x):
         return self.encoder.inverse_transform(x)
     
-    '''
-    def precodition_grids(self, dataset, writer, logging):
-        
-        # First, train the params with fixed grids
-        self.encoder.uniform_grids()
-        self.encoder.feature_grids.requires_grad_(True)
-        self.decoder.requires_grad_(True)
-        self.encoder.grid_scales.requires_grad_(False)
-        self.encoder.grid_translations.requires_grad_(False)
-        param_optimizer = torch.optim.Adam([
-            {"params": [self.encoder.feature_grids], "lr": 0.03},
-            {"params": self.decoder.parameters(), "lr": 0.03}
-        ], betas=[self.opt['beta_1'], self.opt['beta_2']], eps = 10e-15)        
-        param_scheduler = torch.optim.lr_scheduler.StepLR(param_optimizer, 
-                step_size=5000, gamma=0.1)
-        for iteration in range(10000):
-            param_optimizer.zero_grad()
-            
-            x,y = dataset.get_random_points(self.opt['points_per_iteration'])
-            x = x.to(self.opt['device'])
-            y = y.to(self.opt['device'])
-            
-            model_output = self(x)
-            loss = F.mse_loss(model_output, y, reduction='none')
-            loss = loss.sum(dim=1, keepdim=True)
-            loss.mean().backward()
-            
-            param_optimizer.step()
-            param_scheduler.step()                 
-            if(self.opt['log_every'] != 0):
-                logging(writer, iteration, 
-                    {"Preconditioning loss": loss}, 
-                    self, self.opt, dataset.data.shape[2:], dataset, 
-                    preconditioning="model")
-
-        # Second, train the density to match the current error
-        # First, create map of current error
-        with torch.no_grad():
-            grid = list(dataset.data.shape[2:])
-            error = sample_grid(self, grid, max_points=1000000,
-                                device=self.opt['device'],
-                                data_device=self.opt['data_device'])
-            error = error.to(self.opt['data_device'])
-            error = error.permute(3, 0, 1, 2).unsqueeze(0)
-            error -= dataset.data
-            # Use squared error
-            error **= 2
-            # Add all dims together
-            error = torch.sum(error, dim=1, keepdim=True)      
-            
-            # Normalize by sum
-            error /= error.sum() 
-            
-        self.encoder.randomize_grids()
-        self.encoder.feature_grids.requires_grad_(False)
-        self.decoder.requires_grad_(False)
-        self.encoder.grid_scales.requires_grad_(True)
-        self.encoder.grid_translations.requires_grad_(True)
-        grid_optimizer = torch.optim.Adam([
-            {"params": [self.encoder.grid_translations, 
-                        self.encoder.grid_scales], "lr": 0.001}
-        ], betas=[self.opt['beta_1'], self.opt['beta_2']], eps = 10e-15)        
-        grid_scheduler = torch.optim.lr_scheduler.StepLR(grid_optimizer, 
-                step_size=9000, gamma=0.1)
-        for iteration in range(10000):
-            grid_optimizer.zero_grad()
-            
-            x = torch.rand([1, 1, 1, 10000, self.opt['n_dims']], 
-                device=self.opt['data_device']) * 2 - 1            
-            y = F.grid_sample(error,
-                x, mode='bilinear', 
-                align_corners=self.opt['align_corners'])
-            x = x.squeeze()
-            y = y.squeeze()
-            if(len(y.shape) == 1):
-                y = y.unsqueeze(0)                
-            y = y.permute(1,0)
-            
-            density = self.encoder.feature_density_gaussian(x)       
-            density /= density.sum().detach()     
-            
-            target = torch.exp(torch.log(density+1e-16) / \
-                (y/y.mean()))
-            target /= target.sum()
-                
-            density_loss = F.kl_div(
-                torch.log(density+1e-16), 
-                    torch.log(target.detach()+1e-16), 
-                    reduction='none', 
-                    log_target=True)
-            density_loss.mean().backward()
-            
-            grid_optimizer.step()
-            grid_scheduler.step()                 
-            if(self.opt['log_every'] != 0):
-                logging(writer, iteration, 
-                    {"Grid fitting loss": density_loss}, 
-                    self, self.opt, dataset.data.shape[2:], dataset, 
-                    preconditioning="grid")
-    '''
-
     @torch.jit.export
     def grad_at(self, x):
         x.requires_grad_(True)
@@ -406,15 +306,11 @@ class AMGSRN(nn.Module):
         if(self.requires_padded_feats):
             feats = F.pad(feats, (0, self.padding_size), value=1.0) 
         y = self.decoder(feats).float()
-        y = y * (self.volume_max - self.volume_min + 1e-8) + self.volume_min        
+        y = y * (self.volume_max - self.volume_min + 1e-16) + self.volume_min     
         return y
 
-    def forward(self, x):        
-        feats = self.encoder(x)    
-        if(self.requires_padded_feats):
-            feats = F.pad(feats, (0, self.padding_size), value=1.0) 
-        y = self.decoder(feats).float()
-        y = y * (self.volume_max - self.volume_min) + self.volume_min
-        return y
+    def forward(self, x):
+        x_t = self.encoder.transform(x)
+        return self.forward_pre_transformed(x_t)   
 
         
