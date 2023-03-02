@@ -313,4 +313,5 @@ if __name__ == '__main__':
     opt = load_options(os.path.join(save_folder, "Channel_test_small"))
     data, _ = nc_to_tensor(os.path.join(data_folder, "channel5200.nc"), opt)
     print(data.shape)
+    tensor_to_cdf(data, os.path.join(data_folder, "channel512.nc"))
     quit()
