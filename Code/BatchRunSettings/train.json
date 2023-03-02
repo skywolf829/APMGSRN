@@ -5,7 +5,7 @@
             "model": "AMGSRN",
             "data": "channel512.nc",
             "n_features": 1,
-            "n_grids": 4,
+            "n_grids": 16,
             "feature_grid_shape": "64,64,64",
             "n_layers": 2,
             "nodes_per_layer": 64,
