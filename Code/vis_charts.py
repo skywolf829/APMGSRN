@@ -28,9 +28,9 @@ output_folder = os.path.join(project_folder_path, "Output")
    
 asteroid_results = {
     "AMGSRN": {
-        2**16 : 35.350,
-        2**20 : 39.970,
-        2**24 : 45.004
+        2**16 : 34.776,
+        2**20 : 40.040,
+        2**24 : 44.652
     },
     "fVSRN": {
         2**16 : 32.992,
@@ -46,9 +46,9 @@ asteroid_results = {
 
 isotropic_results = {
     "AMGSRN": {
-        2**16 : 27.679, 
-        2**20 : 32.028, 
-        2**24 : 38.268
+        2**16 : 27.622, 
+        2**20 : 31.825, 
+        2**24 : 38.120
     },
     "fVSRN": {
         2**16 : 27.427,
@@ -64,9 +64,9 @@ isotropic_results = {
 
 nyx_results = {
     "AMGSRN": {
-        2**16 : 29.499,
-        2**20 : 37.864,
-        2**24 : 44.608 
+        2**16 : 29.424,
+        2**20 : 37.807,
+        2**24 : 44.075 
     },
     "fVSRN": {
         2**16 : 29.203,
@@ -82,9 +82,9 @@ nyx_results = {
 
 plume_results = {
     "AMGSRN": {
-        2**16 : 49.172, 
-        2**20 : 56.459,
-        2**24 : 57.702
+        2**16 : 48.954, 
+        2**20 : 56.327,
+        2**24 : 58.134
     },
     "fVSRN": {
         2**16 : 44.775,
@@ -100,9 +100,9 @@ plume_results = {
 
 supernova_results = {
     "AMGSRN": {
-        2**16 : 41.914,
-        2**20 : 46.787,
-        2**24 : 49.695
+        2**16 : 41.891,
+        2**20 : 46.831,
+        2**24 : 49.880
     },
     "fVSRN": {
         2**16 : 39.497,
@@ -118,37 +118,37 @@ supernova_results = {
 
 ensemble_results = {
     "Asteroid": {
-        "Ensemble": 44.795,
-        "Single": 45.004
+        "Ensemble": 44.688,
+        "Single": 44.652
         },
     "Isotropic": {
-        "Ensemble": 41.067,
+        "Ensemble": 41.086,
         "Single": 38.268
         },
     "Nyx": {
-        "Ensemble": 46.230,
-        "Single": 44.608 
+        "Ensemble": 46.118,
+        "Single": 44.075 
         },
     "Plume": {
-        "Ensemble": 58.829,
-        "Single": 57.702
+        "Ensemble": 58.363,
+        "Single": 58.134
         },
     "Supernova": {
-        "Ensemble": 50.991,
-        "Single": 49.695
+        "Ensemble": 50.644,
+        "Single": 49.880
         }
 }
     
 ghostcell_results = {
     "Isotropic":
         {
-            "1 ghost cell": 40.616,
-            "16 ghost cells": 39.939
+            "1 ghost cell": 40.490,
+            "16 ghost cells": 39.915
         },
     "Supernova":
         {
-            "1 ghost cell": 50.157,
-            "16 ghost cells": 49.391
+            "1 ghost cell": 50.152,
+            "16 ghost cells": 49.449
         }
 }
 
@@ -162,7 +162,6 @@ data_sizes = {
     "Rotstrat": 286435456,
     "Supernova": 314929
 }
-
 # in lists of KB, PSNR
 compression_results = {
     
@@ -225,9 +224,9 @@ largescale_results = {
         "768 MB": 49.160
     },
     "Rotstrat": {
-        "55 MB": 41.311,        
-        "183 MB": 44.521,
-        "864 MB": 49.160
+        "55 MB": 41.322,        
+        "183 MB": 44.294,
+        "864 MB": 49.074
     }
 }     
 
