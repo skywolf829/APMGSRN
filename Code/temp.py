@@ -309,9 +309,20 @@ def nc_to_raw(name):
     
 if __name__ == '__main__':
 
-    from Models.options import load_options
-    opt = load_options(os.path.join(save_folder, "Channel_test_small"))
-    data, _ = nc_to_tensor(os.path.join(data_folder, "channel5200.nc"), opt)
-    print(data.shape)
-    tensor_to_cdf(data, os.path.join(data_folder, "channel512.nc"))
+    results = []
+    for _ in range(10000):
+        input = torch.randn([1, 16])
+        input_to_a = torch.randn([16, 64])
+        a = input @ input_to_a
+        a[a<0] = 0
+        a_to_b = torch.randn([64, 64])
+        b = a @ a_to_b
+        b[b<0] = 0
+        b_to_c = torch.randn([64, 1])
+        c = b @ b_to_c
+        results.append(c.item())
+    import matplotlib.pyplot as plt
+    
+    plt.hist(results, bins=100)
+    plt.show()
     quit()
