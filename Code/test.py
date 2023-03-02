@@ -82,6 +82,7 @@ def test_psnr_chunked(model, opt):
                     x_range = x_ind_end-x_ind
                     
                     opt['extents'] = f"{z_ind},{z_ind_end},{y_ind},{y_ind_end},{x_ind},{x_ind_end}"
+                    print(f"Extents: {z_ind},{z_ind_end},{y_ind},{y_ind_end},{x_ind},{x_ind_end}")
                     data = Dataset(opt).data
                     data = data[0].flatten(1,-1).permute(1,0)
                     
