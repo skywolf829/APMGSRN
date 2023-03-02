@@ -6,7 +6,7 @@
             "data": "channel512.nc",
             "n_features": 1,
             "n_grids": 4,
-            "feature_grid_shape": "32,32,32",
+            "feature_grid_shape": "64,64,64",
             "n_layers": 2,
             "nodes_per_layer": 64,
             "precondition": false,
