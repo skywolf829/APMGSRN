@@ -69,16 +69,16 @@ def test_psnr_chunked(model, opt):
     SSE = torch.tensor([0.0], dtype=torch.float32, device=opt['data_device'])
     
     chunk_size = 768
-    
+    full_shape = opt['full_shape']
     with torch.no_grad():
-        for z_ind in range(0, opt['full_shape'][0], chunk_size):
-            z_ind_end = min(opt['full_shape'][0], z_ind+chunk_size)
+        for z_ind in range(0, full_shape[0], chunk_size):
+            z_ind_end = min(full_shape[0], z_ind+chunk_size)
             z_range = z_ind_end-z_ind
-            for y_ind in range(0, opt['full_shape'][1], chunk_size):
-                y_ind_end = min(opt['full_shape'][1], y_ind+chunk_size)
+            for y_ind in range(0, full_shape[1], chunk_size):
+                y_ind_end = min(full_shape[1], y_ind+chunk_size)
                 y_range = y_ind_end-y_ind            
-                for x_ind in range(0, opt['full_shape'][2], chunk_size):
-                    x_ind_end = min(opt['full_shape'][2], x_ind+chunk_size)
+                for x_ind in range(0, full_shape[2], chunk_size):
+                    x_ind_end = min(full_shape[2], x_ind+chunk_size)
                     x_range = x_ind_end-x_ind
                     
                     opt['extents'] = f"{z_ind},{z_ind_end},{y_ind},{y_ind_end},{x_ind},{x_ind_end}"
