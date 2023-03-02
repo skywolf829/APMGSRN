@@ -405,5 +405,6 @@ if __name__ == '__main__':
     d2 -= d2.min()
     d2 /= d2.max()
     d3 = d+d2
+    d3 /= 2.0
     tensor_to_cdf(d3, os.path.join(data_folder, "asteroid.nc"))
     quit()
