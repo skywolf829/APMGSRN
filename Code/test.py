@@ -18,12 +18,8 @@ save_folder = os.path.join(project_folder_path, "SavedModels")
 def model_reconstruction(model, opt):
     
     # Load the reference data
-    dataset = Dataset(opt)
-    grid = list(dataset.data.shape[2:])
-    data_max = dataset.data.max()
-    data_min = dataset.data.min()
     with torch.no_grad():
-        result = sample_grid(model, grid, max_points=1000000,
+        result = sample_grid(model, opt['full_shape'], max_points=1000000,
                              align_corners=opt['align_corners'],
                              device=opt['device'],
                              data_device=opt['data_device'])
@@ -34,9 +30,6 @@ def model_reconstruction(model, opt):
         os.path.join(output_folder, 
         "Reconstruction", opt['save_name']+".nc"))
     
-    p = PSNR(dataset.data, result, in_place=True, range=data_max-data_min)
-    print(f"PSNR: {p : 0.03f}")
-
 def test_psnr(model, opt):
     
     # Load the reference data
@@ -159,6 +152,18 @@ def error_volume(model, opt):
         os.path.join(output_folder, "ErrorVolume",
         opt['save_name'] + "_error.nc"))
 
+def data_hist(model, opt):
+    grid = list(opt['full_shape'])
+    with torch.no_grad():
+        result = sample_grid(model, grid, max_points=1000000,
+            align_corners=opt['align_corners'],
+            device=opt['device'],
+            data_device=opt['data_device'])
+        result = result.cpu().numpy().flatten()
+    import matplotlib.pyplot as plt
+    plt.hist(result, bins=100)
+    plt.show()
+    
 def scale_distribution(model, opt):
     import matplotlib.pyplot as plt
     grid_scales = torch.diagonal(model.get_transformation_matrices()[:,], 0, 1, 2)[0:3]
@@ -260,6 +265,8 @@ def perform_tests(model, tests, opt):
         feature_density(model, opt)
     if("psnr" in tests):
         test_psnr_chunked(model, opt)
+    if("histogram" in tests):
+        data_hist(model, opt)
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate a model on some tests')

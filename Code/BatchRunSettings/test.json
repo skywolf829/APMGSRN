@@ -1,7 +1,7 @@
 [    
     [ "test.py",
         {        
-        "load_from": "Channel_AMGSRN_ensemble_medium",
-        "tests": "psnr"
+        "load_from": "Channel_test_large",
+        "tests": "histogram,reconstruction"
     }]
 ]

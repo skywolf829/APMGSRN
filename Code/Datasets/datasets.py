@@ -28,7 +28,7 @@ class Dataset(torch.utils.data.Dataset):
         t2 = time.time()
         print(f"Data: {d.shape} from full extents {full_shape}. IO time loading data: {t2-t1 : 0.04f}")
         self.data = d
-        opt['full_shape'] = full_shape
+        opt['full_shape'] = d.shape[2:]
 
     def min(self):
         if self.min_ is not None:
