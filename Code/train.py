@@ -209,16 +209,13 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
         
         density /= density.sum().detach()
         target = torch.exp(torch.log(density+1e-16) * \
-            (loss.mean()/loss))
+            (loss.mean()/(loss+1e-16)))
         target /= target.sum()
         
-        
         density_loss = F.kl_div(
-            torch.log(density+1e-16), 
-                torch.log(target.detach()+1e-16), 
-                reduction='none', 
-                log_target=True)
-        
+           torch.log(density+1e-16), 
+           torch.log(target.detach()+1e-16), reduction='none', 
+            log_target=True)
         
         density_loss.mean().backward()
         
