@@ -392,6 +392,33 @@ def model_size_performance_chart():
 def ensemble_performance_chart():
     ensemble_comparison(ensemble_results)
 
+def render_sequence_to_mp4(folder, save_name):
+    import imageio.v3 as imageio
+    import cv2
+    font                   = cv2.FONT_HERSHEY_SIMPLEX
+    fontScale              = 1
+    fontColor              = (0,0,0)
+    thickness              = 3
+    lineType               = 2
+
+    imgs = [None]*len(os.listdir(folder))
+    for im in os.listdir(folder):
+        if ".png" in im:
+            im_data = imageio.imread(os.path.join(folder, im))
+            
+            im_ind = int(im.split('.')[1])
+            cv2.putText(im_data, f"Iteration {im_ind*50}/{len(imgs)*50}",
+                        (10, 150), font, fontScale,
+                        fontColor, thickness, lineType)
+            imgs[im_ind] = im_data
+            #print(im_data.shape)
+    
+    save_location = os.path.join(folder, "..", save_name)
+    stacked_imgs = np.stack(imgs, axis=0)
+    #print(stacked_imgs.shape)
+    imageio.imwrite(save_location, stacked_imgs,
+                    extension=".mp4", fps=20)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Test a trained SSR model')
     
@@ -400,8 +427,11 @@ if __name__ == '__main__':
     
     args = vars(parser.parse_args())
 
-    model_size_performance_chart()
-    ensemble_comparison(ensemble_results)
-    flat_top_chart()
-    
+    #model_size_performance_chart()
+    #ensemble_comparison(ensemble_results)
+    #flat_top_chart()
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", "Nyx"),
+        "Nyx.mp4")
     quit()

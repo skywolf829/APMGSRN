@@ -96,6 +96,9 @@ class AMG_encoder(nn.Module):
             tm[:,0:n_dims,:] += torch.randn_like(
                 tm[:,0:n_dims,:],
                 device=d, dtype=torch.float32) * 0.05
+            #tm[:,0,0] += (torch.rand_like(tm[:,0,0])-0.01)*0.5
+            #tm[:,1,1] += (torch.rand_like(tm[:,1,1])-0.01)*0.5
+            #tm[:,2,2] += (torch.rand_like(tm[:,2,2])-0.01)*0.5
             #tm @= tm.transpose(-1, -2)           
             tm[:,n_dims,0:n_dims] = 0.0
             tm[:,-1,-1] = 1.0
