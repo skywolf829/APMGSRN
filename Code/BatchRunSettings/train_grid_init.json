@@ -1,0 +1,53 @@
+[
+    [ "train.py",
+    {        
+        "save_name": "Supernova_AMGSRN_grid_logged_default",
+        "model": "AMGSRN",
+        "data": "Supernova.nc",
+        "n_features": 1,
+        "n_grids": 16,
+        "feature_grid_shape": "16,16,16",
+        "n_layers": 2,
+        "nodes_per_layer": 64,
+        "precondition": false,
+        "log_features_every": 100,
+        "log_every": 100,
+        "lr": 0.01,
+        "iterations": 50000,
+        "grid_initialization": "default"
+    }],
+    [ "train.py",
+    {        
+        "save_name": "Supernova_AMGSRN_grid_logged_small",
+        "model": "AMGSRN",
+        "data": "Supernova.nc",
+        "n_features": 1,
+        "n_grids": 16,
+        "feature_grid_shape": "16,16,16",
+        "n_layers": 2,
+        "nodes_per_layer": 64,
+        "precondition": false,
+        "log_features_every": 100,
+        "log_every": 100,
+        "lr": 0.01,
+        "iterations": 50000,
+        "grid_initialization": "small"
+    }],
+    [ "train.py",
+    {        
+        "save_name": "Supernova_AMGSRN_grid_logged_large",
+        "model": "AMGSRN",
+        "data": "Supernova.nc",
+        "n_features": 1,
+        "n_grids": 16,
+        "feature_grid_shape": "16,16,16",
+        "n_layers": 2,
+        "nodes_per_layer": 64,
+        "precondition": false,
+        "log_features_every": 100,
+        "log_every": 100,
+        "lr": 0.01,
+        "iterations": 50000,
+        "grid_initialization": "large"
+    }]
+]

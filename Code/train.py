@@ -407,6 +407,8 @@ if __name__ == '__main__':
         help='Data file name')
     parser.add_argument('--model',default=None,type=str,
         help='The model architecture to use')
+    parser.add_argument('--grid_initialization',default=None,type=str,
+        help='How to initialize AMGSRN grids. choices: default, large, small')
     parser.add_argument('--save_name',default=None,type=str,
         help='Save name for the model')
     parser.add_argument('--align_corners',default=None,type=str2bool,

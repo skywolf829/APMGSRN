@@ -14,7 +14,8 @@ def weights_init(m):
 
 class AMG_encoder(nn.Module):
     def __init__(self, n_grids:int, n_features:int,
-                 feat_grid_shape:List[int], n_dims:int):
+                 feat_grid_shape:List[int], n_dims:int,
+                 grid_initializaton:str):
         super().__init__()
              
         self.transformation_matrices = torch.nn.Parameter(
@@ -32,11 +33,59 @@ class AMG_encoder(nn.Module):
             requires_grad=True
         )
     
-        self.randomize_grids()
+        if("default" in grid_initializaton):
+            self.randomize_grids()
+        elif("small" in grid_initializaton):
+            self.init_grids_small()
+        elif("large" in grid_initializaton):
+            self.init_grids_large()
+        else:
+            self.randomize_grids()
+        
     
     def get_transform_parameters(self) -> List[Dict[str, torch.Tensor]]:
         return [{"params": self.transformation_matrices}]
-        
+
+    def init_grids_large(self):  
+        with torch.no_grad():     
+            d = self.feature_grids.device
+            n_dims = len(self.feature_grids.shape[2:])
+            n_grids = self.feature_grids.shape[0]
+            tm = torch.eye(n_dims+1, 
+                device=d, dtype=torch.float32).unsqueeze(0).repeat(n_grids,1,1) * 0.125
+            tm[:,0:n_dims,:] += torch.randn_like(
+                tm[:,0:n_dims,:],
+                device=d, dtype=torch.float32) * 0.05
+            #tm @= tm.transpose(-1, -2)           
+            tm[:,n_dims,0:n_dims] = 0.0
+            tm[:,-1,-1] = 1.0
+            
+        self.transformation_matrices = torch.nn.Parameter(
+            tm,                
+            requires_grad=True)
+
+    def init_grids_small(self):  
+        with torch.no_grad():     
+            d = self.feature_grids.device
+            n_dims = len(self.feature_grids.shape[2:])
+            n_grids = self.feature_grids.shape[0]
+            tm = torch.eye(n_dims+1, 
+                device=d, dtype=torch.float32).unsqueeze(0).repeat(n_grids,1,1) * 8
+            tm[:,0:n_dims,:] += torch.randn_like(
+                tm[:,0:n_dims,:],
+                device=d, dtype=torch.float32) * 0.05
+            tm[:,0:3,-1] += (torch.rand_like(
+                tm[:,0:3,-1],
+                device = d, dtype=torch.float32
+            ) *2 - 1) * tm.diagonal(0, 1, 2)
+            #tm @= tm.transpose(-1, -2)           
+            tm[:,n_dims,0:n_dims] = 0.0
+            tm[:,-1,-1] = 1.0
+            
+        self.transformation_matrices = torch.nn.Parameter(
+            tm,                
+            requires_grad=True)
+
     def randomize_grids(self):  
         with torch.no_grad():     
             d = self.feature_grids.device
@@ -175,7 +224,7 @@ class AMGSRN(nn.Module):
         feature_grid_shape: List[int], n_dims : int, 
         n_outputs: int, nodes_per_layer: int, n_layers: int, 
         use_tcnn:bool,use_bias:bool,requires_padded_feats:bool,
-        data_min:float, data_max:float):
+        data_min:float, data_max:float, grid_initialization:str):
         super().__init__()
         
         self.n_grids : int = n_grids
@@ -191,7 +240,7 @@ class AMGSRN(nn.Module):
             self.padding_size : int = 16*int(math.ceil(max(1, (n_grids*n_features)/16))) - n_grids*n_features
             
         self.encoder = AMG_encoder(n_grids, n_features, 
-            feature_grid_shape, n_dims)
+            feature_grid_shape, n_dims, grid_initialization)
         #self.pe = PositionalEncoding(6, n_dims)
         
         def init_decoder_tcnn():
