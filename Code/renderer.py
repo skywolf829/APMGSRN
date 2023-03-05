@@ -876,6 +876,7 @@ if __name__ == '__main__':
     
     # One warm up is always slower    
     img, seq = scene.render_checkerboard(camera)
+    '''
     total_time = 1.43
     import cv2
     font                   = cv2.FONT_HERSHEY_SIMPLEX
@@ -910,6 +911,7 @@ if __name__ == '__main__':
     #img = img.astype(np.uint8)
     
     imsave("Output/model.png", img.cpu().numpy())
+    '''
     
     '''
     timesteps = 10
