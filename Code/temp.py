@@ -396,15 +396,6 @@ def checkerboard_render(w,h):
 
 if __name__ == '__main__':
 
-    #order = checkerboard_render(4,4)
-    
-    d, _ = nc_to_tensor(os.path.join(data_folder, "asteroid_v02.nc"))
-    d2, _ = nc_to_tensor(os.path.join(data_folder, "asteroid_v03.nc"))
-    d -= d.min()
-    d /= d.max()
-    d2 -= d2.min()
-    d2 /= d2.max()
-    d3 = d+d2
-    d3 /= 2.0
-    tensor_to_cdf(d3, os.path.join(data_folder, "asteroid.nc"))
+    order = checkerboard_render(7,7)
+    print(order)
     quit()

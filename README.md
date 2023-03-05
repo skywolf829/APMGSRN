@@ -1,7 +1,7 @@
 # AMGSRN
 
 This repo contains code for adaptive multi-grid scene representation network (AMGSRN), an ensemble training routine for large-scale data, and a neural volume renderer.
-Materials are prepared for submission to VIS2023 for our paper titled "Adaptive Multi-Grid Scene Representation Networks for Large-Scale Data Visualization", submitted on March 31, 2023.
+Materials are prepared for submission to VIS2023 for our paper titled "Adaptive Multi-Grid Scene Representation Networks for Large-Scale Data Visualization", submission ID 1036, submitted on March 31, 2023.
 Included is all code used to train networks giving performance metrics shown in our submitted manuscript.
 
 ## Installation
@@ -44,15 +44,8 @@ pip install -r requirements.txt
 ### Data
 
 A few of our datasets are too large to be hosted for download, but can independently be downloaded from Johns Hopkins Turbulence Database: https://turbulence.pha.jhu.edu/.
-However, we do host 3 smaller-scale datasets and provide pretrained models for the larger-scale data on an anonymous Google Drive.
-To download:
-```
-conda install gdown -c conda-forge
-gdown 10EUDp7D7B6-LokxEHrfcoggixQ5jL998
-tar -xvf data.tar.gz
-rm data.tar.gz
-```
-Now, all our test data should be in ```/Data``` as NetCDF files, which can readily be visualized in ParaView, and the models should be moved to ```/SavedModels```.
+However, we do host 3 smaller-scale datasets and provide pretrained models for all models tested in the paper in an anonymous Google Drive folder: https://drive.google.com/file/d/1FXRxMdcJ53cdeZ6mlAyDI254IvZ2OFoo/view?usp=sharing.
+Extract the folder and make sure the ```Data``` and ```SavedModels``` folders are at the same directory as ```Code```. ```/Data``` hosts the volume data as NetCDF files, which can readily be visualized in ParaView, and ```/SavedModels``` is where all the models are saved and loaded from.
 
 ## Training and Testing Use
 

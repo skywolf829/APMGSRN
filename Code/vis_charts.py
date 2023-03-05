@@ -420,10 +420,16 @@ def render_sequence_to_mp4(folder, save_name,
                         cv2.putText(im_data, words,
                             position, font, fontScale,
                             fontColor, thickness, lineType)    
-                    
-                    imgs[im_ind] = im_data      
-            #print(im_data.shape)
-    
+            
+            if(im_ind >= len(imgs)):
+                imgs.append(im_data)  
+            else:      
+                imgs[im_ind] = im_data      
+            print(f"{im_ind}/{len(os.listdir(folder))}")
+            
+    if imgs[0] is None:
+        imgs.pop(0)
+        
     save_location = os.path.join(folder, "..", save_name)
     stacked_imgs = np.stack(imgs, axis=0)
     #print(stacked_imgs.shape)
@@ -431,15 +437,15 @@ def render_sequence_to_mp4(folder, save_name,
                     extension=".mp4", fps=fps)
 
 def do_all_renders():
-    
+    '''
     # Do all Asteroid renders
     render_sequence_to_mp4(
         os.path.join(output_folder, 
                      "RenderSequences", 
                      "Asteroid_grids_training"),
         "Asteroid_grids_training.mp4", 
-        text_data=[["iter", (1300, 150)]]
-        )
+        text_data=[["iter", (1300, 150)]],
+        fps=60)
     render_sequence_to_mp4(
         os.path.join(output_folder, 
                      "RenderSequences", 
@@ -468,7 +474,8 @@ def do_all_renders():
                      "RenderSequences", 
                      "Isotropic_grids_training"),
         "Isotropic_grids_training.mp4", 
-        text_data=[["iter", (1300, 150)]]
+        text_data=[["iter", (1300, 150)]],
+        fps=60
         )
     render_sequence_to_mp4(
         os.path.join(output_folder, 
@@ -495,7 +502,8 @@ def do_all_renders():
                      "RenderSequences", 
                      "Nyx_grids_training"),
         "Nyx_grids_training.mp4", 
-        text_data=[["iter", (1300, 150)]]
+        text_data=[["iter", (1300, 150)]],
+        fps=60
         )
     render_sequence_to_mp4(
         os.path.join(output_folder, 
@@ -522,7 +530,8 @@ def do_all_renders():
                      "RenderSequences", 
                      "Plume_grids_training"),
         "Plume_grids_training.mp4", 
-        text_data=[["iter", (1300, 150)]]
+        text_data=[["iter", (1300, 150)]],
+        fps=60
         )
     render_sequence_to_mp4(
         os.path.join(output_folder, 
@@ -549,7 +558,8 @@ def do_all_renders():
                      "RenderSequences", 
                      "Supernova_grids_training"),
         "Supernova_grids_training.mp4", 
-        text_data=[["iter", (1300, 150)]]
+        text_data=[["iter", (1300, 150)]],
+        fps=60
         )
     render_sequence_to_mp4(
         os.path.join(output_folder, 
@@ -557,6 +567,7 @@ def do_all_renders():
                      "Supernova_gt"),
         "Supernova_gt.mp4", 
         fps=60)
+    '''
     render_sequence_to_mp4(
         os.path.join(output_folder, 
                      "RenderSequences", 

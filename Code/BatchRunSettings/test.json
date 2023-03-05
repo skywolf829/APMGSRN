@@ -1,7 +1,7 @@
 [    
     [ "test.py",
         {        
-        "load_from": "Asteroid_AMGSRN_ensemble",
+        "load_from": "Supernova_AMGSRN_ensemble",
         "tests": "reconstruction,psnr,error_volume"
     }]
 ]

@@ -14,6 +14,7 @@ from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget, QLabel
 import sys
+from math import ceil
 
 def sync_time():
     torch.cuda.synchronize()
@@ -35,6 +36,11 @@ def imgs_to_video(out_path:str, imgs: np.ndarray, fps:int=15):
         frame = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         video.write(frame)
     video.release()
+
+def imgs_to_video_imageio(save_location, stacked_imgs, fps=10):
+    import imageio.v3 as imageio
+    imageio.imwrite(save_location, stacked_imgs,
+                    extension=".mp4", fps=fps)
 
 class RawData(torch.nn.Module):
     def __init__(self, data_name, device):
@@ -62,9 +68,10 @@ class RawData(torch.nn.Module):
                 mode='bilinear', align_corners=True).squeeze().unsqueeze(1)
         return y.to(x_device)
 
+
 class TransferFunction():
     def __init__(self, device, 
-                 min_value = 0.0, max_value = 1.0, colormap=None):
+                 min_value :float = 0.0, max_value:float = 1.0, colormap=None):
         self.device = device
         
         self.min_value = min_value
@@ -411,6 +418,7 @@ class Scene(torch.nn.Module):
         self.amount_empty = 0.0
         self.occupancy_grid = self.precompute_occupancy_grid()
         torch.cuda.empty_cache()
+        self.on_setting_change()
    
     def precompute_occupancy_grid(self, grid_res:List[int]=[64, 64, 64]):
         # pre-allocate an occupancy grid from a dense sampling that gets max-pooled
@@ -522,45 +530,182 @@ class Scene(torch.nn.Module):
             colors = self.render_rays(t_starts, t_ends, ray_indices, self.image_resolution[0]*self.image_resolution[1])
         return colors.reshape(self.image_resolution[0], self.image_resolution[1], 3)
 
-    def render_checkerboard(self, camera):
-        height, width = self.image_resolution[:2]
-        colors = torch.empty([height, width, 3], device=self.device, dtype=torch.float32)
+    def generate_checkerboard_render_order(self):
+        class Rect():
+            def __init__(self, x, y, w, h):
+                self.x = x
+                self.y = y
+                self.w = w
+                self.h = h
+                if w > 1 and h > 1:
+                    self.queue = [
+                        #(x,y),
+                        (x+w//2,y+h//2),
+                        (x+w//2, y),
+                        (x,y+h//2)
+                    ]
+                elif w > 1:
+                    self.queue = [
+                        #(x,y),
+                        (x+w//2,y)
+                    ]
+                elif h > 1:
+                    self.queue = [
+                        #(x,y),
+                        (x,y+h//2)
+                    ]
+                else:
+                    self.queue = [
+                        #(x,y)
+                    ]
+
+            def subdivide(self):
+                if(self.w > 1 and self.h > 1):
+                    return [
+                        Rect(self.x, self.y, self.w//2, self.h//2),
+                        Rect(self.x+self.w//2, self.y+self.h//2, self.w-self.w//2, self.h-self.h//2),
+                        Rect(self.x+self.w//2, self.y, self.w-self.w//2, self.h//2),
+                        Rect(self.x, self.y+self.h//2, self.w//2, self.h-self.h//2)
+                    ]
+                elif(self.w > 1):
+                    return [
+                        Rect(self.x, self.y, self.w//2, self.h),
+                        Rect(self.x+self.w//2, self.y, self.w-self.w//2, self.h),
+                    ]
+                elif(self.h > 1):
+                    return [
+                        Rect(self.x, self.y, self.w, self.h//2),
+                        Rect(self.x, self.y+self.h//2, self.w, self.h-self.h//2),
+                    ]
+                return []
+            
+            def get_next(self):
+                if(len(self.queue) > 0):
+                    return self.queue.pop(0)
+                return None
+            
+            def needs_subdivide(self):
+                return len(self.queue) == 0
+
+        def checkerboard_render_order(w,h):
+            rects = [Rect(0,0,w,h)]
+
+            offset_order = [(0,0)]
+            rects_to_add = []
+            # continue until all rects are done
+            while len(rects) > 0:
+                # loop through current rects 1 at a time
+                indices_to_remove = []
+                # Get the next spot for each rect
+                for i in range(len(rects)):
+                    spot = rects[i].get_next()
+                    # make sure it is valid
+                    if spot is not None:
+                        offset_order.append(spot)
+                    # see if the rect need subdivision
+                    if rects[i].needs_subdivide():
+                        indices_to_remove.append(i)
+                        rects_to_add += rects[i].subdivide()
+                # remove finished rects
+                for i in range(len(indices_to_remove)):
+                    rects.pop(indices_to_remove[len(indices_to_remove)-i-1])
                 
-        
-        max_view_dist = (self.scene_aabb[3]**2 + self.scene_aabb[4]**2 + self.scene_aabb[5]**2)**0.5
+                # put new rects into queue
+                if(len(rects) == 0):
+                    while(len(rects_to_add) > 0):
+                        rects.append(rects_to_add.pop(0))
+
+            return offset_order
+
+        return checkerboard_render_order(self.strides, self.strides)
+
+    def generate_normal_render_order(self):
+        order = []
+        for x in range(self.strides):
+            for y in range(self.strides):
+                order.append((y,x))
+        return order
+
+    def on_setting_change(self):
+        self.max_view_dist = (self.scene_aabb[3]**2 + self.scene_aabb[4]**2 + self.scene_aabb[5]**2)**0.5
+        height, width = self.image_resolution[:2]
+        n_point_evals = width * height * self.spp * (1-self.amount_empty)
+        n_passes = n_point_evals / self.batch_size
+        self.strides = int(n_passes**0.5) + 1
+        self.image = torch.empty([height, width, 3], device=self.device, dtype=torch.float32) 
+        self.mip = torch.zeros([ceil(height/self.strides), ceil(width/self.strides), 3],
+                              device=self.device, dtype=torch.float32)
+        self.mask = torch.zeros_like(self.image, dtype=torch.bool)
+        self.temp_image = torch.empty_like(self.image)
+        self.render_order = self.generate_checkerboard_render_order()
+        print(f"strides:{self.strides}")
+            
+    def render_checkerboard(self, camera:Camera):
+        height, width = self.image_resolution[:2]           
+        imgs = []
+        mip_imgs = []
+        #imgs_fillin_zoom = []
         
         with torch.no_grad():
             all_rays = camera.generate_dirs(width, height)
             cam_origin = camera.position().unsqueeze(0)
             
-            n_point_evals = width * height * self.spp * (1-self.amount_empty)
-            n_passes = n_point_evals / self.batch_size
-            strides = int(n_passes**0.5) + 1
-            y_leftover = height % strides
-            x_leftover = width % strides
+            y_leftover = height % self.strides
+            x_leftover = width % self.strides
             
-            print(f"Using strides {strides}")
-            for y in range(strides):
-                for x in range(strides):
-                    y_extra = 1 if y < y_leftover else 0
-                    x_extra = 1 if x < x_leftover else 0
+            passes = 0
+            mip_level = 0
+            for x,y in self.render_order:
+                mip_stride = min(self.strides, int(2**mip_level))
+                mip_x = round(mip_stride*(x/(self.strides)))
+                mip_y = round(mip_stride*(y/(self.strides)))
+                y_extra = 1 if y < y_leftover else 0
+                x_extra = 1 if x < x_leftover else 0
+                #print(f"{mip.shape} {mip_stride} {mip_x} {mip_y} // {x} {y} {x_extra} {y_extra}")
+                
+                rays_this_iter = all_rays[y::self.strides,x::self.strides].clone().view(-1, 3)
+                self.rays_d = rays_this_iter
+                num_rays = rays_this_iter.shape[0]
+                self.rays_o = cam_origin.expand(num_rays, 3)
+                
+                ray_indices, t_starts, t_ends = ray_marching(
+                    self.rays_o, self.rays_d,
+                    scene_aabb=self.scene_aabb, 
+                    render_step_size = self.max_view_dist/self.spp,
+                    #grid=self.occupancy_grid
+                )
+                new_colors = self.render_rays(
+                    t_starts, t_ends, 
+                    ray_indices, 
+                    num_rays).view(
+                    height//self.strides + y_extra, 
+                    width//self.strides + x_extra, 
+                    3)
+
+                self.image[y::self.strides,x::self.strides,:] = new_colors
+                self.mask[y::self.strides,x::self.strides,:] = 1
+                self.mip[mip_y:new_colors.shape[0]*mip_stride:mip_stride,
+                    mip_x:new_colors.shape[1]*mip_stride:mip_stride,:] = new_colors
+                
+                temp_image = self.image * self.mask + \
+                    F.interpolate(self.mip.permute(2,0,1).unsqueeze(0), 
+                        size=[height,width],mode='bilinear')[0].permute(1,2,0) *~self.mask
+                imgs.append(temp_image.cpu().numpy())
+                
+                passes += 1
+                if passes == int(4**mip_level):
+                    mip_level += 1
+                    if(self.mip.shape[0]*2 > height or self.mip.shape[1]*2 > width):
+                        upscale_shape = [height, width]
+                    else:
+                        effective_stride = self.strides/(2**mip_level)
+                        new_h = ceil(height/effective_stride)
+                        new_w = ceil(width/effective_stride)
+                        upscale_shape = [new_h, new_w]
+                    self.mip = F.interpolate(self.mip.permute(2,0,1).unsqueeze(0), 
+                        size=upscale_shape,mode='nearest')[0].permute(1,2,0)
                     
-                    rays_this_iter = all_rays[y::strides,x::strides].clone().view(-1, 3)
-                    self.rays_d = rays_this_iter
-                    num_rays = rays_this_iter.shape[0]
-                    self.rays_o = cam_origin.expand(num_rays, 3)
-                    
-                    ray_indices, t_starts, t_ends = ray_marching(
-                        self.rays_o, self.rays_d,
-                        scene_aabb=self.scene_aabb, 
-                        render_step_size = max_view_dist/self.spp,
-                        grid=self.occupancy_grid
-                    )
-                    colors[y::strides,x::strides,:] = self.render_rays(
-                        t_starts, t_ends, 
-                        ray_indices, 
-                        num_rays).view(height//strides + y_extra, width//strides+x_extra, 3)
-        return colors
+        return self.image, imgs
     
 
 # Subclass QMainWindow to customize your application's main window
@@ -649,7 +794,7 @@ if __name__ == '__main__':
         model = RawData(args['load_from'], args['device'])
         full_shape = model.shape
     
-    batch_size = 2**23 
+    batch_size = 2**23
     
     if(args['tensorrt']):
         import torch_tensorrt as torchtrt
@@ -704,8 +849,11 @@ if __name__ == '__main__':
         torch.backends.cudnn.benchmark = True
     device = args['device']
     
-    tf = TransferFunction(device, model.min(), model.max(), args['colormap'])
-        
+    tf = TransferFunction(device, 
+                          0.0,1.0,
+                          #model.min(), model.max(), 
+                          args['colormap'])
+
     scene = Scene(model, full_shape, args['hw'], batch_size, args['spp'], tf, device)
     if args['dist'] is None:
         # set default camera distance to COI by a ratio to AABB
@@ -727,14 +875,43 @@ if __name__ == '__main__':
     print(f"GPU memory free/total {free_mem:0.02f}GB/{total_mem:0.02f}GB")
     
     # One warm up is always slower    
-    img = scene.render_checkerboard(camera)
+    img, seq = scene.render_checkerboard(camera)
+    total_time = 1.43
+    import cv2
+    font                   = cv2.FONT_HERSHEY_SIMPLEX
+    fontScale              = 1.2
+    fontColor              = (0,0,0)
+    thickness              = 3
+    lineType               = cv2.LINE_AA
     
-    from imageio import imsave
-    img = img.cpu().numpy()*255
-    img = img.astype(np.uint8)
-    imsave("Output/gt.png", img)
+    seq.insert(0, np.zeros_like(seq[0])+1)
     
+    for i in range(len(seq)):
+        current_time = i*(total_time / len(seq))
+        cv2.putText(seq[i], f"Frame {i}/{len(seq)-1}",
+                            (700, 50), font, fontScale,
+                            fontColor, thickness, lineType) 
+        cv2.putText(seq[i], f"Time: {current_time :0.03f} sec.",
+                            (700, 110), font, fontScale,
+                            fontColor, thickness, lineType)  
+        
+    imgs_to_video_imageio(os.path.join(output_folder, "Render_sequence_mask_blend.mp4"), 
+                          np.array(seq), fps=15)
+
+    from imageio import imsave, imread
+    from Other.utility_functions import PSNR, ssim
     
+    gt_im = torch.tensor(imread(os.path.join(output_folder, "gt.png")),dtype=torch.float32)/255
+    img = img.cpu()
+    p = PSNR(img, gt_im)
+    s = ssim(img.permute(2,0,1).unsqueeze(0), gt_im.permute(2,0,1).unsqueeze(0))
+    print(f"PSNR (image): {p:0.03f} dB")
+    print(f"SSIM (image): {s: 0.03f} ")
+    #img = img.astype(np.uint8)
+    
+    imsave("Output/model.png", img.cpu().numpy())
+    
+    '''
     timesteps = 10
     times = np.zeros([timesteps])
     for i in range(timesteps):
@@ -749,7 +926,7 @@ if __name__ == '__main__':
     print(f"Min frame time: {times.min():0.04f}")
     print(f"Max frame time: {times.max():0.04f}")
     print(f"Average FPS: {1/times.mean():0.02f}")
-    
+    '''
     GBytes = (torch.cuda.max_memory_allocated(device=device) \
                 / (1024**3))
     print(f"{GBytes : 0.02f}GB of memory used (max reserved) during render.")
