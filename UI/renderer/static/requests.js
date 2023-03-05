@@ -27,87 +27,100 @@ function dscroll_to_ddist(curr_dscroll){
 }
 const canvas = document.createElement("canvas");
 canvas.setAttribute("id", "canvas");
-canvas.setAttribute("width", 1024);
-canvas.setAttribute("height", 1024);
+canvas.setAttribute("width", 512);
+canvas.setAttribute("height", 512);
 
 document.body.appendChild(canvas)
 const ctx = canvas.getContext('2d');
-let imgdata = new ImageData(256,256);
+// let imgdata = new ImageData(256,256);
+let img = new Image();
+//   <img src="{{url_for('video_feed')}}"></img>
+img.src = "/video_feed";
+ctx.drawImage(img, 0, 0);
 
-let is_updating_rotation = false;
-let has_responded = false;
-let prev_x, prev_y; 
-let dx, dy, dscroll = 0;
-let tf = {
-    opacity: [],
-    color: [],
-};
+setInterval(function() {
+    console.log("Draw");
+    ctx.drawImage(img, 100, 100);
+}, 1000/60);
 
-let fps = 30;
-let dt = 1000/fps;
 
-function request_img() {
-    socket.emit("request_img");
-}
-setInterval(request_img, dt);
-// image has been rendered,
-// update the image and start to listen to new camera movement
-let rgb = new Uint8ClampedArray();
-socket.on('img_update', function(data) {
-    // update image on canvas
-    imgdata = new ImageData(data.width, data.height);
-    let rgb = new Uint8ClampedArray(data.img);
-    imgdata.data.set(rgb);
-    ctx.putImageData(imgdata, 0, 0);
-});
+// let is_updating_rotation = false;
+// let has_responded = false;
+// let prev_x, prev_y; 
+// let dx, dy, dscroll = 0;
+// let tf = {
+//     opacity: [],
+//     color: [],
+// };
 
-// // send camera and TF updates
-// function send_scene_updates() {
-//     drot = dxy_to_drotation(dx, dy);
-//     ddist = dscroll_to_ddist(dscroll);
-//     dx,dy,dscroll = 0;
-//     socket.emit('scene_update', {"drot": drot, "ddist": ddist, "tf": tf});
+// let fps = 60;
+// let dt = 1000/fps;
+
+// // function request_img() {
+// //     console.log(1);
+// //     socket.emit("request_img");
+// // }
+// // setInterval(request_img, dt);
+// // image has been rendered,
+// // update the image and start to listen to new camera movement
+// let rgb = new Uint8ClampedArray();
+// socket.on('img_update', function(data) {
+//     // update image on canvas
+//     console.log(data.width);
+//     // take server out of the equation and test js refresh rate with js noise img
+//     // imgdata = new ImageData(data.width, data.height);
+//     // let rgb = new Uint8ClampedArray(data.img);
+//     // imgdata.data.set(rgb);
+//     // ctx.putImageData(imgdata, 0, 0);
+// });
+
+// // // send camera and TF updates
+// // function send_scene_updates() {
+// //     drot = dxy_to_drotation(dx, dy);
+// //     ddist = dscroll_to_ddist(dscroll);
+// //     dx,dy,dscroll = 0;
+// //     socket.emit('scene_update', {"drot": drot, "ddist": ddist, "tf": tf});
+// // }
+// // setInterval(send_scene_updates, dt);
+
+// // recording scene changes ***********************************************
+
+// // rotation
+// function onMouseDown(event) {
+//     prev_x = event.clientX;
+//     prev_y = event.clientY;
+//     is_updating_rotation = true;
 // }
-// setInterval(send_scene_updates, dt);
 
-// recording scene changes ***********************************************
+// function onMouseMove(event) {
+//     if (!is_updating_rotation) return;
+//     curr_x = event.clientX;
+//     curr_y = event.clientY;
+//     // modify dx,dy, to be reported
+//     dx += curr_x - prev_x;
+//     dy += curr_y - prev_y;
 
-// rotation
-function onMouseDown(event) {
-    prev_x = event.clientX;
-    prev_y = event.clientY;
-    is_updating_rotation = true;
-}
+//     prev_x = curr_x;
+//     prev_y = curr_y;
+// }
 
-function onMouseMove(event) {
-    if (!is_updating_rotation) return;
-    curr_x = event.clientX;
-    curr_y = event.clientY;
-    // modify dx,dy, to be reported
-    dx += curr_x - prev_x;
-    dy += curr_y - prev_y;
+// function onMouseUp(event) {
+//     is_updating_rotation = false;
+//     curr_x = event.clientX;
+//     curr_y = event.clientY;
+//     // modify dx,dy, to be reported
+//     dx += curr_x - prev_x;
+//     dy += curr_y - prev_y;
 
-    prev_x = curr_x;
-    prev_y = curr_y;
-}
+//     prev_x = curr_x;
+//     prev_y = curr_y;
+// }
 
-function onMouseUp(event) {
-    is_updating_rotation = false;
-    curr_x = event.clientX;
-    curr_y = event.clientY;
-    // modify dx,dy, to be reported
-    dx += curr_x - prev_x;
-    dy += curr_y - prev_y;
+// // zoom percentage change
+// function onWheelScroll(event) {
+//     dscroll += event.deltaY;
+// }
 
-    prev_x = curr_x;
-    prev_y = curr_y;
-}
-
-// zoom percentage change
-function onWheelScroll(event) {
-    dscroll += event.deltaY;
-}
-
-// transfer function
+// // transfer function
 
 
