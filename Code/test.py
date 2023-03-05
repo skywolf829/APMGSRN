@@ -29,6 +29,64 @@ def model_reconstruction(model, opt):
     tensor_to_cdf(result, 
         os.path.join(output_folder, 
         "Reconstruction", opt['save_name']+".nc"))
+
+def model_reconstruction_chunked(model, opt):
+    
+    chunk_size = 768
+    full_shape = opt['full_shape']
+    
+    output = torch.empty(opt['full_shape'], 
+        dtype=torch.float32, 
+        device=opt['data_device']).unsqueeze(0).unsqueeze(0)
+    
+    with torch.no_grad():
+        for z_ind in range(0, full_shape[0], chunk_size):
+            z_ind_end = min(full_shape[0], z_ind+chunk_size)
+            z_range = z_ind_end-z_ind
+            for y_ind in range(0, full_shape[1], chunk_size):
+                y_ind_end = min(full_shape[1], y_ind+chunk_size)
+                y_range = y_ind_end-y_ind            
+                for x_ind in range(0, full_shape[2], chunk_size):
+                    x_ind_end = min(full_shape[2], x_ind+chunk_size)
+                    x_range = x_ind_end-x_ind
+                    
+                    opt['extents'] = f"{z_ind},{z_ind_end},{y_ind},{y_ind_end},{x_ind},{x_ind_end}"
+                    print(f"Extents: {z_ind},{z_ind_end},{y_ind},{y_ind_end},{x_ind},{x_ind_end}")
+                                                                
+                    grid = [z_range, y_range, x_range]
+                    coord_grid = make_coord_grid(grid, 
+                        opt['data_device'], flatten=True,
+                        align_corners=opt['align_corners'],
+                        use_half=False)
+                    
+                    coord_grid += 1.0
+                    coord_grid /= 2.0
+                    
+                    coord_grid[:,0] *= (x_range-1) / (full_shape[2]-1)
+                    coord_grid[:,1] *= (y_range-1) / (full_shape[1]-1)
+                    coord_grid[:,2] *= (z_range-1) / (full_shape[0]-1)
+                    
+                    coord_grid[:,0] += x_ind / (full_shape[2]-1)
+                    coord_grid[:,1] += y_ind / (full_shape[1]-1)
+                    coord_grid[:,2] += z_ind / (full_shape[0]-1)
+                    
+                    coord_grid *= 2.0
+                    coord_grid -= 1.0
+                    
+                    out_tmp = forward_maxpoints(model, 
+                                                coord_grid, max_points=2**20, 
+                                                data_device=opt['data_device'],
+                                                device=opt['device'])
+                    out_tmp = out_tmp.permute(1,0)
+                    out_tmp = out_tmp.view([out_tmp.shape[0]] + grid)
+                    output[0,:,z_ind:z_ind_end,y_ind:y_ind_end,x_ind:x_ind_end] = out_tmp
+
+                    print(f"Chunk {z_ind},{z_ind_end},{y_ind},{y_ind_end},{x_ind},{x_ind_end}")
+        
+    create_path(os.path.join(output_folder, "Reconstruction"))
+    tensor_to_cdf(output, 
+        os.path.join(output_folder, 
+        "Reconstruction", opt['save_name']+".nc"))
     
 def test_psnr(model, opt):
     
@@ -280,7 +338,7 @@ def feature_locations(model, opt):
     
 def perform_tests(model, tests, opt):
     if("reconstruction" in tests):
-        model_reconstruction(model, opt),
+        model_reconstruction_chunked(model, opt),
     if("feature_locations" in tests):
         feature_locations(model, opt)
     if("error_volume" in tests):
@@ -301,7 +359,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--load_from',default=None,type=str,help="Model name to load")
     parser.add_argument('--tests_to_run',default=None,type=str,
-                        help="A set of tests to run, separated by commas")
+                        help="A set of tests to run, separated by commas. Options are psnr, reconstruction, error_volume, histogram, throughput, and feature_locations.")
     parser.add_argument('--device',default=None,type=str,
                         help="Device to load model to")
     parser.add_argument('--data_device',default=None,type=str,

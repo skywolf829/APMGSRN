@@ -177,6 +177,6 @@ def forward_maxpoints(model, coords, out_dim=1, max_points=100000,
     
     for start in range(0, coords.shape[0], max_points):
         output[start:min(start+max_points, coords.shape[0])] = \
-            model(coords[start:min(start+max_points, coords.shape[0])].to(device))
+            model(coords[start:min(start+max_points, coords.shape[0])].to(device)).to(data_device)
     return output
 

@@ -1,4 +1,4 @@
-name: agINR
+name: AMGSRN
 channels:
   - defaults
   - conda-forge

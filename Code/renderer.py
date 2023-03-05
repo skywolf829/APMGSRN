@@ -649,7 +649,7 @@ if __name__ == '__main__':
         model = RawData(args['load_from'], args['device'])
         full_shape = model.shape
     
-    batch_size = 2**23 # just over 1 million, 1048576
+    batch_size = 2**23 
     
     if(args['tensorrt']):
         import torch_tensorrt as torchtrt
@@ -728,18 +728,19 @@ if __name__ == '__main__':
     
     # One warm up is always slower    
     img = scene.render_checkerboard(camera)
+    
     from imageio import imsave
     img = img.cpu().numpy()*255
     img = img.astype(np.uint8)
     imsave("Output/gt.png", img)
     
-    '''
-    timesteps = 5
+    
+    timesteps = 10
     times = np.zeros([timesteps])
     for i in range(timesteps):
         torch.cuda.empty_cache()
         t0 = sync_time()
-        img = scene.render_checkerboard(camera).cpu().numpy()     
+        img = scene.render_checkerboard(camera)   
         t1 = sync_time()
         times[i] = t1-t0
     print(times)
@@ -748,7 +749,7 @@ if __name__ == '__main__':
     print(f"Min frame time: {times.min():0.04f}")
     print(f"Max frame time: {times.max():0.04f}")
     print(f"Average FPS: {1/times.mean():0.02f}")
-    '''
+    
     GBytes = (torch.cuda.max_memory_allocated(device=device) \
                 / (1024**3))
     print(f"{GBytes : 0.02f}GB of memory used (max reserved) during render.")

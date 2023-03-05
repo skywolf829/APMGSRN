@@ -392,14 +392,15 @@ def model_size_performance_chart():
 def ensemble_performance_chart():
     ensemble_comparison(ensemble_results)
 
-def render_sequence_to_mp4(folder, save_name):
+def render_sequence_to_mp4(folder, save_name,
+        text_data = None, fps = 20):
     import imageio.v3 as imageio
     import cv2
     font                   = cv2.FONT_HERSHEY_SIMPLEX
-    fontScale              = 1
+    fontScale              = 1.5
     fontColor              = (0,0,0)
     thickness              = 3
-    lineType               = 2
+    lineType               = cv2.LINE_AA
 
     imgs = [None]*len(os.listdir(folder))
     for im in os.listdir(folder):
@@ -407,18 +408,169 @@ def render_sequence_to_mp4(folder, save_name):
             im_data = imageio.imread(os.path.join(folder, im))
             
             im_ind = int(im.split('.')[1])
-            cv2.putText(im_data, f"Iteration {im_ind*50}/{len(imgs)*50}",
-                        (10, 150), font, fontScale,
-                        fontColor, thickness, lineType)
-            imgs[im_ind] = im_data
+            if(text_data is not None):
+                for i in range(len(text_data)):
+                    words = text_data[i][0]
+                    position = text_data[i][1]
+                    if("iter" in words):                        
+                        cv2.putText(im_data, f"Iteration {im_ind*50}/{len(imgs)*50}",
+                            position, font, fontScale,
+                            fontColor, thickness, lineType)            
+                    else:
+                        cv2.putText(im_data, words,
+                            position, font, fontScale,
+                            fontColor, thickness, lineType)    
+                    
+                    imgs[im_ind] = im_data      
             #print(im_data.shape)
     
     save_location = os.path.join(folder, "..", save_name)
     stacked_imgs = np.stack(imgs, axis=0)
     #print(stacked_imgs.shape)
     imageio.imwrite(save_location, stacked_imgs,
-                    extension=".mp4", fps=20)
+                    extension=".mp4", fps=fps)
 
+def do_all_renders():
+    
+    # Do all Asteroid renders
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Asteroid_grids_training"),
+        "Asteroid_grids_training.mp4", 
+        text_data=[["iter", (1300, 150)]]
+        )
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Asteroid_gt"),
+        "Asteroid_gt.mp4", 
+        #text_data=[["Asteroid", (50, 100)],["Raw data", (50, 150)]],
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Asteroid_grids"),
+        "Asteroid_grids.mp4", 
+        #text_data=[["Asteroid", (1500, 100)], ["Model - large", (1500, 150)],["39.455 dB", (1500, 200)]],
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Asteroid_model"),
+        "Asteroid_model.mp4", 
+        #text_data=[["Asteroid", (1500, 100)],["Model - large", (1500, 150)],["39.455 dB", (1500, 200)]],
+        fps=60)
+    
+    # Do all Isotropic renders
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Isotropic_grids_training"),
+        "Isotropic_grids_training.mp4", 
+        text_data=[["iter", (1300, 150)]]
+        )
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Isotropic_gt"),
+        "Isotropic_gt.mp4", 
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Isotropic_grids"),
+        "Isotropic_grids.mp4", 
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Isotropic_model"),
+        "Isotropic_model.mp4", 
+        fps=60)
+    
+    # Do all Nyx renders
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Nyx_grids_training"),
+        "Nyx_grids_training.mp4", 
+        text_data=[["iter", (1300, 150)]]
+        )
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Nyx_gt"),
+        "Nyx_gt.mp4", 
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Nyx_grids"),
+        "Nyx_grids.mp4", 
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Nyx_model"),
+        "Nyx_model.mp4", 
+        fps=60)
+    
+    # Do all Plume renders
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Plume_grids_training"),
+        "Plume_grids_training.mp4", 
+        text_data=[["iter", (1300, 150)]]
+        )
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Plume_gt"),
+        "Plume_gt.mp4", 
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Plume_grids"),
+        "Plume_grids.mp4", 
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Plume_model"),
+        "Plume_model.mp4", 
+        fps=60)
+    
+    # Do all Supernova renders
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Supernova_grids_training"),
+        "Supernova_grids_training.mp4", 
+        text_data=[["iter", (1300, 150)]]
+        )
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Supernova_gt"),
+        "Supernova_gt.mp4", 
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Supernova_grids"),
+        "Supernova_grids.mp4", 
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Supernova_model"),
+        "Supernova_model.mp4", 
+        fps=60)
+   
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Test a trained SSR model')
     
@@ -430,8 +582,6 @@ if __name__ == '__main__':
     #model_size_performance_chart()
     #ensemble_comparison(ensemble_results)
     #flat_top_chart()
-    render_sequence_to_mp4(
-        os.path.join(output_folder, 
-                     "RenderSequences", "Nyx"),
-        "Nyx.mp4")
+    do_all_renders()
+    
     quit()
