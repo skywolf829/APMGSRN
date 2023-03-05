@@ -90,7 +90,7 @@ The following will run the jobs defined in example_file.json on cuda devices 1 a
 ```python Code/start_jobs.py --settings example_file.json --devices mps```
 
 ### ```train.py```
-This script will begin training a defined model with chosen hyperparameters and selected volume with extents. Default hyperparemeter values are what is shown in ```/Code/Models/options.py```, and will only be changed if added as a command line argument when running ```train.py```. A description of each argument can be seen by running ```python Code/train.py --help```. 
+This script will begin training a defined model with chosen hyperparameters and selected volume with extents. Default hyperparemeter values are what is shown in ```/Code/Models/options.py```, and will only be changed if added as a command line argument when running ```train.py```. A description of each argument can be seen by running ```python Code/train.py --help```. The only data format currently supported is NetCDF, although you could add your own dataloader as well.
 
 Example of training an AMGSRN model on the plume data:
 
@@ -99,7 +99,7 @@ Example of training an AMGSRN model on the plume data:
 More examples of usage of this code are encoded into the settings JSON files which are used by ```start_jobs.py```, and we recommend not launching ```train.py``` from the command line yourself, and instead letting ```start_jobs.py``` do it.
 
 ### ```test.py```
-This script is responsible for the testing of trained models for PSNR, error, and reconstruction. Output is saved to the correct folder in```/Output/``` depending on task chosen. Similar to ```train.py```, it is usually ran from our ```start_jobs.py``` script, but can also be ran on its own. A description of each command line argument can be seen by running ```python Code/test.py --help```.
+This script is responsible for the testing of trained models for PSNR, error, and reconstruction. Output is saved to the correct folder in```/Output/``` depending on task chosen. Similar to ```train.py```, it is usually ran from our ```start_jobs.py``` script, but can also be ran on its own. A description of each command line argument can be seen by running ```python Code/test.py --help```. Just as with ```train.py```, only NetCDF file formats are supported for loading data to evaluate against.
 
 Example of testing a trained model named plume:
 
