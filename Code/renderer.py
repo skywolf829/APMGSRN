@@ -386,11 +386,14 @@ class Scene(torch.nn.Module):
         self.spp = spp
         self.transfer_function = transfer_function
         self.amount_empty = 0.0
-        self.occupancy_grid = self.precompute_occupancy_grid()
+        #self.occupancy_grid = self.precompute_occupancy_grid()
         self.camera = camera
-        torch.cuda.empty_cache()
         self.on_setting_change()
     
+    def get_mem_use(self):
+        return torch.cuda.max_memory_allocated(device=self.device) \
+                / (1024**3)
+        
     def set_aabb(self, full_shape : np.ndarray):
         self.scene_aabb = \
             torch.tensor([0.0, 0.0, 0.0, 
@@ -401,19 +404,23 @@ class Scene(torch.nn.Module):
             
     def precompute_occupancy_grid(self, grid_res:List[int]=[64, 64, 64]):
         # pre-allocate an occupancy grid from a dense sampling that gets max-pooled
-        sample_grid : List[int] = [grid_res[0]*4, grid_res[1]*4, grid_res[2]*4]
+        scale_amount = 8
+        sample_grid : List[int] = [grid_res[0]*scale_amount, 
+                                   grid_res[1]*scale_amount, 
+                                   grid_res[2]*scale_amount]
         with torch.no_grad():
             grid = OccupancyGrid(self.scene_aabb, grid_res)
             query_points = make_coord_grid(sample_grid, device=self.device)
             output = self.forward_maxpoints(self.model, query_points)
             output_density = self.transfer_function.opacity_at_value(output)
             output_density = output_density.reshape(sample_grid)
-            output_density = F.max_pool3d(output_density.unsqueeze(0).unsqueeze(0), kernel_size=4)
+            output_density = F.max_pool3d(output_density.unsqueeze(0).unsqueeze(0), 
+                                          kernel_size=scale_amount)
             filter_size : int = 17
             output_density = F.max_pool3d(output_density,
                 kernel_size = filter_size, stride=1, padding = filter_size//2)
             output_density = output_density.squeeze()
-            output_density = (output_density>0.01)
+            output_density = (output_density>0.001)
             grid._binary = output_density.clone()
         self.amount_empty = ((grid._binary.numel()-grid._binary.sum())/grid._binary.numel())
         print(f"{100*self.amount_empty:0.02f}% of space empty for skipping!")
@@ -626,6 +633,7 @@ class Scene(torch.nn.Module):
         self.x_leftover = self.width % self.strides
         self.passes = 0
         self.mip_level = 0
+        torch.cuda.empty_cache()
     
     def on_rotate_zoom_pan(self):
         self.image.zero_()
@@ -642,6 +650,7 @@ class Scene(torch.nn.Module):
         self.cam_origin = torch.tensor(self.camera.position(), device=self.device).unsqueeze(0)
         self.passes = 0
         self.mip_level = 0
+        torch.cuda.empty_cache()
         
     def on_resize(self):
         self.height, self.width = self.image_resolution[:2]
@@ -664,6 +673,7 @@ class Scene(torch.nn.Module):
         self.x_leftover = self.width % self.strides        
         self.passes = 0
         self.mip_level = 0
+        torch.cuda.empty_cache()
     
     def one_step_update(self):
         if(self.current_order_spot == len(self.render_order)):
@@ -717,6 +727,7 @@ class Scene(torch.nn.Module):
                     upscale_shape = [new_h, new_w]
                 self.mip = F.interpolate(self.mip.permute(2,0,1).unsqueeze(0), 
                     size=upscale_shape,mode='nearest')[0].permute(1,2,0)
+        
         self.current_order_spot += 1
         
     def render_checkerboard(self):
