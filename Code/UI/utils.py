@@ -23,6 +23,8 @@ class Arcball():
         self.coi = coi.astype(dtype=np.float32)
         self.coi_translate = np.eye(4, dtype=np.float32)
         self.coi_translate[:3, 3] = -coi
+        self.aabb = scene_aabb
+        self.coaabb = scene_aabb.reshape(2, 3).mean(0)
         self.dist = dist
         self.aabb = scene_aabb.astype(dtype=np.float32)
         self.vMat = np.eye(4, dtype=np.float32)
@@ -80,8 +82,8 @@ class Arcball():
         but when close to COI, approach COI with proportional distance
         '''
         cam_dir = self.get_cam_dir()
-        abs_translation = self.aabb.max()/20
-        proportion_translation = self.translation[2, 3]/30
+        abs_translation = self.aabb.max()/10
+        proportion_translation = self.translation[2, 3]/20
         trans = np.minimum(np.abs(abs_translation), np.abs(proportion_translation))
         # print(abs_translation, proportion_translation, trans)
         trans = -trans if delta < 0 else trans
@@ -91,6 +93,16 @@ class Arcball():
         # print(self.translation, "\n")
         # print(self.vMat,"\n")
         # print(self.c2w, "\n")
+    
+    def pan(self, deltaxy):
+        unit_motion = self.translation[2, 3] * 0.5
+        delta_xy_cam = np.array([*deltaxy, 0., 0.], dtype=np.float32)*unit_motion
+        delta_xy_world = self.c2w @ delta_xy_cam
+        self.coi += delta_xy_world[:3]
+        
+        self.update_coi(self.coi)
+        self.update_vMat()
+        self.update_c2w()
     
     def update_dist(self, d) -> None:
         self.translation = np.eye(4, dtype=np.float32)
@@ -122,6 +134,14 @@ class Arcball():
         # print(self.get_c2w())
         return generate_dirs(width, height, self.get_c2w(), self.fov, self.camera_dirs)
     
+    def reset_view_xy(self):
+        self.translation = np.eye(4, dtype=np.float32)
+        self.translation[:3, 3] = [0.,0.,-self.dist]
+        self.rotation = np.eye(4, dtype=np.float32)
+        self.update_coi(self.coaabb)
+        self.update_vMat()
+        self.update_c2w()
+
 def axis_rotate(radians: np.ndarray, axis: np.ndarray):
     '''
     https://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
@@ -145,6 +165,8 @@ def screen_to_arcball(p:np.ndarray):
         return np.array([*normalize_vec(p), 0.])
     
 def normalize_vec(v: np.ndarray):
+    if v is None:
+        print("None")
     norm = np.linalg.norm(v, axis=-1, keepdims=True)
     if np.all(norm == np.zeros_like(norm)):
         return np.zeros_like(v)
@@ -169,7 +191,7 @@ def generate_camera_dirs(width, height, fov):
     z = -np.ones(x.shape, dtype=np.float32)
     camera_dirs = np.stack([x,y,z],-1).astype(dtype=np.float32) # (height*width, 3)
     return camera_dirs
-        
+
 def generate_dirs(width, height, c2w, fov, camera_dirs = None):
     '''
     generate viewing ray directions of number width x height.

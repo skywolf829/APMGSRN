@@ -87,6 +87,10 @@ class MainWindow(QMainWindow):
         self.spp_slider.sliderReleased.connect(self.change_spp)
         self.spp_slider_box.addWidget(self.spp_slider)   
         
+        self.view_xy_button = QPushButton("reset view to xy-plane")
+        self.view_xy_button.setFixedHeight(25)
+        self.view_xy_button.clicked.connect(lambda: self.render_worker.view_xy.emit())
+        
         self.memory_use_label = QLabel("VRAM use: -- GB") 
         self.update_framerate_label = QLabel("Update framerate: -- fps") 
         self.frame_time_label = QLabel("Last frame time: -- sec.") 
@@ -98,6 +102,7 @@ class MainWindow(QMainWindow):
         self.settings_ui.addWidget(self.tfs_dropdown)
         self.settings_ui.addLayout(self.batch_slider_box)
         self.settings_ui.addLayout(self.spp_slider_box)
+        self.settings_ui.addWidget(self.view_xy_button)
         self.settings_ui.addStretch()
         self.settings_ui.addWidget(self.memory_use_label)
         self.settings_ui.addWidget(self.update_framerate_label)
@@ -208,6 +213,8 @@ class MainWindow(QMainWindow):
     
     def endPan(self):
         self.panning = False
+        self.last_x = None
+        self.last_y = None
         
     def endRotate(self):
         self.rotating = False
@@ -256,6 +263,7 @@ class RendererThread(QObject):
     change_transfer_function = pyqtSignal(str)
     change_batch_size = pyqtSignal(int)
     change_opacity_controlpoints = pyqtSignal(np.ndarray)
+    view_xy = pyqtSignal()
     
     def __init__(self, parent=None):
         super(RendererThread, self).__init__()
@@ -284,6 +292,7 @@ class RendererThread(QObject):
         self.scene.on_setting_change()
         
         # Set up events
+        self.pan.connect(self.do_pan)
         self.rotate.connect(self.do_rotate)
         self.zoom.connect(self.do_zoom)
         self.resize.connect(self.do_resize)
@@ -291,6 +300,7 @@ class RendererThread(QObject):
         self.change_spp.connect(self.do_change_spp)
         self.change_transfer_function.connect(self.do_change_transfer_function)
         self.load_new_model.connect(self.do_change_model)
+        self.view_xy.connect(self.do_view_xy)
         
     def run(self):
         last_spot = 0
@@ -307,13 +317,13 @@ class RendererThread(QObject):
                 self.update_rate.append(update_time)
             if(current_spot == len(self.scene.render_order) and 
                 last_spot < current_spot):
-                    frame_time = time.time() - frame_start_time   
-                    self.frame_rate.append(frame_time)     
+                    frame_time = time.time() - frame_start_time
+                    self.frame_rate.append(frame_time)
                     last_frame_time = self.frame_rate[-1]
-                    self.parent.frame_time.emit(last_frame_time)    
+                    self.parent.frame_time.emit(last_frame_time)
             img = torch_float_to_numpy_uint8(self.scene.temp_image)
             render_mutex.unlock()
-            
+
             self.progress.emit(img)
             self.parent.vram_use.emit(self.scene.get_mem_use())
             
@@ -325,7 +335,7 @@ class RendererThread(QObject):
                 average_update_fps = 1/np.array(self.update_rate).mean()
                 self.parent.updates_per_second.emit(average_update_fps)
             last_spot = current_spot
-            
+
     def do_resize(self, w, h):
         render_mutex.lock()
         self.scene.image_resolution = [h,w]
@@ -341,10 +351,25 @@ class RendererThread(QObject):
         self.camera.rotate()
         self.scene.on_rotate_zoom_pan()
         render_mutex.unlock()
-    
+
+    def do_pan(self, last_x, last_y, x, y):
+        render_mutex.lock()
+        mouse_start = np.array([last_x, last_y])
+        mouse_curr = np.array([x, y])
+        mouse_delta = mouse_curr - mouse_start
+        self.camera.pan(mouse_delta)
+        self.scene.on_rotate_zoom_pan()
+        render_mutex.unlock()
+
     def do_zoom(self, zoom):
         render_mutex.lock()
         self.camera.zoom(zoom)
+        self.scene.on_rotate_zoom_pan()
+        render_mutex.unlock()
+
+    def do_view_xy(self):
+        render_mutex.lock()
+        self.camera.reset_view_xy()
         self.scene.on_rotate_zoom_pan()
         render_mutex.unlock()
 
@@ -353,21 +378,21 @@ class RendererThread(QObject):
         self.tf.loadColormap(s)
         self.scene.on_rotate_zoom_pan()
         render_mutex.unlock()
-    
+
     def do_change_batch_size(self, b):
         render_mutex.lock()
         self.batch_size = 2**b
         self.scene.batch_size = 2**b
         self.scene.on_resize()
         render_mutex.unlock()
-    
+
     def do_change_spp(self, b):
         render_mutex.lock()
         self.spp = b
         self.scene.spp = b
         self.scene.on_resize()
         render_mutex.unlock()
-    
+
     def initialize_camera(self):
         aabb = np.array([0.0, 0.0, 0.0, 
                         self.full_shape[0]-1,
