@@ -162,9 +162,9 @@ class MainWindow(QMainWindow):
      
     def mouseClicked(self, event):
         if event.type() == QEvent.MouseButtonPress:
-            if(event.button()) == Qt.LeftButton:
+            if event.button() == Qt.LeftButton:
                 self.startRotate()
-            if(event.button()) == Qt.MiddleButton:
+            if event.button() == Qt.MiddleButton:
                 self.startPan()
                              
     def startPan(self):
@@ -225,6 +225,9 @@ class MainWindow(QMainWindow):
             self.last_x = x
             self.last_y = y
             return
+        if(x is None or y is None):
+            print("x or y was None!")
+            return
         
         if self.rotating:
             self.render_worker.rotate.emit(self.last_x, self.last_y, x, y)
@@ -245,7 +248,7 @@ class MainWindow(QMainWindow):
         qImg = QImage(img, width, height, bytesPerLine, QImage.Format_RGB888)
         self.render_view.setPixmap(QPixmap(qImg))
         
-class RendererThread(QObject):    
+class RendererThread(QObject):
     progress = pyqtSignal(np.ndarray)
     rotate = pyqtSignal(float, float, float, float)
     pan = pyqtSignal(float, float, float, float)

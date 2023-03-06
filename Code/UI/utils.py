@@ -41,7 +41,6 @@ class Arcball():
         self.camera_dirs = None
         # self.zoom_unit = scene_aabb
     
-    
     def position(self) -> np.ndarray:
         return self.c2w[:3, 3]
     
