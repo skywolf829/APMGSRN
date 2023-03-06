@@ -268,33 +268,6 @@ class Camera():
         # return self.transformation_matrix[0:3,3]
         return self.eye
     
-    def up(self):
-        dir=self.transformation_matrix@torch.tensor([0,1.0,0,1.0],
-                                                       device=self.device)
-        return dir[0:3] / dir[0:3].norm()
-    
-    def forward(self):
-        dir = self.transformation_matrix@torch.tensor([0,0,1.0,1.0],
-                                                       device=self.device)
-        return dir[0:3] / dir[0:3].norm()
-    
-    def right(self):
-        dir = self.transformation_matrix@torch.tensor([1.0,0,0,1.0],
-                                                       device=self.device)
-        return dir[0:3] / dir[0:3].norm()
-  
-    # def screen_to_ray_dirs(self, screen_coords):
-        
-    #     im_width = screen_coords.shape[1]
-    #     im_height = screen_coords.shape[0]
-    #     aspect_ratio = im_width/im_height
-        
-    #     z = 1/torch.tan(self.fov*torch.pi/360)
-    #     screen_coords[:,:,0] *= aspect_ratio
-    #     screen_coords = torch.cat([screen_coords, 
-    #         z.unsqueeze(0).unsqueeze(0).repeat(im_height, im_width, 1)],dim=-1)
-    #     return screen_coords
-    
     def set_azi(self, azi_deg:float, device="cuda:0"):
         self.azi = torch.deg2rad(torch.tensor(azi_deg, device=device))
         self.set_eye(self.calc_eye())
@@ -328,13 +301,6 @@ class Camera():
     def get_c2w(self):
         # print("PRINT C2W and eye: ", self.get_view(), self.eye, sep="\n")
         return torch.linalg.inv(self.get_view())
-    
-    def update_view_eye(self, dx, dy):
-        '''
-        TODO:
-        arcball camera model: update view matrix and eye based on x,y change in screen
-        '''
-        pass
     
     def get_view(self):
         '''
@@ -425,8 +391,8 @@ class Scene(torch.nn.Module):
         sample_grid : List[int] = [grid_res[0]*4, grid_res[1]*4, grid_res[2]*4]
         with torch.no_grad():
             grid = OccupancyGrid(self.scene_aabb, grid_res)
-            query_points = make_coord_grid(sample_grid, device=device)
-            output = self.forward_maxpoints(model, query_points)
+            query_points = make_coord_grid(sample_grid, device=self.device)
+            output = self.forward_maxpoints(self.model, query_points)
             output_density = self.transfer_function.opacity_at_value(output)
             output_density = output_density.reshape(sample_grid)
             output_density = F.max_pool3d(output_density.unsqueeze(0).unsqueeze(0), kernel_size=4)
@@ -469,7 +435,7 @@ class Scene(torch.nn.Module):
         sample_locs /= self.scene_aabb[3:]
         sample_locs *= 2 
         sample_locs -= 1
-        densities = model(sample_locs)
+        densities = self.model(sample_locs)
         rgbs, alphas = self.transfer_function.color_opacity_at_value(densities[:,0])
         alphas += 1
         alphas.log_()
@@ -491,7 +457,7 @@ class Scene(torch.nn.Module):
             sample_locs /= self.scene_aabb[3:]
             sample_locs *= 2
             sample_locs -= 1
-            densities = model(sample_locs)
+            densities = self.model(sample_locs)
             self.transfer_function.color_opacity_at_value_inplace(densities, rgbs, alphas, ray_ind_start)
         alphas += 1
         alphas.log_()
@@ -647,9 +613,8 @@ class Scene(torch.nn.Module):
         #imgs_fillin_zoom = []
         
         with torch.no_grad():
-            all_rays = camera.generate_dirs(width, height)
-            cam_origin = camera.position().unsqueeze(0)
-            
+            all_rays = torch.tensor(camera.generate_dirs(width, height), device=self.device)
+            cam_origin = torch.tensor(camera.position(), device=self.device).unsqueeze(0)
             y_leftover = height % self.strides
             x_leftover = width % self.strides
             
@@ -679,7 +644,7 @@ class Scene(torch.nn.Module):
                     ray_indices, 
                     num_rays).view(
                     height//self.strides + y_extra, 
-                    width//self.strides + x_extra, 
+                    width//self.strides + x_extra,
                     3)
 
                 self.image[y::self.strides,x::self.strides,:] = new_colors
@@ -786,6 +751,8 @@ if __name__ == '__main__':
     # Load the model
     if(not args['raw_data']):
         opt = load_options(os.path.join(save_folder, args['load_from']))
+        opt['data_min'] = 0
+        opt['data_max'] = 1
         opt['device'] = args['device']
         model = load_model(opt, args['device']).to(opt['device'])
         full_shape = opt['full_shape']
@@ -868,7 +835,7 @@ if __name__ == '__main__':
         polar_deg=args['polar'],
         dist=args['dist']
     )
-    
+    print(camera.get_c2w())
     free_mem, total_mem = torch.cuda.mem_get_info(device)
     free_mem /= (1024)**3
     total_mem /= (1024)**3
@@ -876,6 +843,10 @@ if __name__ == '__main__':
     
     # One warm up is always slower    
     img, seq = scene.render_checkerboard(camera)
+
+    from imageio import imsave
+    imsave("Output/render.png", (img*255).cpu().numpy().astype(np.uint8))
+
     '''
     total_time = 1.43
     import cv2

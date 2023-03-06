@@ -136,6 +136,7 @@ dmypy.json
 
 # debugging playgrounds by ty
 fplog.ipynb
+ui.ipynb
 
 # vtk files
 *.vts
@@ -143,6 +144,8 @@ fplog.ipynb
 *.vti
 *.vtp
 /Videos
+
+/UI
 
 # SLURM job scripts and outputs
 osc.sh
