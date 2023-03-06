@@ -287,7 +287,7 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
-def make_coord_grid(shape, device, flatten=True, align_corners=False):
+def make_coord_grid(shape, device, flatten=True, align_corners=False, use_half=False):
     """ 
     Make coordinates at grid centers.
     return (shape.prod, 3) matrix with (z,y,x) coordinate
@@ -305,11 +305,13 @@ def make_coord_grid(shape, device, flatten=True, align_corners=False):
 
         else:
             r = (right - left) / (n+1)
-            seq = left + r + r * \
+            seq :torch.Tensor = left + r + r * \
             torch.arange(0, n, 
             device=device, 
             dtype=torch.float32).float()
-
+            
+        if(use_half):
+                seq = seq.half()
         coord_seqs.append(seq)
 
     ret = torch.meshgrid(*coord_seqs, indexing="ij")
@@ -420,14 +422,14 @@ def nc_to_tensor(location, opt = None):
         if(opt is None or opt['extents'] is None):
             d = np.array(f[a])
         else:
-            print(f"Loading data with extents {opt['extents']}")
+            #print(f"Loading data with extents {opt['extents']}")
             ext = opt['extents'].split(',')
             ext = [eval(i) for i in ext]
             d = np.array(f[a][ext[0]:ext[1],ext[2]:ext[3],ext[4]:ext[5]])
         channels.append(d)
     d = np.stack(channels)
     d = torch.tensor(d).unsqueeze(0)
-    print(f"Loaded data with shape {d.shape} (full shape: {full_shape})")
+    #print(f"Loaded data with shape {d.shape} (full shape: {full_shape})")
     return d, full_shape
         
 def cdf_to_tensor(location, channel_names):

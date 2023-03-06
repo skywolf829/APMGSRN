@@ -103,7 +103,7 @@ class PositionalEncoding(nn.Module):
         self.register_buffer("L_terms", L_terms, persistent=False)
 
     def forward(self, locations):
-        repeats = len(list(locations.shape)) * [1]
+        repeats = len(locations.shape) * [1]
         repeats[-1] = self.L*2
         locations = locations.repeat(repeats)
         

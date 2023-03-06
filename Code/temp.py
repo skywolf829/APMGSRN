@@ -300,17 +300,102 @@ def np_to_nc(data, name):
     d.createVariable("data", np.float32, dims)
     d["data"][:] = data
     d.close()
+
+def nc_to_raw(name):
+    data, _ = nc_to_tensor(os.path.join(data_folder, name))
+    data : np.ndarray = data[0,0].cpu().float().numpy().flatten()
+    with open(os.path.join(data_folder, f"{name.split('.')[0]}.raw"), 'wb') as f:
+        data.tofile(f)  
     
+
+class Rect():
+    def __init__(self, x, y, w, h):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+        if w > 1 and h > 1:
+            self.queue = [
+                #(x,y),
+                (x+w//2,y+h//2),
+                (x+w//2, y),
+                (x,y+h//2)
+            ]
+        elif w > 1:
+            self.queue = [
+                #(x,y),
+                (x+w//2,y)
+            ]
+        elif h > 1:
+            self.queue = [
+                #(x,y),
+                (x,y+h//2)
+            ]
+        else:
+            self.queue = [
+                #(x,y)
+            ]
+
+    def subdivide(self):
+        if(self.w > 1 and self.h > 1):
+            return [
+                Rect(self.x, self.y, self.w//2, self.h//2),
+                Rect(self.x+self.w//2, self.y+self.h//2, self.w-self.w//2, self.h-self.h//2),
+                Rect(self.x+self.w//2, self.y, self.w-self.w//2, self.h//2),
+                Rect(self.x, self.y+self.h//2, self.w//2, self.h-self.h//2)
+            ]
+        elif(self.w > 1):
+            return [
+                Rect(self.x, self.y, self.w//2, self.h),
+                Rect(self.x+self.w//2, self.y, self.w-self.w//2, self.h),
+            ]
+        elif(self.h > 1):
+            return [
+                Rect(self.x, self.y, self.w, self.h//2),
+                Rect(self.x, self.y+self.h//2, self.w, self.h-self.h//2),
+            ]
+        return []
+       
+    def get_next(self):
+        if(len(self.queue) > 0):
+            return self.queue.pop(0)
+        return None
+    
+    def needs_subdivide(self):
+        return len(self.queue) == 0
+
+def checkerboard_render(w,h):
+    rects = [Rect(0,0,w,h)]
+
+    offset_order = [(0,0)]
+    rects_to_add = []
+    # continue until all rects are done
+    while len(rects) > 0:
+        # loop through current rects 1 at a time
+        indices_to_remove = []
+        # Get the next spot for each rect
+        for i in range(len(rects)):
+            spot = rects[i].get_next()
+            # make sure it is valid
+            if spot is not None:
+                offset_order.append(spot)
+            # see if the rect need subdivision
+            if rects[i].needs_subdivide():
+                indices_to_remove.append(i)
+                rects_to_add += rects[i].subdivide()
+        # remove finished rects
+        for i in range(len(indices_to_remove)):
+            rects.pop(indices_to_remove[len(indices_to_remove)-i-1])
+        
+        # put new rects into queue
+        if(len(rects) == 0):
+            while(len(rects_to_add) > 0):
+                rects.append(rects_to_add.pop(0))
+
+    return offset_order
+
 if __name__ == '__main__':
 
-    channel = np.fromfile(os.path.join(data_folder, "channel5200.raw"), 
-        dtype=np.float32)
-
-    channel = channel.reshape(14400,128,256,256)
-    channel = channel.reshape(40,6,60,128,256,256)
-    channel = channel.transpose(2,3,1,4,0,5)    
-    channel = channel.reshape(7680, 1536, 10240)
-    np_to_nc(channel, "channel5200.nc")
-    
-    
+    order = checkerboard_render(7,7)
+    print(order)
     quit()

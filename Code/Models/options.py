@@ -21,6 +21,7 @@ class Options():
         opt['hash_max_resolution']                  = 2048         # hash grid: max resolution per dim
         
         opt['data']                                 = 'tornado.nc'
+        opt['grid_initialization']                  = "default"
         opt['ensemble']                             = False
         opt['ensemble_grid']                        = "1,1,1"
         opt['ensemble_ghost_cells']                 = 0
@@ -48,8 +49,8 @@ class Options():
         opt['beta_2']                               = 0.99
 
         opt['iteration_number']                     = 0
-        opt['save_every']                           = 1000
-        opt['log_every']                            = 10
+        opt['save_every']                           = 0
+        opt['log_every']                            = 0
         opt['log_features_every']                   = 0
         opt['log_image_every']                      = 0
         opt['log_image']                            = False

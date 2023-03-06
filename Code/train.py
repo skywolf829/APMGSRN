@@ -174,15 +174,21 @@ def train_step_AMGSRN_precondition(opt, iteration, batch, dataset, model, optimi
             {"Fitting loss": loss}, 
             model, opt, dataset.data.shape[2:], dataset)
 
-def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
-    opt['iteration_number'] = iteration
-    optimizer[0].zero_grad() 
-                 
+def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, writer, 
+                      early_stopping_data=None):
+    early_stop_reconstruction = early_stopping_data[0]
+    early_stop_grid = early_stopping_data[1]
+    early_stopping_reconstruction_losses = early_stopping_data[2]
+    early_stopping_grid_losses = early_stopping_data[3]
+    if(early_stop_reconstruction and early_stop_grid):
+        return (early_stop_reconstruction, early_stop_grid, 
+            early_stopping_reconstruction_losses,
+            early_stopping_grid_losses)
+    optimizer[0].zero_grad()                  
     x, y = batch
     
     x = x.to(opt['device'])
     y = y.to(opt['device'])
-    
     
     transformed_x = model.transform(x)    
     model_output = model.forward_pre_transformed(transformed_x)
@@ -191,49 +197,70 @@ def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, schedule
     loss = loss.sum(dim=1, keepdim=True)
     
     loss.mean().backward()
-       
-    
-    if(iteration < opt['iterations']*0.8):
+    early_stopping_reconstruction_losses[iteration] = loss.mean().detach()
+    early_stop_reconstruction = optimizer[0].param_groups[0]['lr'] < opt['lr'] * 1e-2
+
+    if(iteration > 500 and  # let the network learn a bit first
+        iteration < opt['iterations']*0.8 and  # stop the grid moving to adequately learn at the end
+        not early_stop_grid):
         optimizer[1].zero_grad() 
         
         density = model.feature_density_pre_transformed(transformed_x) 
         
-        density /= density.sum().detach()  
-        target = torch.exp(torch.log(density+1e-16) / \
-            (loss/loss.mean()))
+        density /= density.sum().detach()
+        target = torch.exp(torch.log(density+1e-16) * \
+            (loss.mean()/(loss+1e-16)))
         target /= target.sum()
         
-        
         density_loss = F.kl_div(
-            torch.log(density+1e-16), 
-                torch.log(target.detach()+1e-16), 
-                reduction='none', 
-                log_target=True)
-        
+           torch.log(density+1e-16), 
+           torch.log(target.detach()+1e-16), reduction='none', 
+            log_target=True)
         
         density_loss.mean().backward()
         
         optimizer[1].step()
         scheduler[1].step()   
+
+        early_stopping_grid_losses[iteration] = density_loss.mean().detach()
+        if(iteration >= 2500):
+            prev_avg = early_stopping_grid_losses[iteration-2000:iteration-1000].mean()
+            current_avg = early_stopping_grid_losses[iteration-1000:iteration].mean()
+            
+            thresh = prev_avg * 1e-4
+            momentum_needed = 1
+            
+            # See if the slope is under the threshold
+            thresh_met = prev_avg - current_avg < thresh
+            
+            # a let the momentum of the grids finish for 1k more iterations
+            if(thresh_met):
+                early_stopping_grid_losses[-1] += 1
+            else:
+                early_stopping_grid_losses[-1] = 0
+                
+            early_stop_grid = thresh_met and early_stopping_grid_losses[-1] > momentum_needed 
+            if(early_stop_grid):
+                print(f"Grid has converged. Setting early stopping flag.")
+
     else:
         density_loss = None
-         
-    regularization_loss = 10e-6 * (torch.cat([x.view(-1) for x in model.parameters()])**2).mean()
-    regularization_loss.backward()
     
     optimizer[0].step()
-    scheduler[0].step()   
-         
-    profiler.step()
+    if(early_stop_grid):
+        scheduler[0].step(early_stopping_reconstruction_losses[iteration-1000:iteration].mean())   
     
     if(opt['log_every'] != 0):
         logging(writer, iteration, 
             {"Fitting loss": loss, 
-             "Grid loss": density_loss,
-             "L1 Regularization": regularization_loss}, 
+             "Grid loss": density_loss}, 
             model, opt, dataset.data.shape[2:], dataset, preconditioning='grid')
+    return (early_stop_reconstruction, early_stop_grid, 
+            early_stopping_reconstruction_losses,
+            early_stopping_grid_losses)
 
-def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
+def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, scheduler, writer,
+                       early_stopping_data=None):
     opt['iteration_number'] = iteration
     optimizer.zero_grad()
        
@@ -246,8 +273,7 @@ def train_step_vanilla(opt, iteration, batch, dataset, model, optimizer, schedul
     loss.mean().backward()                   
 
     optimizer.step()
-    scheduler.step()        
-    profiler.step()
+    scheduler.step()   
     
     logging(writer, iteration, 
         {"Fitting loss": loss.mean()}, 
@@ -265,8 +291,11 @@ def train( model, dataset, opt):
     
     if(os.path.exists(os.path.join(output_folder, "FeatureLocations", opt['save_name']))):
         shutil.rmtree(os.path.join(output_folder, "FeatureLocations", opt['save_name']))
-        
-    writer = SummaryWriter(os.path.join('tensorboard',opt['save_name']))
+    
+    if(opt['log_every'] > 0):
+        writer = SummaryWriter(os.path.join('tensorboard',opt['save_name']))
+    else: 
+        writer = None
     dataloader = DataLoader(dataset, 
                             batch_size=None, 
                             num_workers=4 if ("cpu" in opt['data_device'] and "cuda" in opt['device']) else 0,
@@ -276,87 +305,66 @@ def train( model, dataset, opt):
     model.train(True)
 
     # choose the specific training iteration function based on the model
-    train_step = train_step_vanilla
-    if 'AMGSRN' in opt['model']:
-        if(opt['precondition']):
-            train_step = train_step_AMGSRN_precondition
-            model.precodition_grids(dataset, writer, logging)
-            model.zero_grad()            
-            # Finally, reset the parameters necessary, and keep the grids
-            model.reset_parameters()
-            model.feature_grids.requires_grad_(True)
-            model.decoder.requires_grad_(True)
-            model.grid_scales.requires_grad_(False)
-            model.grid_translations.requires_grad_(False)
-        else:
-            train_step = train_step_AMGSRN
-                
+    
     if("AMGSRN" in opt['model']):
-        if(opt['precondition']):
-            optimizer = optim.Adam([
+        train_step = train_step_AMGSRN
+        optimizer = [
+            optim.Adam([
                 {"params": [model.encoder.feature_grids], "lr": opt["lr"]},
                 {"params": model.decoder.parameters(), "lr": opt["lr"]}
-            ],betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15) 
-            scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
-                [opt['iterations']*(2/5), opt['iterations']*(4/5)],
-                gamma=0.1)
-        else:
-            optimizer = [
-                optim.Adam([
-                    {"params": [model.encoder.feature_grids], "lr": opt["lr"]},
-                    {"params": model.decoder.parameters(), "lr": opt["lr"]}
-                ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
-                optim.Adam(
-                    model.encoder.get_transform_parameters(), 
-                    lr=opt['lr'] * 0.05, 
-                    betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15
-                    )
-            ]        
-            scheduler = [
-                torch.optim.lr_scheduler.MultiStepLR(optimizer[0],
-                    [opt['iterations']*(9/10)],
-                    gamma=0.1),
-                torch.optim.lr_scheduler.LinearLR(optimizer[1], 
-                    start_factor=1, end_factor=0.5)
-            ]      
+            ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
+            optim.Adam(
+                model.encoder.get_transform_parameters(), 
+                lr=opt['lr'] * 0.05, 
+                betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15
+                )
+        ]        
+        scheduler = [
+            torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer[0],
+                mode="min", patience=500, threshold=1e-4, threshold_mode="rel",
+                cooldown=250,factor=0.1,verbose=True),
+            torch.optim.lr_scheduler.LinearLR(optimizer[1], 
+                start_factor=1, end_factor=0.5)
+        ]      
+        early_stopping_data = (False, False,
+            torch.zeros([opt['iterations']], 
+                dtype=torch.float32, device=opt['device']),
+            torch.zeros([opt['iterations']], 
+                dtype=torch.float32, device=opt['device'])
+            )
     else:
+        train_step = train_step_vanilla
         optimizer = optim.Adam(model.parameters(), lr=opt["lr"], 
             betas=[opt['beta_1'], opt['beta_2']]) 
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
             [opt['iterations']*(2/5), opt['iterations']*(3/5), opt['iterations']*(4/5)],
             gamma=0.33)
-       
-    with torch.profiler.profile(
-        activities=[
-            torch.profiler.ProfilerActivity.CPU,
-            torch.profiler.ProfilerActivity.CUDA,
-        ] if torch.cuda.is_available() else [
-            torch.profiler.ProfilerActivity.CPU
-        ],
-        schedule=torch.profiler.schedule(
-            wait=2,
-            warmup=8,
-            active=1,
-            repeat=1),
-        record_shapes=True,
-        profile_memory=True,
-        with_stack=True,
-        with_modules=True,
-        on_trace_ready=torch.profiler.tensorboard_trace_handler(
-            os.path.join('tensorboard',opt['save_name']))) as profiler:
-        for (iteration, batch) in enumerate(dataloader):
-            train_step(opt,
-                    iteration,
-                    batch,
-                    dataset,
-                    model,
-                    optimizer,
-                    scheduler,
-                    profiler,
-                    writer)
+        early_stopping_data = (False,
+            torch.zeros([opt['iterations']], 
+            dtype=torch.float32, device=opt['device'])
+            )
+    
+    start_time = time.time()
+    for (iteration, batch) in enumerate(dataloader):
+        early_stopping_data = train_step(opt,
+                iteration,
+                batch,
+                dataset,
+                model,
+                optimizer,
+                scheduler,
+                writer,
+                early_stopping_data=early_stopping_data)
+    end_time = time.time()
+    sec_passed = end_time-start_time
+    mins = sec_passed / 60
+    
+    print(f"Model completed training after {int(mins)}m {sec_passed%60:0.02f}s")
+
     
     #writer.add_graph(model, torch.zeros([1, 3], device=opt['device'], dtype=torch.float32))
-    writer.close()
+    if(opt['log_every'] > 0):
+        writer.close()
     save_model(model, opt)
 
 if __name__ == '__main__':
@@ -396,6 +404,8 @@ if __name__ == '__main__':
         help='Data file name')
     parser.add_argument('--model',default=None,type=str,
         help='The model architecture to use')
+    parser.add_argument('--grid_initialization',default=None,type=str,
+        help='How to initialize AMGSRN grids. choices: default, large, small')
     parser.add_argument('--save_name',default=None,type=str,
         help='Save name for the model')
     parser.add_argument('--align_corners',default=None,type=str2bool,
@@ -477,6 +487,11 @@ if __name__ == '__main__':
         dataset = Dataset(opt)
         opt['data_min'] = dataset.min().item()
         opt['data_max'] = dataset.max().item()
+        
+        #opt['data_min'] = max(dataset.min(), dataset.data.mean() - dataset.data.std()*3).item()
+        #opt['data_max'] = min(dataset.max(), dataset.data.mean() + dataset.data.std()*3).item()
+        #opt['data_min'] = dataset.data.mean().item()
+        #opt['data_max'] = max(dataset.data.mean()-dataset.data.min(), dataset.data.max() -dataset.data.mean()).item()
         model = create_model(opt)
         model = model.to(opt['device'])
     else:        

@@ -13,7 +13,8 @@ from Other.utility_functions import create_path
 #plt.style.use('fivethirtyeight')
 #plt.style.use('ggplot')
 #plt.style.use('seaborn')
-plt.style.use('seaborn-paper')
+#plt.style.use('seaborn-paper')
+plt.style.use('seaborn-v0_8-whitegrid')
 font = {#'font.family' : 'normal',
     #'font.weight' : 'bold',
     'font.size'   : 16,
@@ -26,118 +27,209 @@ save_folder = os.path.join(project_folder_path, "Output", "Charts")
 output_folder = os.path.join(project_folder_path, "Output")
    
 asteroid_results = {
-    "Ours": {
-        2**16 : 35.319,
-        2**20 : 39.645,
-        2**24 : 42.825
-    },
-    "NGP": {
-        2**16 : 35.806,
-        2**20 : 41.626,
-        2**24 : 45.248
+    "AMGSRN": {
+        2**16 : 34.776,
+        2**20 : 40.040,
+        2**24 : 44.652
     },
     "fVSRN": {
-        2**16 : 33.058,
-        2**20 : 35.407,
-        2**24 : 40.413
+        2**16 : 32.992,
+        2**20 : 35.408,
+        2**24 : 40.442
+    },
+    "NGP": {
+        2**16 : 35.848,
+        2**20 : 41.645,
+        2**24 : 45.269
     }
 }
 
 isotropic_results = {
-    "Ours": {
-        2**16 : 27.703, 
-        2**20 : 32.206, 
-        2**24 : 38.604
-    },
-    "NGP": {
-        2**16 : 27.006,
-        2**20 : 30.776,
-        2**24 : 37.199
+    "AMGSRN": {
+        2**16 : 27.622, 
+        2**20 : 31.825, 
+        2**24 : 38.120
     },
     "fVSRN": {
-        2**16 : 27.417,
-        2**20 : 31.780,
-        2**24 : 38.468
+        2**16 : 27.427,
+        2**20 : 31.781,
+        2**24 : 38.464
+    },
+    "NGP": {
+        2**16 : 27.007,
+        2**20 : 30.786,
+        2**24 : 37.198
     }
 }
 
 nyx_results = {
-    "Ours": {
-        2**16 : 29.616,
-        2**20 : 38.294,
-        2**24 : 44.302 
-    },
-    "NGP": {
-        2**16 : 28.381,
-        2**20 : 35.147,
-        2**24 : 42.696
+    "AMGSRN": {
+        2**16 : 29.424,
+        2**20 : 37.807,
+        2**24 : 44.075 
     },
     "fVSRN": {
-        2**16 : 29.204,
-        2**20 : 37.741,
-        2**24 : 43.923
+        2**16 : 29.203,
+        2**20 : 37.761,
+        2**24 : 43.889
+    },
+    "NGP": {
+        2**16 : 28.391,
+        2**20 : 35.142,
+        2**24 : 42.750
     }
 }
 
 plume_results = {
-    "Ours": {
-        2**16 : 50.195, 
-        2**20 : 57.344,
-        2**24 : 59.154
-    },
-    "NGP": {
-        2**16 : 46.895,
-        2**20 : 50.031,
-        2**24 : 53.283
+    "AMGSRN": {
+        2**16 : 48.954, 
+        2**20 : 56.327,
+        2**24 : 58.134
     },
     "fVSRN": {
-        2**16 : 44.667,
-        2**20 : 52.520,
-        2**24 : 55.297
+        2**16 : 44.775,
+        2**20 : 52.580,
+        2**24 : 55.064
+    },
+    "NGP": {
+        2**16 : 46.713,
+        2**20 : 50.847,
+        2**24 : 53.282
     }
 }
 
 supernova_results = {
-    "Ours": {
-        2**16 : 41.990,
-        2**20 : 46.594,
-        2**24 : 48.260
-    },
-    "NGP": {
-        2**16 : 41.544,
-        2**20 : 44.828,
-        2**24 : 47.831
+    "AMGSRN": {
+        2**16 : 41.891,
+        2**20 : 46.831,
+        2**24 : 49.880
     },
     "fVSRN": {
-        2**16 : 39.467,
-        2**20 : 43.507,
-        2**24 : 47.494
-    }
+        2**16 : 39.497,
+        2**20 : 43.513,
+        2**24 : 47.480
+    },
+    "NGP": {
+        2**16 : 41.523,
+        2**20 : 44.811,
+        2**24 : 47.806
+    },
 }
 
 ensemble_results = {
     "Asteroid": {
-        "Ensemble": 45.164,
-        "Single": 42.825
+        "Ensemble": 44.688,
+        "Single": 44.652
         },
     "Isotropic": {
-        "Ensemble": 41.646,
-        "Single": 38.604
+        "Ensemble": 41.086,
+        "Single": 38.268
         },
     "Nyx": {
-        "Ensemble": 47.054,
-        "Single": 44.302
+        "Ensemble": 46.118,
+        "Single": 44.075 
         },
     "Plume": {
-        "Ensemble": 59.358,
-        "Single": 59.154
+        "Ensemble": 58.363,
+        "Single": 58.134
         },
     "Supernova": {
-        "Ensemble": 50.414,
-        "Single": 48.260
+        "Ensemble": 50.644,
+        "Single": 49.880
         }
 }
     
+ghostcell_results = {
+    "Isotropic":
+        {
+            "1 ghost cell": 40.490,
+            "16 ghost cells": 39.915
+        },
+    "Supernova":
+        {
+            "1 ghost cell": 50.152,
+            "16 ghost cells": 49.449
+        }
+}
+
+# Sizes in KB:
+data_sizes = {
+    "Asteroid" : 3906250,
+    "Channel": 471859200,
+    "Isotropic": 4194305,
+    "Nyx": 65537,
+    "Plume": 65219,
+    "Rotstrat": 286435456,
+    "Supernova": 314929
+}
+# in lists of KB, PSNR
+compression_results = {
+    
+    "Nyx": {
+        "TTHRESH": [
+            [4202.0, 46.230],
+            [3486.0, 44.608],
+            [1137.0, 37.864],
+            [211.0, 29.499] 
+        ],
+        "AMGSRN": [
+            [65858.0, 46.230],
+            [65574.0, 44.608],
+            [4127.0, 37.864],
+            [283.0, 29.499]            
+        ]
+    },
+    "Plume": {
+        "TTHRESH": [
+            [99.7237, 58.829],  
+            [114.242, 57.702],          
+            [124.611, 56.459],       
+            [304.084, 49.172]
+        ],
+        "AMGSRN": [
+            [65644.0, 57.702],
+            [65574.0, 58.829],
+            [4127.0, 56.459],
+            [283.0, 49.172]            
+        ]
+    },
+    "Rotstrat": {
+        "TTHRESH": [
+            ["OOM", 49.160]
+        ],
+        "AMGSRN": [
+            [885600.0, 49.160]        
+        ]
+    },
+    "Supernova": {
+        "TTHRESH": [
+            [8928.0, 50.991],
+            [7922.0, 49.695],
+            [5099.0, 46.787],
+            [2065.0, 41.914] 
+        ],
+        "AMGSRN": [
+            [65744.0, 50.991],
+            [65574.0, 49.695],
+            [4127.0, 46.787],
+            [283.0, 41.914]            
+        ]
+    }
+}
+
+largescale_results = {
+    "Channel": {
+        "99072": 40.201,            
+        "393864": 40.011,
+        "787200": 40.147
+    },
+    "Rotstrat": {
+        "55 MB": 41.322,        
+        "183 MB": 44.294,
+        "864 MB": 49.074
+    }
+}     
+
 def architecture_comparison(data, name):
     
     create_path(os.path.join(output_folder, "Charts"))
@@ -300,6 +392,196 @@ def model_size_performance_chart():
 def ensemble_performance_chart():
     ensemble_comparison(ensemble_results)
 
+def render_sequence_to_mp4(folder, save_name,
+        text_data = None, fps = 20):
+    import imageio.v3 as imageio
+    import cv2
+    font                   = cv2.FONT_HERSHEY_SIMPLEX
+    fontScale              = 1.5
+    fontColor              = (0,0,0)
+    thickness              = 3
+    lineType               = cv2.LINE_AA
+
+    imgs = [None]*len(os.listdir(folder))
+    for im in os.listdir(folder):
+        if ".png" in im:
+            im_data = imageio.imread(os.path.join(folder, im))
+            
+            im_ind = int(im.split('.')[1])
+            if(text_data is not None):
+                for i in range(len(text_data)):
+                    words = text_data[i][0]
+                    position = text_data[i][1]
+                    if("iter" in words):                        
+                        cv2.putText(im_data, f"Iteration {im_ind*50}/{len(imgs)*50}",
+                            position, font, fontScale,
+                            fontColor, thickness, lineType)            
+                    else:
+                        cv2.putText(im_data, words,
+                            position, font, fontScale,
+                            fontColor, thickness, lineType)    
+            
+            if(im_ind >= len(imgs)):
+                imgs.append(im_data)  
+            else:      
+                imgs[im_ind] = im_data      
+            print(f"{im_ind}/{len(os.listdir(folder))}")
+            
+    if imgs[0] is None:
+        imgs.pop(0)
+        
+    save_location = os.path.join(folder, "..", save_name)
+    stacked_imgs = np.stack(imgs, axis=0)
+    #print(stacked_imgs.shape)
+    imageio.imwrite(save_location, stacked_imgs,
+                    extension=".mp4", fps=fps)
+
+def do_all_renders():
+    '''
+    # Do all Asteroid renders
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Asteroid_grids_training"),
+        "Asteroid_grids_training.mp4", 
+        text_data=[["iter", (1300, 150)]],
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Asteroid_gt"),
+        "Asteroid_gt.mp4", 
+        #text_data=[["Asteroid", (50, 100)],["Raw data", (50, 150)]],
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Asteroid_grids"),
+        "Asteroid_grids.mp4", 
+        #text_data=[["Asteroid", (1500, 100)], ["Model - large", (1500, 150)],["39.455 dB", (1500, 200)]],
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Asteroid_model"),
+        "Asteroid_model.mp4", 
+        #text_data=[["Asteroid", (1500, 100)],["Model - large", (1500, 150)],["39.455 dB", (1500, 200)]],
+        fps=60)
+    
+    # Do all Isotropic renders
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Isotropic_grids_training"),
+        "Isotropic_grids_training.mp4", 
+        text_data=[["iter", (1300, 150)]],
+        fps=60
+        )
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Isotropic_gt"),
+        "Isotropic_gt.mp4", 
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Isotropic_grids"),
+        "Isotropic_grids.mp4", 
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Isotropic_model"),
+        "Isotropic_model.mp4", 
+        fps=60)
+    
+    # Do all Nyx renders
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Nyx_grids_training"),
+        "Nyx_grids_training.mp4", 
+        text_data=[["iter", (1300, 150)]],
+        fps=60
+        )
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Nyx_gt"),
+        "Nyx_gt.mp4", 
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Nyx_grids"),
+        "Nyx_grids.mp4", 
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Nyx_model"),
+        "Nyx_model.mp4", 
+        fps=60)
+    
+    # Do all Plume renders
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Plume_grids_training"),
+        "Plume_grids_training.mp4", 
+        text_data=[["iter", (1300, 150)]],
+        fps=60
+        )
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Plume_gt"),
+        "Plume_gt.mp4", 
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Plume_grids"),
+        "Plume_grids.mp4", 
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Plume_model"),
+        "Plume_model.mp4", 
+        fps=60)
+    
+    # Do all Supernova renders
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Supernova_grids_training"),
+        "Supernova_grids_training.mp4", 
+        text_data=[["iter", (1300, 150)]],
+        fps=60
+        )
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Supernova_gt"),
+        "Supernova_gt.mp4", 
+        fps=60)
+    '''
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Supernova_grids"),
+        "Supernova_grids.mp4", 
+        fps=60)
+    render_sequence_to_mp4(
+        os.path.join(output_folder, 
+                     "RenderSequences", 
+                     "Supernova_model"),
+        "Supernova_model.mp4", 
+        fps=60)
+   
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Test a trained SSR model')
     
@@ -308,6 +590,9 @@ if __name__ == '__main__':
     
     args = vars(parser.parse_args())
 
-    flat_top_chart()
+    #model_size_performance_chart()
+    #ensemble_comparison(ensemble_results)
+    #flat_top_chart()
+    do_all_renders()
     
     quit()
