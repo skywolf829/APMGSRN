@@ -380,7 +380,6 @@ class Scene(torch.nn.Module):
                         full_shape[1]-1,
                         full_shape[2]-1], 
             device=self.device)
-        print(f"Bounding box: {self.scene_aabb}")
         self.image_resolution : Tuple[int]= image_resolution
         self.batch_size : int = batch_size
         self.spp = spp

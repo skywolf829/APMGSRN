@@ -27,19 +27,22 @@ project_folder_path = os.path.abspath(os.path.join(project_folder_path, "..", ".
 data_folder = os.path.join(project_folder_path, "Data")
 savedmodels_folder = os.path.join(project_folder_path, "SavedModels")
 tf_folder = os.path.join(project_folder_path, "Colormaps")
+
+
     
 class MainWindow(QMainWindow):
     
     updates_per_second = pyqtSignal(float)
     frame_time = pyqtSignal(float)
     vram_use = pyqtSignal(float)
+    status_text_update = pyqtSignal(str)
     
     def __init__(self, parent=None):
         super().__init__(parent)
         project_folder_path = os.path.dirname(os.path.abspath(__file__))
         project_folder_path = os.path.abspath(os.path.join(project_folder_path, "..", ".."))
         
-        self.setWindowTitle("My App") 
+        self.setWindowTitle("Neural Volume Renderer") 
             
         # Find all available models/colormaps        
         self.available_models = os.listdir(savedmodels_folder)
@@ -87,9 +90,17 @@ class MainWindow(QMainWindow):
         self.spp_slider.sliderReleased.connect(self.change_spp)
         self.spp_slider_box.addWidget(self.spp_slider)   
         
+        self.transfer_function_box = QVBoxLayout()
+        self.transfer_function_bg = QWidget()
+        self.transfer_function_bg.setMinimumHeight(150)
+        self.transfer_function_bg.setStyleSheet("background-color: white; border: 1px solid black;")
+        self.transfer_function_box.addWidget(self.transfer_function_bg)
+                        
+        self.status_text = QLabel("") 
         self.memory_use_label = QLabel("VRAM use: -- GB") 
         self.update_framerate_label = QLabel("Update framerate: -- fps") 
         self.frame_time_label = QLabel("Last frame time: -- sec.") 
+        self.status_text_update.connect(self.update_status_text)
         self.vram_use.connect(self.update_vram)
         self.updates_per_second.connect(self.update_updates)
         self.frame_time.connect(self.update_frame_time)
@@ -98,7 +109,9 @@ class MainWindow(QMainWindow):
         self.settings_ui.addWidget(self.tfs_dropdown)
         self.settings_ui.addLayout(self.batch_slider_box)
         self.settings_ui.addLayout(self.spp_slider_box)
+        self.settings_ui.addLayout(self.transfer_function_box)
         self.settings_ui.addStretch()
+        self.settings_ui.addWidget(self.status_text)
         self.settings_ui.addWidget(self.memory_use_label)
         self.settings_ui.addWidget(self.update_framerate_label)
         self.settings_ui.addWidget(self.frame_time_label)
@@ -123,6 +136,9 @@ class MainWindow(QMainWindow):
         self.last_x = None
         self.last_y = None
    
+    def update_status_text(self, val):
+        self.status_text.setText(f"{val}")
+        
     def update_vram(self, val):
         self.memory_use_label.setText(f"VRAM use: {val:0.02f} GB")
         
@@ -174,8 +190,9 @@ class MainWindow(QMainWindow):
         self.rotating = True
   
     def load_model(self, s):
-        print(f"Model changed {s}")
+        self.status_text_update.emit(f"Loading model {s}...")
         self.render_worker.load_new_model.emit(s)
+        self.status_text_update.emit("")
         
     def load_tf(self, s):
         print(f"TF changed {s}")
@@ -277,9 +294,9 @@ class RendererThread(QObject):
         self.frame_rate = []
         self.tf = TransferFunction(self.device)      
         
-        self.initialize_model()   
-        self.initialize_camera()
-        
+        self.initialize_model()  
+        self.parent.status_text_update.emit("Initializing scene...") 
+        self.initialize_camera()        
         self.scene = Scene(self.model, self.camera, 
                            self.full_shape, self.resolution, 
                            self.batch_size, self.spp, 
@@ -294,6 +311,7 @@ class RendererThread(QObject):
         self.change_spp.connect(self.do_change_spp)
         self.change_transfer_function.connect(self.do_change_transfer_function)
         self.load_new_model.connect(self.do_change_model)
+        self.parent.status_text_update.emit(f"")
         
     def run(self):
         last_spot = 0
@@ -392,14 +410,19 @@ class RendererThread(QObject):
     
     def initialize_model(self):
         first_model = os.listdir(savedmodels_folder)[0]
+        print(f"Loading model {first_model}")
+        self.parent.status_text_update.emit(f"Loading model {first_model}...")
         self.opt = load_options(os.path.abspath(os.path.join('SavedModels', first_model)))
         self.full_shape = self.opt['full_shape']
         self.model = load_model(self.opt, self.device).to(self.device)
         self.model.eval()
-        self.tf.set_minmax(self.model.min(), self.model.max())     
+        print(f"Min/max: {self.model.min().item():0.02f}/{self.model.max().item():0.02f}")
+        self.tf.set_minmax(self.model.min(), self.model.max())  
+        self.parent.status_text_update.emit(f"")   
     
     def do_change_model(self, s):
         render_mutex.lock()
+        print(f"Loading model {s}")
         self.opt = load_options(os.path.abspath(os.path.join('SavedModels', s)))
         self.full_shape = self.opt['full_shape']
         self.model = load_model(self.opt, self.device).to(self.device)
@@ -422,6 +445,7 @@ class RendererThread(QObject):
                 self.full_shape[1]**2 + \
                 self.full_shape[2]**2)**0.5)
         #self.scene.precompute_occupancy_grid()
+        print(f"Min/max: {self.model.min().item():0.02f}/{self.model.max().item():0.02f}")
         self.scene.on_setting_change()
         render_mutex.unlock()
 

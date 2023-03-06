@@ -358,7 +358,7 @@ class AMGSRN(nn.Module):
         if(self.requires_padded_feats):
             feats = F.pad(feats, (0, self.padding_size), value=1.0) 
         y = self.decoder(feats).float()
-        y = y * (self.volume_max - self.volume_min + 1e-16) + self.volume_min     
+        y = y * (self.volume_max - self.volume_min) + self.volume_min     
         return y
 
     def forward(self, x):

@@ -32,7 +32,7 @@ def model_reconstruction(model, opt):
 
 def model_reconstruction_chunked(model, opt):
     
-    chunk_size = 768
+    chunk_size = 512
     full_shape = opt['full_shape']
     
     output = torch.empty(opt['full_shape'], 
