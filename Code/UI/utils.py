@@ -40,7 +40,8 @@ class Arcball():
         self.mouse_curr = np.zeros(2, dtype=np.float32)
         self.camera_dirs = None
         # self.zoom_unit = scene_aabb
-        
+    
+    
     def position(self) -> np.ndarray:
         return self.c2w[:3, 3]
     
@@ -93,6 +94,19 @@ class Arcball():
         # print(self.vMat,"\n")
         # print(self.c2w, "\n")
     
+    def update_dist(self, d) -> None:
+        self.translation = np.eye(4, dtype=np.float32)
+        self.translation[:3, 3] = [0.,0.,-d]
+        self.vMat = self.translation @ self.rotation @ self.coi_translate
+        self.c2w = np.linalg.inv(self.vMat)
+        
+    def update_coi(self, coi) -> None:
+        self.coi = coi.astype(dtype=np.float32)
+        self.coi_translate = np.eye(4, dtype=np.float32)
+        self.coi_translate[:3, 3] = -coi
+        self.vMat = self.translation @ self.rotation @ self.coi_translate
+        self.c2w = np.linalg.inv(self.vMat)
+        
     def update_vMat(self) -> None:
         self.vMat = (self.translation  @ self.rotation @ self.coi_translate).astype(np.float32)
     

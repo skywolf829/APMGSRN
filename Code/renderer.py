@@ -201,6 +201,10 @@ class TransferFunction():
                 self.precomputed_opacity_map[start_ind:start_ind+num_elements] =\
                     opacity_a * (1-lerp_values) + opacity_b*lerp_values
 
+    def set_minmax(self, min, max):
+        self.min_value = min
+        self.max_value = max
+    
     def color_at_value(self, value:torch.Tensor):
         value_ind = (value[:,0] - self.min_value) / (self.max_value - self.min_value)
         value_ind *= self.num_dict_entries
@@ -386,7 +390,15 @@ class Scene(torch.nn.Module):
         self.camera = camera
         torch.cuda.empty_cache()
         self.on_setting_change()
-   
+    
+    def set_aabb(self, full_shape : np.ndarray):
+        self.scene_aabb = \
+            torch.tensor([0.0, 0.0, 0.0, 
+                        full_shape[0]-1,
+                        full_shape[1]-1,
+                        full_shape[2]-1], 
+            device=self.device)   
+            
     def precompute_occupancy_grid(self, grid_res:List[int]=[64, 64, 64]):
         # pre-allocate an occupancy grid from a dense sampling that gets max-pooled
         sample_grid : List[int] = [grid_res[0]*4, grid_res[1]*4, grid_res[2]*4]
@@ -712,6 +724,7 @@ class Scene(torch.nn.Module):
         
         while(self.current_order_spot < len(self.render_order)):
             self.one_step_update()
+
                     
         return self.image, imgs
     
