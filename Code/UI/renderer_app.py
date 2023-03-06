@@ -60,6 +60,7 @@ class MainWindow(QMainWindow):
         self.models_dropdown.currentTextChanged.connect(self.load_model)
         self.tfs_dropdown = self.load_colormaps_dropdown()
         self.tfs_dropdown.currentTextChanged.connect(self.load_tf)
+        
         self.batch_slider_box = QHBoxLayout()      
         self.batch_slider_label = QLabel("Batch size (2^x): 20")  
         self.batch_slider_box.addWidget(self.batch_slider_label)
@@ -73,6 +74,19 @@ class MainWindow(QMainWindow):
         self.batch_slider.sliderReleased.connect(self.change_batch)
         self.batch_slider_box.addWidget(self.batch_slider)   
         
+        self.spp_slider_box = QHBoxLayout()      
+        self.spp_slider_label = QLabel("Samples per ray: 256")  
+        self.spp_slider_box.addWidget(self.spp_slider_label)
+        self.spp_slider = QSlider(Qt.Horizontal)
+        self.spp_slider.setMinimum(7)
+        self.spp_slider.setMaximum(13)
+        self.spp_slider.setValue(8)   
+        self.spp_slider.setTickPosition(QSlider.TicksBelow)
+        self.spp_slider.setTickInterval(1)  
+        self.spp_slider.valueChanged.connect(self.change_spp_visual)
+        self.spp_slider.sliderReleased.connect(self.change_spp)
+        self.spp_slider_box.addWidget(self.spp_slider)   
+        
         self.memory_use_label = QLabel("VRAM use: -- GB") 
         self.update_framerate_label = QLabel("Update framerate: -- fps") 
         self.frame_time_label = QLabel("Last frame time: -- sec.") 
@@ -83,6 +97,8 @@ class MainWindow(QMainWindow):
         self.settings_ui.addWidget(self.models_dropdown)
         self.settings_ui.addWidget(self.tfs_dropdown)
         self.settings_ui.addLayout(self.batch_slider_box)
+        self.settings_ui.addLayout(self.spp_slider_box)
+        self.settings_ui.addStretch()
         self.settings_ui.addWidget(self.memory_use_label)
         self.settings_ui.addWidget(self.update_framerate_label)
         self.settings_ui.addWidget(self.frame_time_label)
@@ -173,6 +189,15 @@ class MainWindow(QMainWindow):
         val = int(self.batch_slider.value())
         self.batch_slider_label.setText(f"Batch size (2^x): {val}")
         self.render_worker.change_batch_size.emit(val)
+     
+    def change_spp_visual(self):
+        val = int(self.spp_slider.value())
+        self.spp_slider_label.setText(f"Samples per ray: {2**val}")
+        
+    def change_spp(self):
+        val = int(self.spp_slider.value())
+        self.spp_slider_label.setText(f"Samples per ray: {2**val}")
+        self.render_worker.change_spp.emit(2**val)
      
     def mouseReleased(self, event):
         if event.type() == QEvent.MouseButtonRelease:
