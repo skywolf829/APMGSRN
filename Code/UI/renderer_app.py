@@ -10,12 +10,13 @@ from PyQt5.QtCore import QSize, Qt, QTimer, QMutex
 from PyQt5.QtGui import QImage, QPixmap, QPalette, QColor, QIcon
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, \
     QWidget, QLabel, QHBoxLayout, QVBoxLayout, QStackedLayout, \
-    QComboBox
-from PyQt5.QtCore import QObject, QThread, pyqtSignal
+    QComboBox, QSlider
+from PyQt5.QtCore import QObject, QThread, pyqtSignal, QEvent, Qt
 from Code.renderer import Camera, Scene, TransferFunction
 from Code.UI.utils import Arcball, torch_float_to_numpy_uint8
 from Code.Models.options import load_options
 from Code.Models.models import load_model
+from typing import List
 
 # For locking renderer actions
 render_mutex = QMutex()
@@ -28,6 +29,10 @@ savedmodels_folder = os.path.join(project_folder_path, "SavedModels")
 tf_folder = os.path.join(project_folder_path, "Colormaps")
     
 class MainWindow(QMainWindow):
+    
+    updates_per_second = pyqtSignal(float)
+    frame_time = pyqtSignal(float)
+    vram_use = pyqtSignal(float)
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -45,9 +50,9 @@ class MainWindow(QMainWindow):
         
         # Render area
         self.render_view = QLabel()   
-        self.render_view.mousePressEvent = self.startRotate
-        self.render_view.mouseReleaseEvent = self.endRotate
-        self.render_view.mouseMoveEvent = self.doRotate    
+        self.render_view.mousePressEvent = self.mouseClicked
+        self.render_view.mouseReleaseEvent = self.mouseReleased
+        self.render_view.mouseMoveEvent = self.mouseMove    
         
         # Settings area
         self.settings_ui = QVBoxLayout()        
@@ -55,8 +60,32 @@ class MainWindow(QMainWindow):
         self.models_dropdown.currentTextChanged.connect(self.load_model)
         self.tfs_dropdown = self.load_colormaps_dropdown()
         self.tfs_dropdown.currentTextChanged.connect(self.load_tf)
+        self.batch_slider_box = QHBoxLayout()      
+        self.batch_slider_label = QLabel("Batch size (2^x): 20")  
+        self.batch_slider_box.addWidget(self.batch_slider_label)
+        self.batch_slider = QSlider(Qt.Horizontal)
+        self.batch_slider.setMinimum(18)
+        self.batch_slider.setMaximum(25)
+        self.batch_slider.setValue(20)   
+        self.batch_slider.setTickPosition(QSlider.TicksBelow)
+        self.batch_slider.setTickInterval(1)  
+        self.batch_slider.valueChanged.connect(self.change_batch_visual)
+        self.batch_slider.sliderReleased.connect(self.change_batch)
+        self.batch_slider_box.addWidget(self.batch_slider)   
+        
+        self.memory_use_label = QLabel("VRAM use: -- GB") 
+        self.update_framerate_label = QLabel("Update framerate: -- fps") 
+        self.frame_time_label = QLabel("Last frame time: -- sec.") 
+        self.vram_use.connect(self.update_vram)
+        self.updates_per_second.connect(self.update_updates)
+        self.frame_time.connect(self.update_frame_time)
+        
         self.settings_ui.addWidget(self.models_dropdown)
         self.settings_ui.addWidget(self.tfs_dropdown)
+        self.settings_ui.addLayout(self.batch_slider_box)
+        self.settings_ui.addWidget(self.memory_use_label)
+        self.settings_ui.addWidget(self.update_framerate_label)
+        self.settings_ui.addWidget(self.frame_time_label)
         
         # UI full layout        
         layout.addWidget(self.render_view, stretch=4)
@@ -69,13 +98,23 @@ class MainWindow(QMainWindow):
         
         # Set up render thread
         self.render_thread = QThread()
-        self.render_worker = RendererThread()        
+        self.render_worker = RendererThread(self)        
         self.load_renderer()
         
         # Variables to use for interaction
         self.rotating = False
+        self.panning = False
         self.last_x = None
         self.last_y = None
+   
+    def update_vram(self, val):
+        self.memory_use_label.setText(f"VRAM use: {val:0.02f} GB")
+        
+    def update_updates(self, val):
+        self.update_framerate_label.setText(f"Update framerate: {val:0.02f} fps")
+    
+    def update_frame_time(self, val):
+        self.frame_time_label.setText(f"Last frame time: {val:0.02f} sec.")
         
     def load_models_dropdown(self):
         dropdown = QComboBox()        
@@ -104,8 +143,18 @@ class MainWindow(QMainWindow):
         h = self.render_view.frameGeometry().height()
         self.render_worker.resize.emit(w,h)
         QMainWindow.resizeEvent(self, event)
+     
+    def mouseClicked(self, event):
+        if event.type() == QEvent.MouseButtonPress:
+            if(event.button()) == Qt.LeftButton:
+                self.startRotate()
+            if(event.button()) == Qt.MiddleButton:
+                self.startPan()
+                             
+    def startPan(self):
+        self.panning = True
         
-    def startRotate(self, QMouseEvent):
+    def startRotate(self):
         self.rotating = True
   
     def load_model(self, s):
@@ -115,13 +164,33 @@ class MainWindow(QMainWindow):
     def load_tf(self, s):
         print(f"TF changed {s}")
         self.render_worker.change_transfer_function.emit(s)
+    
+    def change_batch_visual(self):
+        val = int(self.batch_slider.value())
+        self.batch_slider_label.setText(f"Batch size (2^x): {val}")
         
-    def endRotate(self, event):
+    def change_batch(self):
+        val = int(self.batch_slider.value())
+        self.batch_slider_label.setText(f"Batch size (2^x): {val}")
+        self.render_worker.change_batch_size.emit(val)
+     
+    def mouseReleased(self, event):
+        if event.type() == QEvent.MouseButtonRelease:
+            if(event.button()) == Qt.LeftButton:
+                self.endRotate()
+            if(event.button()) == Qt.MiddleButton:
+                self.endPan()
+    
+    def endPan(self):
+        self.panning = False
+        
+    def endRotate(self):
         self.rotating = False
         self.last_x = None
         self.last_y = None
         
-    def doRotate(self, event):
+    def mouseMove(self, event):
+        
         w = self.render_view.frameGeometry().width()
         h = self.render_view.frameGeometry().height()
         x = (event.x() / w) * 2 - 1
@@ -134,6 +203,10 @@ class MainWindow(QMainWindow):
         
         if self.rotating:
             self.render_worker.rotate.emit(self.last_x, self.last_y, x, y)
+            self.last_x = x
+            self.last_y = y
+        if self.panning:
+            self.render_worker.pan.emit(self.last_x, self.last_y, x, y)
             self.last_x = x
             self.last_y = y
     
@@ -150,25 +223,30 @@ class MainWindow(QMainWindow):
 class RendererThread(QObject):    
     progress = pyqtSignal(np.ndarray)
     rotate = pyqtSignal(float, float, float, float)
+    pan = pyqtSignal(float, float, float, float)
     zoom = pyqtSignal(float)
     resize = pyqtSignal(int, int)
     change_spp = pyqtSignal(int)
     load_new_model = pyqtSignal(str)
     change_transfer_function = pyqtSignal(str)
     change_batch_size = pyqtSignal(int)
+    change_opacity_controlpoints = pyqtSignal(np.ndarray)
     
-    def __init__(self):
+    def __init__(self, parent=None):
         super(RendererThread, self).__init__()
+        self.parent = parent
         
         # Local variables needed to keep track of 
         self.device = "cuda:0"
-        self.batch_size = 2**20
         self.spp = 256
+        self.batch_size = 2**20
         self.resolution = [256,256]
         self.full_shape = [1,1,1]
         self.opt = None  
         self.model = None
         self.camera = None
+        self.update_rate = []
+        self.frame_rate = []
         self.tf = TransferFunction(self.device)      
         
         self.initialize_model()   
@@ -184,21 +262,51 @@ class RendererThread(QObject):
         self.rotate.connect(self.do_rotate)
         self.zoom.connect(self.do_zoom)
         self.resize.connect(self.do_resize)
+        self.change_batch_size.connect(self.do_change_batch_size)
+        self.change_spp.connect(self.do_change_spp)
         self.change_transfer_function.connect(self.do_change_transfer_function)
         self.load_new_model.connect(self.do_change_model)
         
     def run(self):
+        last_spot = 0
+        current_spot = 0
         while True:
+            current_spot = self.scene.current_order_spot
             render_mutex.lock()
+            if(self.scene.current_order_spot == 0):
+                frame_start_time = time.time()
+            update_start_time = time.time()
             self.scene.one_step_update()
+            if(current_spot < len(self.scene.render_order)):
+                update_time = time.time() - update_start_time
+                self.update_rate.append(update_time)
+            if(current_spot == len(self.scene.render_order) and 
+                last_spot < current_spot):
+                    frame_time = time.time() - frame_start_time   
+                    self.frame_rate.append(frame_time)     
+                    last_frame_time = self.frame_rate[-1]
+                    self.parent.frame_time.emit(last_frame_time)    
             img = torch_float_to_numpy_uint8(self.scene.temp_image)
             render_mutex.unlock()
+            
             self.progress.emit(img)
+            self.parent.vram_use.emit(self.scene.get_mem_use())
+            
+            if(len(self.update_rate) > 20):
+                self.update_rate.pop(0)
+            if(len(self.frame_rate) > 5):
+                self.frame_rate.pop(0)
+            if(len(self.update_rate) > 0):
+                average_update_fps = 1/np.array(self.update_rate).mean()
+                self.parent.updates_per_second.emit(average_update_fps)
+            last_spot = current_spot
             
     def do_resize(self, w, h):
         render_mutex.lock()
         self.scene.image_resolution = [h,w]
         self.scene.on_resize()
+        self.update_rate = []
+        self.frame_rate = []
         render_mutex.unlock()
         
     def do_rotate(self, last_x, last_y, x, y):
@@ -219,6 +327,20 @@ class RendererThread(QObject):
         render_mutex.lock()
         self.tf.loadColormap(s)
         self.scene.on_rotate_zoom_pan()
+        render_mutex.unlock()
+    
+    def do_change_batch_size(self, b):
+        render_mutex.lock()
+        self.batch_size = 2**b
+        self.scene.batch_size = 2**b
+        self.scene.on_resize()
+        render_mutex.unlock()
+    
+    def do_change_spp(self, b):
+        render_mutex.lock()
+        self.spp = b
+        self.scene.spp = b
+        self.scene.on_resize()
         render_mutex.unlock()
     
     def initialize_camera(self):
@@ -271,7 +393,7 @@ class RendererThread(QObject):
         self.camera.update_dist((self.full_shape[0]**2 + \
                 self.full_shape[1]**2 + \
                 self.full_shape[2]**2)**0.5)
-        self.scene.precompute_occupancy_grid()
+        #self.scene.precompute_occupancy_grid()
         self.scene.on_setting_change()
         render_mutex.unlock()
 
