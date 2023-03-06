@@ -1,6 +1,6 @@
 
 // import { io } from "socket.io-client";
-// const socket = io();
+const socket = io();
 // 1 implementation I want to have to deal with the fps is, in the frontend, I have a flag variable to record if backend has returned an updated image. Then the logic is. We start with a rendering. As user start to interacts, one request is sent, and then no user interaction will be send to the backend, unless the previous requests are fulfilled (i.e. image rendered). Once the previous image is fulfilled,
 
 /*
@@ -58,6 +58,10 @@ setInterval(function() {
     ctx.drawImage(img, 0, 0);
 }, 1000 / 60);
 
+setInterval(function() {
+
+}, 1000 / 60);
+
 // setInterval(function() {
 //     // let img = new Image();
 //     // img.onload = function() {
@@ -98,69 +102,84 @@ function rescale_ndc(x, length) {
 
 // // recording scene changes ***********************************************
 
+
 // rotation
 function onMouseDown(event) {
     is_updating_rotation = true;
-    fetch('/mousedown', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            "x_start": rescale_ndc(event.clientX, canvas_width),
-            "y_start": rescale_ndc(canvas_height-event.clientY, canvas_height)
-        })
-    })
-    .then(response => response.json())
-    .then(data => console.log(data))
-    .catch(error => console.error(error));
+    socket.emit("mousedown", JSON.stringify({
+        "x_start": rescale_ndc(event.clientX, canvas_width),
+        "y_start": rescale_ndc(canvas_height-event.clientY, canvas_height)
+    }));
+
+    // fetch('/mousedown', {
+    //     method: 'POST',
+    //     headers: {'Content-Type': 'application/json'},
+    //     body: JSON.stringify({
+    //         "x_start": rescale_ndc(event.clientX, canvas_width),
+    //         "y_start": rescale_ndc(canvas_height-event.clientY, canvas_height)
+    //     })
+    // })
+    // .then(response => response.json())
+    // .then(data => console.log(data))
+    // .catch(error => console.error(error));
 
 }
 
 function onMouseMove(event) {
     if (!is_updating_rotation) return;
-    // Make a POST request to the Flask route with the x and y coordinates
-    // console.log(canvas_height-event.clientY, canvas_height, rescale_ndc(canvas_height-event.clientY, canvas_height));
-    fetch('/mousemove', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            "x_curr": rescale_ndc(event.clientX, canvas_width),
-            "y_curr": rescale_ndc(canvas_height-event.clientY, canvas_height),
-        })
-    })
-    .then(response => response.json())
-    .then(data => console.log(data))
-    .catch(error => console.error(error));
+    socket.emit("mousemove", JSON.stringify({
+        "x_curr": rescale_ndc(event.clientX, canvas_width),
+        "y_curr": rescale_ndc(canvas_height-event.clientY, canvas_height),
+    }));
+    // // Make a POST request to the Flask route with the x and y coordinates
+    // // console.log(canvas_height-event.clientY, canvas_height, rescale_ndc(canvas_height-event.clientY, canvas_height));
+    // fetch('/mousemove', {
+    //     method: 'POST',
+    //     headers: {'Content-Type': 'application/json'},
+    //     body: JSON.stringify({
+    //         "x_curr": rescale_ndc(event.clientX, canvas_width),
+    //         "y_curr": rescale_ndc(canvas_height-event.clientY, canvas_height),
+    //     })
+    // })
+    // .then(response => response.json())
+    // .then(data => console.log(data))
+    // .catch(error => console.error(error));
 }
 
 function onMouseUp(event) {
     if (!is_updating_rotation) return;
     is_updating_rotation = false;
-    // Make a POST request to the Flask route with the x and y coordinates
-    fetch('/mousemove', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            "x_curr": rescale_ndc(event.clientX, canvas_width),
-            "y_curr": rescale_ndc(canvas_height-event.clientY, canvas_height)
-        })
-    })
-    .then(response => response.json())
-    .then(data => console.log(data))
-    .catch(error => console.error(error));
+    socket.emit("mousemove", JSON.stringify({
+        "x_curr": rescale_ndc(event.clientX, canvas_width),
+        "y_curr": rescale_ndc(canvas_height-event.clientY, canvas_height)
+    }));
+    // // Make a POST request to the Flask route with the x and y coordinates
+    // fetch('/mousemove', {
+    //     method: 'POST',
+    //     headers: {'Content-Type': 'application/json'},
+    //     body: JSON.stringify({
+    //         "x_curr": rescale_ndc(event.clientX, canvas_width),
+    //         "y_curr": rescale_ndc(canvas_height-event.clientY, canvas_height)
+    //     })
+    // })
+    // .then(response => response.json())
+    // .then(data => console.log(data))
+    // .catch(error => console.error(error));
 }
 
 // zoom percentage change
 function onWheelScroll(event) {
-    console.log(event.deltaMode);
-    // Make a POST request to the Flask route with the x and y coordinates
-    fetch('/wheelscroll', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({"dscroll": event.deltaY})
-    })
-    .then(response => response.json())
-    .then(data => console.log(data))
-    .catch(error => console.error(error));
+    // console.log(event.deltaMode);
+    socket.emit("wheelscroll", JSON.stringify({"dscroll": event.deltaY}));
+    // // Make a POST request to the Flask route with the x and y coordinates
+    // fetch('/wheelscroll', {
+    //     method: 'POST',
+    //     headers: {'Content-Type': 'application/json'},
+    //     body: JSON.stringify({"dscroll": event.deltaY})
+    // })
+    // .then(response => response.json())
+    // .then(data => console.log(data))
+    // .catch(error => console.error(error));
 }
 
 canvas.addEventListener("mouseup", onMouseUp);

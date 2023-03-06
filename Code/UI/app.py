@@ -1,6 +1,7 @@
 import os, sys
+import json
 from flask import Flask, render_template, Response, request, jsonify
-# from flask_socketio import SocketIO
+from flask_socketio import SocketIO
 import torch
 import numpy as np
 import base64
@@ -20,7 +21,7 @@ from Code.UI.utils import Arcball, torch_float_to_numpy_uint8
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 app.config['TEMPLATES_AUTO_RELOAD'] = True
-
+socketio = SocketIO(app)
         
 def render_background():
     '''
@@ -31,11 +32,12 @@ def render_background():
     while True:
         while not scene_update_fulfilled:
             # print(" @@@@@@@@@@@@@@@@@@@@@@@@rendering@@@@@@@@@@@@@@@@@@@@@")
-            tmpimg, _ = scene.render_checkerboard(arcball)
+            scene.on_rotate_zoom_pan()
+            tmpimg, _ = scene.render_checkerboard()
             img = torch_float_to_numpy_uint8(tmpimg)
             # full image rendered, send the complete img
             scene_update_fulfilled = True
-        time.sleep(1/30)
+        time.sleep(1/60)
         
         
 # communication flags
@@ -68,20 +70,24 @@ tf = TransferFunction(
     max_value=1.,
     colormap=None,
 )
-scene = Scene(model, full_shape, hw, batch_size, spp, tf, device)
-dist = (scene.scene_aabb.max(0)[0] - scene.scene_aabb.min(0)[0])*1.8
+aabb = np.array([0.0, 0.0, 0.0, 
+                    full_shape[0]-1,
+                    full_shape[1]-1,
+                    full_shape[2]-1])
+dist = (aabb.max(0) - aabb.min(0))*1.8
 arcball = Arcball(
-    scene_aabb=scene.scene_aabb.cpu().numpy(),
-    coi=scene.scene_aabb.reshape(2,3).mean(0).cpu().numpy(), # camera lookat center of aabb,
+    scene_aabb=aabb,
+    coi=aabb.reshape(2,3).mean(0), # camera lookat center of aabb,
     dist=float(dist),
     fov=60.
 )
+scene = Scene(model, arcball, full_shape, hw, batch_size, spp, tf, device)
 print("Camera distance to center of AABB:", dist)
 
 
 # rendering parameter
 print("rendering")
-tmpimg, _ = scene.render_checkerboard(arcball)
+tmpimg, _ = scene.render_checkerboard()
 print("rendering done")
 print(tmpimg.max(), tmpimg.min())
 
@@ -143,7 +149,7 @@ def gen():
         # print(ret, counter)
         yield (b'--frame\r\n'
                b'Content-Type: image/png\r\n\r\n' + jpeg + b'\r\n')
-        time.sleep(1/30)
+        time.sleep(1/60)
         
 
 @app.route('/video_feed')
@@ -152,11 +158,40 @@ def video_feed():
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
+@socketio.on("mousedown")
+def soc_mousedown(data):
+    global scene_update_fulfilled
+    data = json.loads(data)
+    x_start = float(data['x_start'])
+    y_start = float(data['y_start'])
+    arcball.mouse_start = np.array([x_start, y_start])
+    scene_update_fulfilled = False
+
+@socketio.on("mousemove")
+def soc_mousemove(data):
+    global scene_update_fulfilled
+    data = json.loads(data)
+    x_curr = float(data['x_curr'])
+    y_curr = float(data['y_curr'])
+    arcball.mouse_curr = np.array([x_curr, y_curr])
+    print("\tcurr_mouse ndc:", arcball.mouse_curr)
+    arcball.rotate()
+    scene_update_fulfilled = False
+
+@socketio.on("wheelscroll")
+def soc_wheelscroll(data):
+    global scene_update_fulfilled
+    data = json.loads(data)
+    dscroll = float(data['dscroll'])
+    arcball.zoom(dscroll)
+    print("\tdscroll:", dscroll)
+    scene_update_fulfilled = False
+
 if __name__ == '__main__':
     # send_img_thread = setInterval(1/30, send_img_updates)
     # send_img_thread.start()
     
     # render_thread.join()
-    app.run(port=5000, debug=True)
-    # socketio.run(app ,port=5000, debug=True)
+    # app.run(port=5000, debug=True)
+    socketio.run(app ,port=5000, debug=True)
     
