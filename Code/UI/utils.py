@@ -2,9 +2,7 @@ import os
 import numpy as np
 import torch
 # from Code.Models.options import load_options
-from Code.Models.models import create_model
 # from Code.renderer import Camera, Scene, TransferFunction
-# from Code.UI.utils import Arcball
 from pyquaternion import Quaternion
 
 class Arcball():
@@ -148,7 +146,7 @@ def screen_to_arcball(p:np.ndarray):
 def normalize_vec(v: np.ndarray):
     norm = np.linalg.norm(v, axis=-1, keepdims=True)
     if np.all(norm == np.zeros_like(norm)):
-        return 0
+        return np.zeros_like(v)
     else:
         return v/norm
 
