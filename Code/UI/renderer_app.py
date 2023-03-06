@@ -59,8 +59,8 @@ class MainWindow(QMainWindow):
         self.settings_ui.addWidget(self.tfs_dropdown)
         
         # UI full layout        
-        layout.addWidget(self.render_view)
-        layout.addLayout(self.settings_ui)        
+        layout.addWidget(self.render_view, stretch=4)
+        layout.addLayout(self.settings_ui, stretch=1)        
         layout.setContentsMargins(0,0,10,10)
         layout.setSpacing(20)
         self.centralWidget = QWidget()
@@ -93,7 +93,6 @@ class MainWindow(QMainWindow):
         self.render_thread.started.connect(self.render_worker.run)
                 
         self.render_thread.start()
-        #self.start_polling()
         
     def finish_worker(self):
         self.render_worker.finished.connect(self.render_thread.quit)
@@ -242,7 +241,8 @@ class RendererThread(QObject):
         )
     
     def initialize_model(self):
-        self.opt = load_options(os.path.abspath(os.path.join('SavedModels', "Supernova_AMGSRN_small")))
+        first_model = os.listdir(savedmodels_folder)[0]
+        self.opt = load_options(os.path.abspath(os.path.join('SavedModels', first_model)))
         self.full_shape = self.opt['full_shape']
         self.model = load_model(self.opt, self.device).to(self.device)
         self.model.eval()
@@ -271,6 +271,7 @@ class RendererThread(QObject):
         self.camera.update_dist((self.full_shape[0]**2 + \
                 self.full_shape[1]**2 + \
                 self.full_shape[2]**2)**0.5)
+        self.scene.precompute_occupancy_grid()
         self.scene.on_setting_change()
         render_mutex.unlock()
 
