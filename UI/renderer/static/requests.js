@@ -29,97 +29,108 @@ const canvas = document.createElement("canvas");
 canvas.setAttribute("id", "canvas");
 canvas.setAttribute("width", 512);
 canvas.setAttribute("height", 512);
+canvas.style.border = '1px solid black';
 
 document.body.appendChild(canvas)
 const ctx = canvas.getContext('2d');
 // let imgdata = new ImageData(256,256);
 let img = new Image();
-//   <img src="{{url_for('video_feed')}}"></img>
 img.src = "/video_feed";
-ctx.drawImage(img, 0, 0);
+ctx.drawImage(img, 100, 100);
 
 setInterval(function() {
-    console.log("Draw");
+    // console.log("Draw");
     ctx.drawImage(img, 100, 100);
 }, 1000/60);
 
 
-// let is_updating_rotation = false;
-// let has_responded = false;
-// let prev_x, prev_y; 
-// let dx, dy, dscroll = 0;
-// let tf = {
-//     opacity: [],
-//     color: [],
-// };
-
-// let fps = 60;
-// let dt = 1000/fps;
-
-// // function request_img() {
-// //     console.log(1);
-// //     socket.emit("request_img");
-// // }
-// // setInterval(request_img, dt);
-// // image has been rendered,
-// // update the image and start to listen to new camera movement
-// let rgb = new Uint8ClampedArray();
-// socket.on('img_update', function(data) {
-//     // update image on canvas
-//     console.log(data.width);
-//     // take server out of the equation and test js refresh rate with js noise img
-//     // imgdata = new ImageData(data.width, data.height);
-//     // let rgb = new Uint8ClampedArray(data.img);
-//     // imgdata.data.set(rgb);
-//     // ctx.putImageData(imgdata, 0, 0);
-// });
-
-// // // send camera and TF updates
-// // function send_scene_updates() {
-// //     drot = dxy_to_drotation(dx, dy);
-// //     ddist = dscroll_to_ddist(dscroll);
-// //     dx,dy,dscroll = 0;
-// //     socket.emit('scene_update', {"drot": drot, "ddist": ddist, "tf": tf});
-// // }
-// // setInterval(send_scene_updates, dt);
+let is_updating_rotation = false;
+let has_responded = false;
+let prev_x, prev_y; 
+let dx, dy, dscroll = 0;
+let tf = {
+    opacity: [],
+    color: [],
+};
 
 // // recording scene changes ***********************************************
 
-// // rotation
-// function onMouseDown(event) {
-//     prev_x = event.clientX;
-//     prev_y = event.clientY;
-//     is_updating_rotation = true;
-// }
+// rotation
+function onMouseDown(event) {
+    prev_x = event.clientX;
+    prev_y = event.clientY;
+    is_updating_rotation = true;
+    fetch('/mousedown', {
+        method: 'GET',
+        headers: {'Content-Type': 'application/json'}
+    })
+    .catch(error => console.error(error));
 
-// function onMouseMove(event) {
-//     if (!is_updating_rotation) return;
-//     curr_x = event.clientX;
-//     curr_y = event.clientY;
-//     // modify dx,dy, to be reported
-//     dx += curr_x - prev_x;
-//     dy += curr_y - prev_y;
+}
 
-//     prev_x = curr_x;
-//     prev_y = curr_y;
-// }
+function onMouseMove(event) {
+    if (!is_updating_rotation) return;
 
-// function onMouseUp(event) {
-//     is_updating_rotation = false;
-//     curr_x = event.clientX;
-//     curr_y = event.clientY;
-//     // modify dx,dy, to be reported
-//     dx += curr_x - prev_x;
-//     dy += curr_y - prev_y;
+    curr_x = event.clientX;
+    curr_y = event.clientY;
+    // modify dx,dy, to be reported
+    dx = curr_x - prev_x;
+    dy = curr_y - prev_y;
 
-//     prev_x = curr_x;
-//     prev_y = curr_y;
-// }
+    prev_x = curr_x;
+    prev_y = curr_y;
 
-// // zoom percentage change
-// function onWheelScroll(event) {
-//     dscroll += event.deltaY;
-// }
+    // Make a POST request to the Flask route with the x and y coordinates
+    fetch('/mousemove', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({"dx": dx, "dy": -dy})
+    })
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch(error => console.error(error));
+}
+
+function onMouseUp(event) {
+    if (!is_updating_rotation) return;
+    is_updating_rotation = false;
+    curr_x = event.clientX;
+    curr_y = event.clientY;
+    // modify dx,dy, to be reported
+    dx = curr_x - prev_x;
+    dy = curr_y - prev_y;
+    prev_x = curr_x;
+    prev_y = curr_y;
+
+    // Make a POST request to the Flask route with the x and y coordinates
+    fetch('/mousemove', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({"dx": dx, "dy": -dy})
+    })
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch(error => console.error(error));
+}
+
+// zoom percentage change
+function onWheelScroll(event) {
+    // Make a POST request to the Flask route with the x and y coordinates
+    fetch('/wheelscroll', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({"dscroll": -event.deltaY})
+    })
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch(error => console.error(error));
+}
+
+canvas.addEventListener("mouseup", onMouseUp);
+canvas.addEventListener("mousedown", onMouseDown);
+canvas.addEventListener("mousemove", onMouseMove);
+canvas.addEventListener("mouseout", onMouseUp);
+canvas.addEventListener("wheel", onWheelScroll);
 
 // // transfer function
 
