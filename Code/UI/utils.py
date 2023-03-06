@@ -38,6 +38,7 @@ class Arcball():
         self.c2w = np.linalg.inv(self.vMat)
         self.mouse_start = np.zeros(2, dtype=np.float32)
         self.mouse_curr = np.zeros(2, dtype=np.float32)
+        self.camera_dirs = None
         # self.zoom_unit = scene_aabb
         
     def position(self) -> np.ndarray:
@@ -53,7 +54,6 @@ class Arcball():
         '''
         calculate arcball rotation by p_start and p_curr
         '''
-        print("start")
         # print(self.vMat,"\n")
         # print(self.c2w)
         ball_start = screen_to_arcball(self.mouse_start)
@@ -62,7 +62,7 @@ class Arcball():
         rot_axis = normalize_vec(np.cross(ball_start, ball_curr))
         # print(ball_start, ball_curr)
         rot = axis_rotate(rot_radians, rot_axis)
-        q = Quaternion(axis=rot_axis, radians=rot_radians/16)
+        q = Quaternion(axis=rot_axis, radians=rot_radians)
         # print(np.rad2deg(rot_radians), rot_axis, q.rotation_matrix)
         # rotate the camera axes and position in place
         self.rotation[:3,:3] = q.rotation_matrix @ self.rotation[:3,:3]
@@ -103,9 +103,12 @@ class Arcball():
     def get_c2w(self) -> np.ndarray:
         return self.c2w
     
+    def resize(self, width, height) -> None:
+        self.camera_dirs = generate_camera_dirs(width, height, self.fov)
+    
     def generate_dirs(self, width, height) -> np.ndarray:
         # print(self.get_c2w())
-        return generate_dirs(width, height, self.get_c2w(), self.fov)
+        return generate_dirs(width, height, self.get_c2w(), self.fov, self.camera_dirs)
     
 def axis_rotate(radians: np.ndarray, axis: np.ndarray):
     '''
@@ -139,12 +142,7 @@ def normalize_vec(v: np.ndarray):
 def vec_angle(v0: np.ndarray, v1: np.ndarray):
     return np.arccos(np.clip(np.dot(v0, v1)/(np.linalg.norm(v0)*np.linalg.norm(v1)), -1., 1.))
 
-def generate_dirs(width, height, c2w, fov):
-    '''
-    generate viewing ray directions of number width x height.
-    instance vars need:
-        self.fov
-    '''
+def generate_camera_dirs(width, height, fov):
     x, y = np.meshgrid(
         np.arange(width),
         np.arange(height),
@@ -158,6 +156,16 @@ def generate_dirs(width, height, c2w, fov):
     y = (1 - 2*(y+0.5)/height) * np.tan(np.deg2rad(fov/2))
     z = -np.ones(x.shape, dtype=np.float32)
     camera_dirs = np.stack([x,y,z],-1).astype(dtype=np.float32) # (height*width, 3)
+    return camera_dirs
+        
+def generate_dirs(width, height, c2w, fov, camera_dirs = None):
+    '''
+    generate viewing ray directions of number width x height.
+    instance vars need:
+        self.fov
+    '''
+    if(camera_dirs is None):
+        camera_dirs = generate_camera_dirs(width, height, fov)
     # map camera space dirs to world space
     directions = (c2w[:3,:3] @ camera_dirs.T).T
     directions = normalize_vec(directions)

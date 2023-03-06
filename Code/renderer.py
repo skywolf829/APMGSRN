@@ -362,7 +362,7 @@ class Camera():
         return directions.reshape(height, width, 3)
               
 class Scene(torch.nn.Module):
-    def __init__(self, model, full_shape, 
+    def __init__(self, model, camera, full_shape, 
         image_resolution:Tuple[int], 
         batch_size : int, spp : int,
         transfer_function:TransferFunction,
@@ -383,6 +383,7 @@ class Scene(torch.nn.Module):
         self.transfer_function = transfer_function
         self.amount_empty = 0.0
         self.occupancy_grid = self.precompute_occupancy_grid()
+        self.camera = camera
         torch.cuda.empty_cache()
         self.on_setting_change()
    
@@ -594,81 +595,123 @@ class Scene(torch.nn.Module):
 
     def on_setting_change(self):
         self.max_view_dist = (self.scene_aabb[3]**2 + self.scene_aabb[4]**2 + self.scene_aabb[5]**2)**0.5
-        height, width = self.image_resolution[:2]
-        n_point_evals = width * height * self.spp * (1-self.amount_empty)
+        self.height, self.width = self.image_resolution[:2]
+        n_point_evals = self.width * self.height * self.spp * (1-self.amount_empty)
         n_passes = n_point_evals / self.batch_size
         self.strides = int(n_passes**0.5) + 1
-        self.image = torch.empty([height, width, 3], device=self.device, dtype=torch.float32) 
-        self.mip = torch.zeros([ceil(height/self.strides), ceil(width/self.strides), 3],
+        self.image = torch.empty([self.height, self.width, 3], device=self.device, dtype=torch.float32) 
+        self.mip = torch.zeros([ceil(self.height/self.strides), 
+                                ceil(self.width/self.strides), 3],
                               device=self.device, dtype=torch.float32)
         self.mask = torch.zeros_like(self.image, dtype=torch.bool)
         self.temp_image = torch.empty_like(self.image)
         self.render_order = self.generate_checkerboard_render_order()
-        print(f"strides:{self.strides}")
-            
-    def render_checkerboard(self, camera:Camera):
-        height, width = self.image_resolution[:2]           
-        imgs = []
-        mip_imgs = []
-        #imgs_fillin_zoom = []
+        self.current_order_spot = 0
+        self.all_rays = torch.tensor(self.camera.generate_dirs(self.width, self.height), 
+                                     device=self.device)
+        self.cam_origin = torch.tensor(self.camera.position(), device=self.device).unsqueeze(0)
+        self.y_leftover = self.height % self.strides
+        self.x_leftover = self.width % self.strides
+        self.passes = 0
+        self.mip_level = 0
+    
+    def on_rotate_zoom_pan(self):
+        self.image.zero_()
+        self.mask.zero_()
+        self.temp_image.zero_()
+        # Only mips need to get reset
+        self.mip = torch.zeros([ceil(self.height/self.strides), 
+                                ceil(self.width/self.strides), 3],
+                              device=self.device, dtype=torch.float32)
         
+        self.current_order_spot = 0
+        self.all_rays = torch.tensor(self.camera.generate_dirs(self.width, self.height), 
+                                     device=self.device)
+        self.cam_origin = torch.tensor(self.camera.position(), device=self.device).unsqueeze(0)
+        self.passes = 0
+        self.mip_level = 0
+        
+    def on_resize(self):
+        self.height, self.width = self.image_resolution[:2]
+        n_point_evals = self.width * self.height * self.spp * (1-self.amount_empty)
+        n_passes = n_point_evals / self.batch_size
+        self.strides = int(n_passes**0.5) + 1
+        self.image = torch.empty([self.height, self.width, 3], device=self.device, dtype=torch.float32) 
+        self.mip = torch.zeros([ceil(self.height/self.strides), 
+            ceil(self.width/self.strides), 3],
+            device=self.device, dtype=torch.float32)
+        self.mask = torch.zeros_like(self.image, dtype=torch.bool)
+        self.temp_image = torch.empty_like(self.image)
+        self.render_order = self.generate_checkerboard_render_order()
+        self.current_order_spot = 0
+        self.camera.resize(self.width, self.height)
+        self.all_rays = torch.tensor(self.camera.generate_dirs(self.width, self.height), 
+            device=self.device)
+        self.cam_origin = torch.tensor(self.camera.position(), device=self.device).unsqueeze(0)
+        self.y_leftover = self.height % self.strides
+        self.x_leftover = self.width % self.strides        
+        self.passes = 0
+        self.mip_level = 0
+    
+    def one_step_update(self):
+        if(self.current_order_spot == len(self.render_order)):
+            return
         with torch.no_grad():
-            all_rays = torch.tensor(camera.generate_dirs(width, height), device=self.device)
-            cam_origin = torch.tensor(camera.position(), device=self.device).unsqueeze(0)
-            y_leftover = height % self.strides
-            x_leftover = width % self.strides
+            x,y = self.render_order[self.current_order_spot]
+                        
+            mip_stride = min(self.strides, int(2**self.mip_level))
+            mip_x = round(mip_stride*(x/(self.strides)))
+            mip_y = round(mip_stride*(y/(self.strides)))
+            y_extra = 1 if y < self.y_leftover else 0
+            x_extra = 1 if x < self.x_leftover else 0
             
-            passes = 0
-            mip_level = 0
-            for x,y in self.render_order:
-                mip_stride = min(self.strides, int(2**mip_level))
-                mip_x = round(mip_stride*(x/(self.strides)))
-                mip_y = round(mip_stride*(y/(self.strides)))
-                y_extra = 1 if y < y_leftover else 0
-                x_extra = 1 if x < x_leftover else 0
-                #print(f"{mip.shape} {mip_stride} {mip_x} {mip_y} // {x} {y} {x_extra} {y_extra}")
-                
-                rays_this_iter = all_rays[y::self.strides,x::self.strides].clone().view(-1, 3)
-                self.rays_d = rays_this_iter
-                num_rays = rays_this_iter.shape[0]
-                self.rays_o = cam_origin.expand(num_rays, 3)
-                
-                ray_indices, t_starts, t_ends = ray_marching(
-                    self.rays_o, self.rays_d,
-                    scene_aabb=self.scene_aabb, 
-                    render_step_size = self.max_view_dist/self.spp,
-                    #grid=self.occupancy_grid
-                )
-                new_colors = self.render_rays(
-                    t_starts, t_ends, 
-                    ray_indices, 
-                    num_rays).view(
-                    height//self.strides + y_extra, 
-                    width//self.strides + x_extra,
-                    3)
+            rays_this_iter = self.all_rays[y::self.strides,x::self.strides].clone().view(-1, 3)
+            self.rays_d = rays_this_iter
+            num_rays = rays_this_iter.shape[0]
+            self.rays_o = self.cam_origin.expand(num_rays, 3)
+            
+            ray_indices, t_starts, t_ends = ray_marching(
+                self.rays_o, self.rays_d,
+                scene_aabb=self.scene_aabb, 
+                render_step_size = self.max_view_dist/self.spp,
+                #grid=self.occupancy_grid
+            )
+            new_colors = self.render_rays(
+                t_starts, t_ends, 
+                ray_indices, 
+                num_rays).view(
+                self.height//self.strides + y_extra, 
+                self.width//self.strides + x_extra,
+                3)
 
-                self.image[y::self.strides,x::self.strides,:] = new_colors
-                self.mask[y::self.strides,x::self.strides,:] = 1
-                self.mip[mip_y:new_colors.shape[0]*mip_stride:mip_stride,
-                    mip_x:new_colors.shape[1]*mip_stride:mip_stride,:] = new_colors
-                
-                temp_image = self.image * self.mask + \
-                    F.interpolate(self.mip.permute(2,0,1).unsqueeze(0), 
-                        size=[height,width],mode='bilinear')[0].permute(1,2,0) *~self.mask
-                imgs.append(temp_image.cpu().numpy())
-                
-                passes += 1
-                if passes == int(4**mip_level):
-                    mip_level += 1
-                    if(self.mip.shape[0]*2 > height or self.mip.shape[1]*2 > width):
-                        upscale_shape = [height, width]
-                    else:
-                        effective_stride = self.strides/(2**mip_level)
-                        new_h = ceil(height/effective_stride)
-                        new_w = ceil(width/effective_stride)
-                        upscale_shape = [new_h, new_w]
-                    self.mip = F.interpolate(self.mip.permute(2,0,1).unsqueeze(0), 
-                        size=upscale_shape,mode='nearest')[0].permute(1,2,0)
+            self.image[y::self.strides,x::self.strides,:] = new_colors
+            self.mask[y::self.strides,x::self.strides,:] = 1
+            self.mip[mip_y:new_colors.shape[0]*mip_stride:mip_stride,
+                mip_x:new_colors.shape[1]*mip_stride:mip_stride,:] = new_colors
+            
+            self.temp_image = self.image * self.mask + \
+                F.interpolate(self.mip.permute(2,0,1).unsqueeze(0), 
+                    size=[self.height,self.width],mode='bilinear')[0].permute(1,2,0) *~self.mask
+            
+            self.passes += 1
+            if self.passes == int(4**self.mip_level):
+                self.mip_level += 1
+                if(self.mip.shape[0]*2 > self.height or self.mip.shape[1]*2 > self.width):
+                    upscale_shape = [self.height, self.width]
+                else:
+                    effective_stride = self.strides/(2**self.mip_level)
+                    new_h = ceil(self.height/effective_stride)
+                    new_w = ceil(self.width/effective_stride)
+                    upscale_shape = [new_h, new_w]
+                self.mip = F.interpolate(self.mip.permute(2,0,1).unsqueeze(0), 
+                    size=upscale_shape,mode='nearest')[0].permute(1,2,0)
+        self.current_order_spot += 1
+        
+    def render_checkerboard(self):
+        imgs = []
+        
+        while(self.current_order_spot < len(self.render_order)):
+            self.one_step_update()
                     
         return self.image, imgs
     
@@ -820,21 +863,25 @@ if __name__ == '__main__':
                           0.0,1.0,
                           #model.min(), model.max(), 
                           args['colormap'])
-
-    scene = Scene(model, full_shape, args['hw'], batch_size, args['spp'], tf, device)
+    aabb = np.array([0.0, 0.0, 0.0, 
+                        full_shape[0]-1,
+                        full_shape[1]-1,
+                        full_shape[2]-1])
+    camera = Camera(
+        device,
+        scene_aabb=aabb,
+        coi=aabb[3:].mean(), # camera lookat center of aabb,
+        azi_deg=args['azi'],
+        polar_deg=args['polar'],
+        dist=args['dist']
+    )
+        
+    scene = Scene(model, camera, full_shape, args['hw'], batch_size, args['spp'], tf, device)
     if args['dist'] is None:
         # set default camera distance to COI by a ratio to AABB
         args['dist'] = (scene.scene_aabb.max(0)[0] - scene.scene_aabb.min(0)[0])*1.8
         print("Camera distance to center of AABB:", args['dist'])
         
-    camera = Camera(
-        device,
-        scene_aabb=scene.scene_aabb,
-        coi=scene.scene_aabb.reshape(2,3).mean(0), # camera lookat center of aabb,
-        azi_deg=args['azi'],
-        polar_deg=args['polar'],
-        dist=args['dist']
-    )
     print(camera.get_c2w())
     free_mem, total_mem = torch.cuda.mem_get_info(device)
     free_mem /= (1024)**3
