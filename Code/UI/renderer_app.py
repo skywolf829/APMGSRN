@@ -441,7 +441,15 @@ class RendererThread(QObject):
 
     def do_view_xy(self):
         render_mutex.lock()
-        self.camera.reset_view_xy()
+        self.camera.reset_view_xy(np.array([ 
+                self.full_shape[2]/2,
+                self.full_shape[1]/2,
+                self.full_shape[0]/2
+                ], dtype=np.float32),
+                (self.full_shape[0]**2 + \
+                    self.full_shape[1]**2 + \
+                    self.full_shape[2]**2)**0.5   
+            )
         self.scene.on_rotate_zoom_pan()
         render_mutex.unlock()
 
@@ -467,16 +475,16 @@ class RendererThread(QObject):
 
     def initialize_camera(self):
         aabb = np.array([0.0, 0.0, 0.0, 
-                        self.full_shape[0]-1,
+                        self.full_shape[2]-1,
                         self.full_shape[1]-1,
-                        self.full_shape[2]-1], 
+                        self.full_shape[0]-1], 
                         dtype=np.float32)
         self.camera = Arcball(
             scene_aabb=aabb,
             coi=np.array(
-                [aabb[3]/2, 
+                [aabb[5]/2, 
                 aabb[4]/2, 
-                aabb[5]/2], 
+                aabb[3]/2], 
                 dtype=np.float32), 
             dist=(aabb[3]**2 + \
                 aabb[4]**2 + \
@@ -500,26 +508,31 @@ class RendererThread(QObject):
         render_mutex.lock()
         print(f"Loading model {s}")
         self.opt = load_options(os.path.abspath(os.path.join('SavedModels', s)))
+        different_size = (self.full_shape[0] != self.opt['full_shape'][0] or
+                          self.full_shape[1] != self.opt['full_shape'][1] or
+                          self.full_shape[2] != self.opt['full_shape'][2])
         self.full_shape = self.opt['full_shape']
         self.model = load_model(self.opt, self.device).to(self.device)
         self.model.eval()
         self.tf.set_minmax(self.model.min(), self.model.max())        
         self.scene.model = self.model
         self.scene.set_aabb([ 
-            self.full_shape[2]-1,
-            self.full_shape[1]-1,
-            self.full_shape[0]-1
-            ])
-        self.camera.update_coi(
-            np.array([ 
-            self.full_shape[2]/2,
-            self.full_shape[1]/2,
-            self.full_shape[0]/2
-            ], dtype=np.float32)            
-        )
-        self.camera.update_dist((self.full_shape[0]**2 + \
-                self.full_shape[1]**2 + \
-                self.full_shape[2]**2)**0.5)
+                self.full_shape[2]-1,
+                self.full_shape[1]-1,
+                self.full_shape[0]-1
+                ])
+        if(different_size and False):
+            
+            self.camera.update_coi(
+                np.array([ 
+                self.full_shape[2]/2,
+                self.full_shape[1]/2,
+                self.full_shape[0]/2
+                ], dtype=np.float32)            
+            )
+            self.camera.update_dist((self.full_shape[0]**2 + \
+                    self.full_shape[1]**2 + \
+                    self.full_shape[2]**2)**0.5)
         #self.scene.precompute_occupancy_grid()
         print(f"Min/max: {self.model.min().item():0.02f}/{self.model.max().item():0.02f}")
         self.scene.on_setting_change()
@@ -529,25 +542,30 @@ class RendererThread(QObject):
         render_mutex.lock()
         print(f"Loading model {s}")
         self.model = RawData(s, self.device)
+        different_size = (self.full_shape[0] != self.model.shape[0] or
+                          self.full_shape[1] != self.model.shape[1] or
+                          self.full_shape[2] != self.model.shape[2])
         self.full_shape = self.model.shape
         self.model.eval()
         self.tf.set_minmax(self.model.min(), self.model.max())        
         self.scene.model = self.model
         self.scene.set_aabb([ 
-            self.full_shape[2]-1,
-            self.full_shape[1]-1,
-            self.full_shape[0]-1
-            ])
-        self.camera.update_coi(
-            np.array([ 
-            self.full_shape[2]/2,
-            self.full_shape[1]/2,
-            self.full_shape[0]/2
-            ], dtype=np.float32)            
-        )
-        self.camera.update_dist((self.full_shape[0]**2 + \
-                self.full_shape[1]**2 + \
-                self.full_shape[2]**2)**0.5)
+                self.full_shape[2]-1,
+                self.full_shape[1]-1,
+                self.full_shape[0]-1
+                ])
+        if(different_size and False):
+            
+            self.camera.update_coi(
+                np.array([ 
+                self.full_shape[2]/2,
+                self.full_shape[1]/2,
+                self.full_shape[0]/2
+                ], dtype=np.float32)            
+            )
+            self.camera.update_dist((self.full_shape[0]**2 + \
+                    self.full_shape[1]**2 + \
+                    self.full_shape[2]**2)**0.5)
         #self.scene.precompute_occupancy_grid()
         print(f"Min/max: {self.model.min().item():0.02f}/{self.model.max().item():0.02f}")
         self.scene.on_setting_change()

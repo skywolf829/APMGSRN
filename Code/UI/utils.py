@@ -133,11 +133,12 @@ class Arcball():
         # print(self.get_c2w())
         return generate_dirs(width, height, self.get_c2w(), self.fov, self.camera_dirs)
     
-    def reset_view_xy(self):
+    def reset_view_xy(self, coi, dist):
         self.translation = np.eye(4, dtype=np.float32)
+        self.dist = dist
         self.translation[:3, 3] = [0.,0.,-self.dist]
         self.rotation = np.eye(4, dtype=np.float32)
-        self.update_coi(self.coaabb)
+        self.update_coi(coi)
         self.update_vMat()
         self.update_c2w()
 
