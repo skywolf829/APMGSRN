@@ -157,7 +157,7 @@ class NGP(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         feats = self.hash_grid(x)
         y = self.decoder(feats).float()
-        y = y * (self.volume_max - self.volume_min + 1e-8) + self.volume_min
+        y = y * (self.volume_max - self.volume_min) + self.volume_min
         return y
 
 class NGP_TCNN(nn.Module):
@@ -209,10 +209,10 @@ class NGP_TCNN(nn.Module):
         )
     
     def min(self):
-        return self.volume_max
+        return self.volume_min
 
     def max(self):
-        return self.volume_min
+        return self.volume_max
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         y = self.model((x+1)/2).float()
