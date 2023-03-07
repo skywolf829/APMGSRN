@@ -1,7 +1,17 @@
 [    
     [ "test.py",
         {        
-        "load_from": "Asteroid_AMGSRN_ensemble",
-        "tests": "reconstruction,psnr,error_volume"
+        "load_from": "Isotropic_AMGSRN_ensemble",
+        "tests": "throughput"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Isotropic_AMGSRN_medium",
+        "tests": "throughput"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Isotropic_AMGSRN_small",
+        "tests": "throughput"
     }]
 ]
