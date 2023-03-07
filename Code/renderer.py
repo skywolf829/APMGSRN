@@ -68,7 +68,6 @@ class RawData(torch.nn.Module):
                 mode='bilinear', align_corners=True).squeeze().unsqueeze(1)
         return y.to(x_device)
 
-
 class TransferFunction():
     def __init__(self, device, 
                  min_value :float = 0.0, max_value:float = 1.0, colormap=None):
@@ -117,7 +116,6 @@ class TransferFunction():
                         dtype=torch.float32,
                         device=self.device)
         self.color_values = torch.stack([r,g,b], dim=1)
-        
         
         # If alpha points set, load those, otherwise ramp opacity  
         if("Points" in color_data.keys()):
@@ -171,9 +169,9 @@ class TransferFunction():
             color_a = self.color_values[ind]
             color_b = self.color_values[ind+1]
             
-            section_range = self.color_control_points[ind+1]-self.color_control_points[ind]
             start_ind = int(self.num_dict_entries*self.color_control_points[ind])
-            num_elements = int(self.num_dict_entries*section_range)
+            end_ind = int(self.num_dict_entries*self.color_control_points[ind+1])
+            num_elements = end_ind - start_ind
             if(num_elements > 0):
                 color_a = color_a.unsqueeze(0).repeat(num_elements, 1)
                 color_b = color_b.unsqueeze(0).repeat(num_elements, 1)
@@ -181,16 +179,16 @@ class TransferFunction():
                 lerp_values = torch.arange(0.0, 1.0, step=(1/num_elements),
                                 dtype=torch.float32,
                                 device=self.device).unsqueeze(1).repeat(1, 3)
-                self.precomputed_color_map[start_ind:start_ind+num_elements] =\
+                self.precomputed_color_map[start_ind:end_ind] =\
                     color_a * (1-lerp_values) + color_b*lerp_values
         
         for ind in range(self.opacity_control_points.shape[0]-1):
             opacity_a = self.opacity_values[ind]
             opacity_b = self.opacity_values[ind+1]
             
-            section_range = self.opacity_control_points[ind+1]-self.opacity_control_points[ind]
             start_ind = int(self.num_dict_entries*self.opacity_control_points[ind])
-            num_elements = int(self.num_dict_entries*section_range)
+            end_ind = int(self.num_dict_entries*self.opacity_control_points[ind+1])
+            num_elements = end_ind - start_ind
             if(num_elements > 0):
                 opacity_a = opacity_a.unsqueeze(0).repeat(num_elements, 1)
                 opacity_b = opacity_b.unsqueeze(0).repeat(num_elements, 1)
@@ -198,9 +196,9 @@ class TransferFunction():
                 lerp_values = torch.arange(0.0, 1.0, step=(1/num_elements),
                                 dtype=torch.float32,
                                 device=self.device).unsqueeze(1)[0:num_elements]
-                self.precomputed_opacity_map[start_ind:start_ind+num_elements] =\
+                self.precomputed_opacity_map[start_ind:end_ind] =\
                     opacity_a * (1-lerp_values) + opacity_b*lerp_values
-
+        
     def set_minmax(self, min, max):
         self.min_value = min
         self.max_value = max
@@ -473,7 +471,7 @@ class Scene(torch.nn.Module):
             sample_locs = self.rays_o[ray_indices[ray_ind_start:ray_ind_end]] + \
                 self.rays_d[ray_indices[ray_ind_start:ray_ind_end]] * \
                     (t_starts[ray_ind_start:ray_ind_end] + t_ends[ray_ind_start:ray_ind_end]) / 2
-            sample_locs /= self.scene_aabb[3:]
+            sample_locs /= (self.scene_aabb[3:]-1)
             sample_locs *= 2
             sample_locs -= 1
             densities = self.model(sample_locs)

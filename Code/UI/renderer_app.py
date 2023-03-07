@@ -10,13 +10,14 @@ from PyQt5.QtCore import QSize, Qt, QTimer, QMutex
 from PyQt5.QtGui import QImage, QPixmap, QPalette, QColor, QIcon
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, \
     QWidget, QLabel, QHBoxLayout, QVBoxLayout, QStackedLayout, \
-    QComboBox, QSlider
+    QComboBox, QSlider, QFileDialog
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, QEvent, Qt
-from Code.renderer import Camera, Scene, TransferFunction
+from Code.renderer import Camera, Scene, TransferFunction, RawData
 from Code.UI.utils import Arcball, torch_float_to_numpy_uint8
 from Code.Models.options import load_options
 from Code.Models.models import load_model
 from typing import List
+import imageio.v3 as imageio
 
 # For locking renderer actions
 render_mutex = QMutex()
@@ -32,6 +33,8 @@ tf_folder = os.path.join(project_folder_path, "Colormaps")
     
 class MainWindow(QMainWindow):
     
+    loading_model = True
+    last_img = np.zeros([1,1,3],dtype=np.uint8)
     updates_per_second = pyqtSignal(float)
     frame_time = pyqtSignal(float)
     vram_use = pyqtSignal(float)
@@ -47,6 +50,7 @@ class MainWindow(QMainWindow):
         # Find all available models/colormaps        
         self.available_models = os.listdir(savedmodels_folder)
         self.available_tfs = os.listdir(tf_folder)
+        self.available_data = os.listdir(data_folder)
         
         # Full screen layout
         layout = QHBoxLayout()        
@@ -58,11 +62,26 @@ class MainWindow(QMainWindow):
         self.render_view.mouseMoveEvent = self.mouseMove    
         
         # Settings area
-        self.settings_ui = QVBoxLayout()        
+        self.settings_ui = QVBoxLayout()       
+         
+        self.load_box = QHBoxLayout()  
+        self.load_box.addWidget(QLabel("Load from: "))
+        self.load_from_dropdown = QComboBox()        
+        self.load_from_dropdown.addItems(["Model", "Data"])   
+        self.load_from_dropdown.currentTextChanged.connect(self.data_box_update) 
+        self.load_box.addWidget(self.load_from_dropdown)
+           
+        self.datamodel_box = QHBoxLayout()  
+        self.datamodel_box.addWidget(QLabel("Model/data: "))
         self.models_dropdown = self.load_models_dropdown()
         self.models_dropdown.currentTextChanged.connect(self.load_model)
+        self.datamodel_box.addWidget(self.models_dropdown)
+        
+        self.tf_box = QHBoxLayout()  
+        self.tf_box.addWidget(QLabel("Colormap:"))
         self.tfs_dropdown = self.load_colormaps_dropdown()
         self.tfs_dropdown.currentTextChanged.connect(self.load_tf)
+        self.tf_box.addWidget(self.tfs_dropdown)
         
         self.batch_slider_box = QHBoxLayout()      
         self.batch_slider_label = QLabel("Batch size (2^x): 20")  
@@ -94,10 +113,6 @@ class MainWindow(QMainWindow):
         self.view_xy_button.setFixedHeight(25)
         self.view_xy_button.clicked.connect(lambda: self.render_worker.view_xy.emit())
         
-        self.view_xy_button = QPushButton("reset view to xy-plane")
-        self.view_xy_button.setFixedHeight(25)
-        self.view_xy_button.clicked.connect(lambda: self.render_worker.view_xy.emit())
-        
         self.transfer_function_box = QVBoxLayout()
         self.transfer_function_bg = QWidget()
         self.transfer_function_bg.setMinimumHeight(150)
@@ -112,9 +127,12 @@ class MainWindow(QMainWindow):
         self.vram_use.connect(self.update_vram)
         self.updates_per_second.connect(self.update_updates)
         self.frame_time.connect(self.update_frame_time)
+        self.save_img_button = QPushButton("Save image")
+        self.save_img_button.clicked.connect(self.save_img)
         
-        self.settings_ui.addWidget(self.models_dropdown)
-        self.settings_ui.addWidget(self.tfs_dropdown)
+        self.settings_ui.addLayout(self.load_box)
+        self.settings_ui.addLayout(self.datamodel_box)
+        self.settings_ui.addLayout(self.tf_box)
         self.settings_ui.addLayout(self.batch_slider_box)
         self.settings_ui.addLayout(self.spp_slider_box)
         self.settings_ui.addWidget(self.view_xy_button)
@@ -124,6 +142,7 @@ class MainWindow(QMainWindow):
         self.settings_ui.addWidget(self.memory_use_label)
         self.settings_ui.addWidget(self.update_framerate_label)
         self.settings_ui.addWidget(self.frame_time_label)
+        self.settings_ui.addWidget(self.save_img_button)
         
         # UI full layout        
         layout.addWidget(self.render_view, stretch=4)
@@ -145,6 +164,17 @@ class MainWindow(QMainWindow):
         self.last_x = None
         self.last_y = None
    
+   
+    def save_img(self):
+        folderpath,_ = QFileDialog.getSaveFileName(self, 'Select Save Location')
+        if ".jpg" not in folderpath and ".png" not in folderpath:
+            folderpath = folderpath + ".png"
+        
+        print(f"Saving to {folderpath}")
+        
+        imageio.imwrite(folderpath, self.last_img)
+        
+        
     def update_status_text(self, val):
         self.status_text.setText(f"{val}")
         
@@ -156,7 +186,16 @@ class MainWindow(QMainWindow):
     
     def update_frame_time(self, val):
         self.frame_time_label.setText(f"Last frame time: {val:0.02f} sec.")
-        
+     
+    def data_box_update(self, s):
+        self.loading_model = "Model" in s
+        if(self.loading_model):
+            self.models_dropdown.clear()
+            self.models_dropdown.addItems(self.available_models)
+        else:            
+            self.models_dropdown.clear()
+            self.models_dropdown.addItems(self.available_data)
+       
     def load_models_dropdown(self):
         dropdown = QComboBox()        
         dropdown.addItems(self.available_models)        
@@ -199,8 +238,13 @@ class MainWindow(QMainWindow):
         self.rotating = True
   
     def load_model(self, s):
+        if s == "":
+            return
         self.status_text_update.emit(f"Loading model {s}...")
-        self.render_worker.load_new_model.emit(s)
+        if(self.loading_model):
+            self.render_worker.load_new_model.emit(s)
+        else:
+            self.render_worker.load_new_data.emit(s)
         self.status_text_update.emit("")
         
     def load_tf(self, s):
@@ -272,6 +316,7 @@ class MainWindow(QMainWindow):
          
     def set_render_image(self, img:np.ndarray):  
         height, width, channel = img.shape
+        self.last_img = img
         bytesPerLine = channel * width
         qImg = QImage(img, width, height, bytesPerLine, QImage.Format_RGB888)
         self.render_view.setPixmap(QPixmap(qImg))
@@ -284,6 +329,7 @@ class RendererThread(QObject):
     resize = pyqtSignal(int, int)
     change_spp = pyqtSignal(int)
     load_new_model = pyqtSignal(str)
+    load_new_data = pyqtSignal(str)
     change_transfer_function = pyqtSignal(str)
     change_batch_size = pyqtSignal(int)
     change_opacity_controlpoints = pyqtSignal(np.ndarray)
@@ -324,6 +370,7 @@ class RendererThread(QObject):
         self.change_spp.connect(self.do_change_spp)
         self.change_transfer_function.connect(self.do_change_transfer_function)
         self.load_new_model.connect(self.do_change_model)
+        self.load_new_data.connect(self.do_change_data)
         self.view_xy.connect(self.do_view_xy)
         self.parent.status_text_update.emit(f"")
         
@@ -477,6 +524,35 @@ class RendererThread(QObject):
         print(f"Min/max: {self.model.min().item():0.02f}/{self.model.max().item():0.02f}")
         self.scene.on_setting_change()
         render_mutex.unlock()
+    
+    def do_change_data(self, s):
+        render_mutex.lock()
+        print(f"Loading model {s}")
+        self.model = RawData(s, self.device)
+        self.full_shape = self.model.shape
+        self.model.eval()
+        self.tf.set_minmax(self.model.min(), self.model.max())        
+        self.scene.model = self.model
+        self.scene.set_aabb([ 
+            self.full_shape[2]-1,
+            self.full_shape[1]-1,
+            self.full_shape[0]-1
+            ])
+        self.camera.update_coi(
+            np.array([ 
+            self.full_shape[2]/2,
+            self.full_shape[1]/2,
+            self.full_shape[0]/2
+            ], dtype=np.float32)            
+        )
+        self.camera.update_dist((self.full_shape[0]**2 + \
+                self.full_shape[1]**2 + \
+                self.full_shape[2]**2)**0.5)
+        #self.scene.precompute_occupancy_grid()
+        print(f"Min/max: {self.model.min().item():0.02f}/{self.model.max().item():0.02f}")
+        self.scene.on_setting_change()
+        render_mutex.unlock()
+
 
 if __name__ == '__main__':
     app = QApplication([])
