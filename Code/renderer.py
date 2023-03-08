@@ -157,15 +157,15 @@ class TransferFunction():
                                 dtype=torch.float32,
                                 device=self.device)
         self.precompute_maps()
-        
+      
     def precompute_maps(self):
+        self.precompute_color_map()
+        self.precompute_opacity_map()
+    
+    def precompute_color_map(self):
         self.precomputed_color_map = torch.zeros([self.num_dict_entries, 3],
-                                dtype=torch.float32,
-                                device=self.device)
-        self.precomputed_opacity_map = torch.zeros([self.num_dict_entries, 1],
-                                dtype=torch.float32,
-                                device=self.device)
-        
+                            dtype=torch.float32,
+                            device=self.device)
         for ind in range(self.color_control_points.shape[0]-1):
             color_a = self.color_values[ind]
             color_b = self.color_values[ind+1]
@@ -182,6 +182,11 @@ class TransferFunction():
                                 device=self.device).unsqueeze(1).repeat(1, 3)
                 self.precomputed_color_map[start_ind:end_ind] =\
                     color_a * (1-lerp_values) + color_b*lerp_values
+                    
+    def precompute_opacity_map(self):       
+        self.precomputed_opacity_map = torch.zeros([self.num_dict_entries, 1],
+                                dtype=torch.float32,
+                                device=self.device)
         
         for ind in range(self.opacity_control_points.shape[0]-1):
             opacity_a = self.opacity_values[ind]
@@ -204,6 +209,15 @@ class TransferFunction():
         self.min_value = min
         self.max_value = max
     
+    def update_opacities(self, opacity_control_points, opacity_values):
+        self.opacity_control_points = torch.tensor(opacity_control_points,
+                                    dtype=torch.float32,
+                                    device=self.device)  
+        self.opacity_values = torch.tensor(opacity_values,
+                                    dtype=torch.float32,
+                                    device=self.device)
+        self.precompute_opacity_map()
+        
     def color_at_value(self, value:torch.Tensor):
         value_ind = (value[:,0] - self.min_value) / (self.max_value - self.min_value)
         value_ind *= self.num_dict_entries
@@ -632,7 +646,19 @@ class Scene(torch.nn.Module):
         self.passes = 0
         self.mip_level = 0
         torch.cuda.empty_cache()
-    
+   
+    def on_tf_change(self):
+        self.image.zero_()
+        self.mask.zero_()
+        self.temp_image.zero_()
+        self.mip = torch.zeros([ceil(self.height/self.strides), 
+                                ceil(self.width/self.strides), 3],
+                              device=self.device, dtype=torch.float32)
+        self.current_order_spot = 0       
+        self.passes = 0
+        self.mip_level = 0
+        torch.cuda.empty_cache() 
+         
     def on_rotate_zoom_pan(self):
         self.image.zero_()
         self.mask.zero_()

@@ -36,16 +36,30 @@ class TransferFunctionEditor(pg.GraphItem):
     '''
     Thanks to https://stackoverflow.com/questions/45624912/draggable-line-with-multiple-break-points
     '''
-    def __init__(self):
+    def __init__(self, parent=None):
         self.dragPoint = None
-        self.lastDragPointIndex = None
         self.dragOffset = None
+        self.lastDragPointIndex = 0
+        self.parent = parent
         pg.GraphItem.__init__(self)
 
     def setData(self, **kwds):
+        '''
+        Assumes kwds['pos'] is a pre-sorted lists of tuples of control point -> opacity
+        sorted by control point value. I.e.
+        [[0, 0], [0.5, 1.0], [1.0, 0.0]]
+        is a mountain and is legal because kwds['pos'][:,0] is strictly increasing.
+        '''
         self.data = kwds
+        self.data['size']=12
+        self.data['pxMode']=True
         if 'pos' in self.data:
             npts = self.data['pos'].shape[0]
+            # Normalize control point x to [0,1]
+            self.data['pos'][:,0] -= self.data['pos'][0,0]
+            self.data['pos'][:,0] /= self.data['pos'][-1,0]
+            # Clip opacity between 0 and 1
+            self.data['pos'][:,1] = np.clip(self.data['pos'][:,1], 0.0, 1.0)            
             self.data['adj'] = np.column_stack((np.arange(0, npts-1), np.arange(1, npts)))
             self.data['data'] = np.empty(npts, dtype=[('index', int)])
             self.data['data']['index'] = np.arange(npts)
@@ -53,14 +67,27 @@ class TransferFunctionEditor(pg.GraphItem):
 
     def updateGraph(self):
         pg.GraphItem.setData(self, **self.data)
-
+        if(self.parent is not None):
+            if "pos" in self.data.keys():
+                opacity_control_points = self.data['pos'][:,0]
+                opacity_values = self.data['pos'][:,1]
+                if self.parent.render_worker is not None:
+                    self.parent.render_worker.change_opacity_controlpoints.emit(
+                        opacity_control_points, opacity_values
+                    )
     def deleteLastPoint(self):
-        old_data = self.data['pos']
-        
-        return
+        if(self.lastDragPointIndex > 0 and 
+           self.lastDragPointIndex < self.data['pos'].shape[0]-1):
+            new_pos = np.concatenate(
+                [self.data['pos'][0:self.lastDragPointIndex],
+                self.data['pos'][self.lastDragPointIndex+1:]],
+                axis=0
+            )
+            self.data['pos'] = new_pos
+            self.setData(**self.data)
+            self.lastDragPointIndex -= 1
         
     def mouseDragEvent(self, ev):
-        print(self.data)
         if ev.button() != Qt.LeftButton:
             ev.ignore()
             return
@@ -73,7 +100,7 @@ class TransferFunctionEditor(pg.GraphItem):
                 return
             self.dragPoint = pts[0]
             ind = pts[0].data()[0]
-            self.lastDragPoint = ind
+            self.lastDragPointIndex = ind
             self.dragOffset = [
                 self.data['pos'][ind][0] - pos[0],
                 self.data['pos'][ind][1] - pos[1]
@@ -102,7 +129,34 @@ class TransferFunctionEditor(pg.GraphItem):
 
         self.updateGraph()
         ev.accept()
-    
+        
+    def mouseClickEvent(self, event):
+        if event.button() != Qt.LeftButton:
+            return
+        
+        p = event.pos()
+        x = np.clip(p.x(), 0.0, 1.0)
+        y = np.clip(p.y(), 0.0, 1.0)
+        
+        pts = self.scatter.pointsAt(p)
+        if len(pts) > 0:
+            return
+        
+        if x > 0 and x < 1.0:
+            ind = 0
+            while x > self.data['pos'][ind][0]:
+                ind += 1
+            new_pos = np.concatenate(
+                [self.data['pos'][0:ind],
+                 [[x, y]],
+                 self.data['pos'][ind:]
+                 ],
+                axis=0
+            )
+            self.data['pos'] = new_pos
+            self.setData(**self.data)
+            self.lastDragPointIndex = ind
+                
 class MainWindow(QMainWindow):
     
     loading_model = True
@@ -111,6 +165,7 @@ class MainWindow(QMainWindow):
     frame_time = pyqtSignal(float)
     vram_use = pyqtSignal(float)
     status_text_update = pyqtSignal(str)
+    render_worker = None
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -187,10 +242,9 @@ class MainWindow(QMainWindow):
         self.view_xy_button.clicked.connect(lambda: self.render_worker.view_xy.emit())
         
         self.transfer_function_box = QVBoxLayout()
-        self.tf_editor = TransferFunctionEditor()
+        self.tf_editor = TransferFunctionEditor(self)
         x = np.linspace(0.0, 1.0, 4)
         pos = np.column_stack((x, x))
-        self.tf_editor.setData(pos=pos, size=16, pxMode=True)        
         win = pg.GraphicsLayoutWidget() 
         view = win.addViewBox(row=0, col=1, rowspan=2, colspan=2) 
         view.enableAutoRange(axis='xy', enable=False)
@@ -253,7 +307,11 @@ class MainWindow(QMainWindow):
         self.last_x = None
         self.last_y = None
    
-   
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Delete:
+            self.tf_editor.deleteLastPoint()
+        event.accept()
+        
     def save_img(self):
         folderpath,_ = QFileDialog.getSaveFileName(self, 'Select Save Location')
         if ".jpg" not in folderpath and ".png" not in folderpath:
@@ -262,8 +320,7 @@ class MainWindow(QMainWindow):
         print(f"Saving to {folderpath}")
         
         imageio.imwrite(folderpath, self.last_img)
-        
-        
+             
     def update_status_text(self, val):
         self.status_text.setText(f"{val}")
         
@@ -421,7 +478,7 @@ class RendererThread(QObject):
     load_new_data = pyqtSignal(str)
     change_transfer_function = pyqtSignal(str)
     change_batch_size = pyqtSignal(int)
-    change_opacity_controlpoints = pyqtSignal(np.ndarray)
+    change_opacity_controlpoints = pyqtSignal(np.ndarray, np.ndarray)
     view_xy = pyqtSignal()
     
     def __init__(self, parent=None):
@@ -448,6 +505,7 @@ class RendererThread(QObject):
                            self.full_shape, self.resolution, 
                            self.batch_size, self.spp, 
                            self.tf, self.device)
+        self.do_change_transfer_function("Coolwarm.json")
         self.scene.on_setting_change()
         
         # Set up events
@@ -458,6 +516,7 @@ class RendererThread(QObject):
         self.change_batch_size.connect(self.do_change_batch_size)
         self.change_spp.connect(self.do_change_spp)
         self.change_transfer_function.connect(self.do_change_transfer_function)
+        self.change_opacity_controlpoints.connect(self.do_change_opacities)
         self.load_new_model.connect(self.do_change_model)
         self.load_new_data.connect(self.do_change_data)
         self.view_xy.connect(self.do_view_xy)
@@ -547,6 +606,21 @@ class RendererThread(QObject):
         self.tf.loadColormap(s)
         self.scene.on_rotate_zoom_pan()
         render_mutex.unlock()
+        data_for_tf_editor = np.stack(
+            [self.scene.transfer_function.opacity_control_points.cpu(),
+             self.scene.transfer_function.opacity_values.cpu()],
+            axis=0
+        ).transpose()
+        self.parent.tf_editor.setData(pos=data_for_tf_editor)
+
+    def do_change_opacities(self, control_points, values):  
+        render_mutex.lock()
+        self.scene.transfer_function.update_opacities(
+            control_points, values
+        )
+        self.scene.on_tf_change()
+        render_mutex.unlock()
+    
 
     def do_change_batch_size(self, b):
         render_mutex.lock()
