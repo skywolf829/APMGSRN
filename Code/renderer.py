@@ -15,6 +15,7 @@ from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget, QLabel
 import sys
 from math import ceil
+from UI.utils import Arcball
 
 def sync_time():
     torch.cuda.synchronize()
@@ -884,14 +885,16 @@ if __name__ == '__main__':
                           0.0,1.0,
                           #model.min(), model.max(), 
                           args['colormap'])
-    aabb = np.array([0.0, 0.0, 0.0, 
+    aabb = torch.tensor([0.0, 0.0, 0.0, 
                         full_shape[0]-1,
                         full_shape[1]-1,
                         full_shape[2]-1])
+    if(args['dist'] is None):
+        args['dist'] = (aabb[3]**2 + aabb[4]**2 + aabb[5]**2)**0.5
     camera = Camera(
         device,
         scene_aabb=aabb,
-        coi=aabb[3:].mean(), # camera lookat center of aabb,
+        coi=aabb.reshape(2,3).mean(dim=0), # camera lookat center of aabb,
         azi_deg=args['azi'],
         polar_deg=args['polar'],
         dist=args['dist']
@@ -903,14 +906,14 @@ if __name__ == '__main__':
         args['dist'] = (scene.scene_aabb.max(0)[0] - scene.scene_aabb.min(0)[0])*1.8
         print("Camera distance to center of AABB:", args['dist'])
         
-    print(camera.get_c2w())
+    #print(camera.get_c2w())
     free_mem, total_mem = torch.cuda.mem_get_info(device)
     free_mem /= (1024)**3
     total_mem /= (1024)**3
     print(f"GPU memory free/total {free_mem:0.02f}GB/{total_mem:0.02f}GB")
     
     # One warm up is always slower    
-    img, seq = scene.render_checkerboard(camera)
+    img, seq = scene.render_checkerboard()
 
     from imageio import imsave
     imsave("Output/render.png", (img*255).cpu().numpy().astype(np.uint8))
@@ -952,13 +955,14 @@ if __name__ == '__main__':
     imsave("Output/model.png", img.cpu().numpy())
     '''
     
-    '''
+    
     timesteps = 10
     times = np.zeros([timesteps])
     for i in range(timesteps):
         torch.cuda.empty_cache()
         t0 = sync_time()
-        img = scene.render_checkerboard(camera)   
+        scene.current_order_spot = 0
+        img = scene.render_checkerboard()   
         t1 = sync_time()
         times[i] = t1-t0
     print(times)
@@ -967,7 +971,7 @@ if __name__ == '__main__':
     print(f"Min frame time: {times.min():0.04f}")
     print(f"Max frame time: {times.max():0.04f}")
     print(f"Average FPS: {1/times.mean():0.02f}")
-    '''
+    
     GBytes = (torch.cuda.max_memory_allocated(device=device) \
                 / (1024**3))
     print(f"{GBytes : 0.02f}GB of memory used (max reserved) during render.")
