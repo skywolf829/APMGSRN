@@ -17,7 +17,10 @@ from Code.UI.utils import Arcball, torch_float_to_numpy_uint8
 from Code.Models.options import load_options
 from Code.Models.models import load_model
 from typing import List
+import pyqtgraph as pg
 import imageio.v3 as imageio
+
+pg.setConfigOptions(antialias=True)
 
 # For locking renderer actions
 render_mutex = QMutex()
@@ -29,7 +32,78 @@ data_folder = os.path.join(project_folder_path, "Data")
 savedmodels_folder = os.path.join(project_folder_path, "SavedModels")
 tf_folder = os.path.join(project_folder_path, "Colormaps")
 
+class TransferFunctionEditor(pg.GraphItem):
+    '''
+    Thanks to https://stackoverflow.com/questions/45624912/draggable-line-with-multiple-break-points
+    '''
+    def __init__(self):
+        self.dragPoint = None
+        self.lastDragPointIndex = None
+        self.dragOffset = None
+        pg.GraphItem.__init__(self)
 
+    def setData(self, **kwds):
+        self.data = kwds
+        if 'pos' in self.data:
+            npts = self.data['pos'].shape[0]
+            self.data['adj'] = np.column_stack((np.arange(0, npts-1), np.arange(1, npts)))
+            self.data['data'] = np.empty(npts, dtype=[('index', int)])
+            self.data['data']['index'] = np.arange(npts)
+        self.updateGraph()
+
+    def updateGraph(self):
+        pg.GraphItem.setData(self, **self.data)
+
+    def deleteLastPoint(self):
+        old_data = self.data['pos']
+        
+        return
+        
+    def mouseDragEvent(self, ev):
+        print(self.data)
+        if ev.button() != Qt.LeftButton:
+            ev.ignore()
+            return
+
+        if ev.isStart():
+            pos = ev.buttonDownPos()
+            pts = self.scatter.pointsAt(pos)
+            if len(pts) == 0:
+                ev.ignore()
+                return
+            self.dragPoint = pts[0]
+            ind = pts[0].data()[0]
+            self.lastDragPoint = ind
+            self.dragOffset = [
+                self.data['pos'][ind][0] - pos[0],
+                self.data['pos'][ind][1] - pos[1]
+            ]
+            print(f"Clicked {ind}")
+        elif ev.isFinish():
+            self.lastDragPoint = self.dragPoint        
+            return
+        else:
+            if self.dragPoint is None:
+                ev.ignore()
+                return
+
+        ind = self.dragPoint.data()[0]
+        
+        # Cannot move endpoints
+        if(ind == 0 or ind == self.data['pos'].shape[0]-1):
+            # only move y
+            self.data['pos'][ind][1] = np.clip(ev.pos()[1] + self.dragOffset[1], 0.0, 1.0)
+        # Points in between cannot move past other points to maintain ordering
+        else:
+            # move x
+            self.data['pos'][ind][0] = np.clip(ev.pos()[0] + self.dragOffset[0], 
+                                               self.data['pos'][ind-1][0]+1e-4,
+                                               self.data['pos'][ind+1][0]-1e-4)
+            # move y
+            self.data['pos'][ind][1] = np.clip(ev.pos()[1] + self.dragOffset[1], 0.0, 1.0)
+
+        self.updateGraph()
+        ev.accept()
     
 class MainWindow(QMainWindow):
     
@@ -59,7 +133,8 @@ class MainWindow(QMainWindow):
         self.render_view = QLabel()   
         self.render_view.mousePressEvent = self.mouseClicked
         self.render_view.mouseReleaseEvent = self.mouseReleased
-        self.render_view.mouseMoveEvent = self.mouseMove    
+        self.render_view.mouseMoveEvent = self.mouseMove   
+        self.render_view.wheelEvent = self.zoom   
         
         # Settings area
         self.settings_ui = QVBoxLayout()       
@@ -114,10 +189,26 @@ class MainWindow(QMainWindow):
         self.view_xy_button.clicked.connect(lambda: self.render_worker.view_xy.emit())
         
         self.transfer_function_box = QVBoxLayout()
-        self.transfer_function_bg = QWidget()
-        self.transfer_function_bg.setMinimumHeight(150)
-        self.transfer_function_bg.setStyleSheet("background-color: white; border: 1px solid black;")
-        self.transfer_function_box.addWidget(self.transfer_function_bg)
+        self.tf_editor = TransferFunctionEditor()
+        x = np.linspace(0.0, 1.0, 4)
+        pos = np.column_stack((x, x))
+        self.tf_editor.setData(pos=pos, size=16, pxMode=True)        
+        win = pg.GraphicsLayoutWidget() 
+        view = win.addViewBox(row=0, col=1, rowspan=2, colspan=2) 
+        view.enableAutoRange(axis='xy', enable=False)
+        view.setYRange(0, 1.0, padding=0.1, update=True)
+        view.setXRange(0, 1.0, padding=0.1, update=True)
+        view.setBackgroundColor([255, 255, 255, 255])
+        view.setMouseEnabled(x=False,y=False)
+        x_axis = pg.AxisItem("bottom", linkView=view)
+        y_axis = pg.AxisItem("left", linkView=view)     
+        win.addItem(x_axis, row=2, col=1, colspan=2)
+        win.addItem(y_axis, row=0, col=0, rowspan=2)
+        view.addItem(self.tf_editor)
+        self.transfer_function_box.addWidget(win)
+        #self.transfer_function_box.addWidget(x_axis)
+        #self.transfer_function_box.addWidget(y_axis)
+        
                         
         self.status_text = QLabel("") 
         self.memory_use_label = QLabel("VRAM use: -- GB") 
@@ -310,7 +401,7 @@ class MainWindow(QMainWindow):
             self.last_x = x
             self.last_y = y
     
-    def wheelEvent(self,event):
+    def zoom(self,event):
         scroll = event.angleDelta().y()/120
         self.render_worker.zoom.emit(-scroll)
          
