@@ -1,17 +1,7 @@
 [    
     [ "test.py",
         {        
-        "load_from": "Isotropic_AMGSRN_ensemble",
-        "tests": "throughput"
-    }],
-    [ "test.py",
-        {        
-        "load_from": "Isotropic_AMGSRN_medium",
-        "tests": "throughput"
-    }],
-    [ "test.py",
-        {        
-        "load_from": "Isotropic_AMGSRN_small",
+        "load_from": "Channel_AMGSRN_ensemble_small",
         "tests": "throughput"
     }]
 ]
