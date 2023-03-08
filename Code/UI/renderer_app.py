@@ -78,9 +78,7 @@ class TransferFunctionEditor(pg.GraphItem):
                 self.data['pos'][ind][0] - pos[0],
                 self.data['pos'][ind][1] - pos[1]
             ]
-            print(f"Clicked {ind}")
-        elif ev.isFinish():
-            self.lastDragPoint = self.dragPoint        
+        elif ev.isFinish():       
             return
         else:
             if self.dragPoint is None:
