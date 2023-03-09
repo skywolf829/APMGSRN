@@ -274,17 +274,17 @@ class AMGSRN(nn.Module):
                 first_layer_input_size = n_features*n_grids + self.padding_size
                                            
             layer = ReLULayer(first_layer_input_size, 
-                nodes_per_layer, bias=use_bias, dtype=torch.float16)
+                nodes_per_layer, bias=use_bias, dtype=torch.float32)
             decoder.append(layer)
             
             for i in range(n_layers):
                 if i == n_layers - 1:
                     layer = nn.Linear(nodes_per_layer, n_outputs, 
-                        bias=use_bias, dtype=torch.float16)
+                        bias=use_bias, dtype=torch.float32)
                     decoder.append(layer)
                 else:
                     layer = ReLULayer(nodes_per_layer, nodes_per_layer, 
-                        bias=use_bias, dtype=torch.float16)
+                        bias=use_bias, dtype=torch.float32)
                     decoder.append(layer)
             decoder = torch.nn.Sequential(*decoder)
             return decoder
@@ -359,8 +359,8 @@ class AMGSRN(nn.Module):
         feats = self.encoder.forward_pre_transformed(x)    
         if(self.requires_padded_feats):
             feats = F.pad(feats, (0, self.padding_size), value=1.0) 
-        y = self.decoder(feats.half()).float()
-        y = y * (self.volume_max - self.volume_min) + self.volume_min     
+        y = self.decoder(feats)
+        y = y.float() * (self.volume_max - self.volume_min) + self.volume_min     
         return y
 
     def forward(self, x):
