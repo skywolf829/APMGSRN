@@ -16,12 +16,13 @@ class LinearLayer(nn.Module):
     return self.layer(x)
 
 class ReLULayer(nn.Module):
-    def __init__(self, in_features, out_features, bias=True):
+    def __init__(self, in_features, out_features, 
+                bias=True, dtype=torch.float32):
         super().__init__()
         
         self.in_features = in_features
         self.linear = nn.Linear(in_features, out_features, 
-            bias=bias)
+            bias=bias, dtype=dtype)
         
         self.init_weights()
     
@@ -35,12 +36,13 @@ class ReLULayer(nn.Module):
         return F.relu(self.linear(input))
     
 class LReLULayer(nn.Module):
-    def __init__(self, in_features, out_features, bias=True):
+    def __init__(self, in_features, out_features, 
+                 bias=True, dtype=torch.float32):
         super().__init__()
         
         self.in_features = in_features
         self.linear = nn.Linear(in_features, out_features, 
-            bias=bias)
+            bias=bias, dtype=dtype)
         
         self.init_weights()
     
