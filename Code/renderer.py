@@ -1,21 +1,15 @@
 import torch
-from nerfacc import ray_marching, rendering, OccupancyGrid, Grid
+from nerfacc import ray_marching, rendering, OccupancyGrid
 import argparse
 import os
 from Models.models import load_model
 from Models.options import load_options
-import matplotlib.pyplot as plt
 import numpy as np
 from Other.utility_functions import make_coord_grid, str2bool
 import time
 import torch.nn.functional as F
-from typing import Dict, List, Tuple
-from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtGui import QImage, QPixmap
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget, QLabel
-import sys
+from typing import List, Tuple
 from math import ceil
-from UI.utils import Arcball
 
 def sync_time():
     torch.cuda.synchronize()
@@ -764,26 +758,6 @@ class Scene(torch.nn.Module):
         return self.image, imgs
     
 
-# Subclass QMainWindow to customize your application's main window
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-
-        self.setWindowTitle("My App")
-    
-        self.render_view = QLabel()
-    
-        # Set the central widget of the Window.
-        self.setCentralWidget(self.render_view)
-        
-    def set_render_image(self, img):    
-        height, width, channel = img.shape
-        bytesPerLine = channel * width
-        qImg = QImage(img, width, height, bytesPerLine, QImage.Format_RGB888)
-        self.render_view.setPixmap(QPixmap(qImg))
-
-
-            
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate a model on some tests')
 
@@ -853,55 +827,7 @@ if __name__ == '__main__':
         full_shape = model.shape
     
     batch_size = 2**23
-    
-    if(args['tensorrt']):
-        import torch_tensorrt as torchtrt
-        # Convert model to torch.jit.scriptmodule
-        if("NGP" in opt['model']):
-            print(f"Cannot convert model type {opt['model']} to torchscript for ONNX conversion. Exiting.")
-            quit()
-        # Check if TCNN was used in this model and convert if necessary
-        if("decoder.params" in model.state_dict().keys()):
-            print(f"TCNN decoder used in model. Converting to pytorch for tracing.")
-            from model_to_torchscript import convert_tcnn_to_pytorch
-            new_model_name = convert_tcnn_to_pytorch(opt['save_name'])
-            opt = load_options(os.path.join(save_folder, new_model_name))
-            opt["device"] = args['device']    
-            model = load_model(opt, opt['device'])
-            model = model.to(opt['device'])
-        model = model.eval()
-        print(model)
-        #model = torch.jit.script(model)
-        
-        '''  
-        # Convert model to onnx
-        onnx_file_path = os.path.join(save_folder, opt['save_name'], "model.onnx")
-        torch.onnx.export(model, torch.rand([1, 3],
-                                dtype=torch.float32, 
-                                device=opt['device']),
-                          onnx_file_path,
-                          export_params=True, 
-                          input_names=["input"],
-                          output_names=['output'],
-                          opset_version=16 #needed for grid_sampler
-                          )
-        model = onnx.load(onnx_file_path)
-        onnx.checker.check_model(model)
-        '''
-        
-        os.environ["CUDA_MODULE_LOADING"] = "LAZY"
-        # Convert to torch_tensorrt
-        inputs = [
-            torchtrt.Input([batch_size, 3],
-                dtype=torch.float32
-            )
-        ]
-        enabled_precisions = {torch.float}#, torch.half}
-        model = torchtrt.compile(model, 
-                inputs = inputs, 
-                enabled_precisions = enabled_precisions,
-                workspace_size = 1 << 33)
-             
+            
     if("cuda" in args['device']):        
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.benchmark = True
@@ -1002,15 +928,3 @@ if __name__ == '__main__':
                 / (1024**3))
     print(f"{GBytes : 0.02f}GB of memory used (max reserved) during render.")
     
-    # #plt.imshow(np.flip(img, 0))
-    # #plt.show()
-    
-    # app = QApplication([])
-
-    # window = MainWindow()
-    # img = img*255
-    # img = img.astype(np.uint8)
-    # window.set_render_image(img)
-    # window.show()
-
-    # app.exec()

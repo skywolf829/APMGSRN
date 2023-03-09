@@ -1,7 +1,7 @@
 [    
     [ "test.py",
         {        
-        "load_from": "Channel_AMGSRN_ensemble_small",
-        "tests": "throughput"
+        "load_from": "temp",
+        "tests": "throughput,reconstruction,psnr"
     }]
 ]

@@ -1,13 +1,17 @@
 name: AMGSRN
 channels:
   - defaults
-  - conda-forge
+  - pytorch
+  - nvidia
 dependencies:
   - python=3.9
-  - numba
-  - netcdf4
-  - matplotlib
-  - h5py
-  - vtk
   - tensorboard
+  - numba
   - zeep
+  - h5py
+  - matplotlib
+  - netcdf4
+  - vtk
+  - imageio
+  - sympy
+  - pyqtgraph

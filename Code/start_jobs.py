@@ -182,6 +182,8 @@ if __name__ == '__main__':
         available_devices = []
         for i in range(torch.cuda.device_count()):
             available_devices.append("cuda:" + str(i))
+        if(len(available_devices)==0):
+            available_devices.append("cpu")
             
     else:
         available_devices = parse_devices(args['devices'])
