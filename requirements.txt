@@ -2,6 +2,4 @@ imageio-ffmpeg==0.4.8
 opencv-python==4.7.0.72
 pyopenssl==22.0.0
 pyquaternion==0.9.9
-pyjhtdb==20200909.0
 Ninja
-pycuda
