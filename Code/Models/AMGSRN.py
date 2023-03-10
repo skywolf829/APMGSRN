@@ -227,7 +227,8 @@ class AMGSRN(nn.Module):
         feature_grid_shape: List[int], n_dims : int, 
         n_outputs: int, nodes_per_layer: int, n_layers: int, 
         use_tcnn:bool,use_bias:bool,requires_padded_feats:bool,
-        data_min:float, data_max:float, grid_initialization:str):
+        data_min:float, data_max:float, grid_initialization:str,
+        full_shape:List[int]):
         super().__init__()
         
         self.n_grids : int = n_grids
@@ -239,6 +240,7 @@ class AMGSRN(nn.Module):
         self.n_layers : int = n_layers
         self.requires_padded_feats : bool = requires_padded_feats
         self.padding_size : int = 0
+        self.full_shape = full_shape
         if(requires_padded_feats):
             self.padding_size : int = 16*int(math.ceil(max(1, (n_grids*n_features)/16))) - n_grids*n_features
             
@@ -312,7 +314,7 @@ class AMGSRN(nn.Module):
         )
 
     def get_volume_extents(self):
-        return self.opt['full_shape']
+        return self.full_shape
     
     def reset_parameters(self):
         with torch.no_grad():

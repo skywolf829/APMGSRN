@@ -10,12 +10,15 @@ class fVSRN(nn.Module):
         feature_grid_shape: List[int], n_dims : int, 
         n_outputs: int, nodes_per_layer: int, n_layers: int, 
         num_positional_encoding_terms, use_tcnn:bool, use_bias:bool,
-        requires_padded_feats:bool,data_min:float, data_max:float):
+        requires_padded_feats:bool,data_min:float, data_max:float,
+        full_shape:List[int]):
         super().__init__()
         
         
         self.requires_padded_feats : bool = requires_padded_feats
         self.padding_size : int = 0
+        self.full_shape = full_shape
+
         if(requires_padded_feats):
             self.padding_size : int = \
                 16*int(math.ceil(max(1, (n_features+num_positional_encoding_terms*n_dims*2)/16))) - \
@@ -23,7 +26,7 @@ class fVSRN(nn.Module):
             
         self.pe = PositionalEncoding(num_positional_encoding_terms, n_dims)        
         feat_shape : List[int] = [1, n_features] + feature_grid_shape
-
+        self.full_shape = full_shape
         self.feature_grid = torch.rand(feat_shape, 
             dtype=torch.float32)
         self.feature_grid = torch.nn.Parameter(self.feature_grid, 
@@ -97,7 +100,7 @@ class fVSRN(nn.Module):
         return self.volume_max
     
     def get_volume_extents(self):
-        return self.opt['full_shape']
+        return self.full_shape
                        
     def forward(self, x):     
         
