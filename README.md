@@ -4,7 +4,7 @@ This repo contains code for adaptive multi-grid scene representation network (AM
 Materials are prepared for submission to VIS2023 for our paper titled "Adaptive Multi-Grid Scene Representation Networks for Large-Scale Data Visualization", submission ID 1036, submitted on March 31, 2023.
 Included is all code used to train networks giving performance metrics shown in our submitted manuscript. A CUDA accelerated device, preferably a NVidia 2060 or newer, is required.
 
-![Adatpive feature grids fitting to scientific data.](/Figures/Training%20Sequence%20Overlapped.mp4)
+https://user-images.githubusercontent.com/12601616/224204819-b38f3fad-50b9-499e-8e7c-3c510d8fb938.mp4
 
 ## Installation
 
