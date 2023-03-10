@@ -73,8 +73,7 @@ Opens a file browser fiew to pick where to save the current renderer image in PN
 
 To prepare your model to work in the renderer, there are 3 steps:
 1. Implement a loading function for your model in ```Code/Models/models.py``` functions ```create_model(opt)``` and ```load_model(opt,device)```.
-   - The Options class we use is a wrapper around a dictionary that keeps track of model hyperparameters and some data about the volume. You can use your own file format or options class/object to save your hyperparamters, and you may want to implement a loader for that in ```Code/Models/options.py```, ```load_options(load_location)```. If you do not use such a file, you can assume ```opt``` will be none in the above method signatures. 
-   - ```create_model``` and ```load_model``` both assume the options file passed is of our custom Options class. We wrap the body of these methods with an if statement so that other models which dont can be implemented in the empty else statement we have added.
+   - We use a dictionary object to hold various hyperparameters and settings that exist for the network saved to disk separate from the network.
    - If this is not specific enough for a new model, you can also adjust how the options/models are loaded in the ```RendererThread``` object in ```Code/UI/renderer_app.py```, in methods ```initialize_model``` and ```do_change_model```.
    - The device is the string representing the device for PyTorch to load the model to. This is important since PyTorch will default try to load the model to the same place it was last, which may not be possible if it was trained on "cuda:4" previously, and you are trying to open it on a machine with one GPU.
 2. Your model must have accessible ```min()```, ```max()```, and ```get_volume_extents()``` functions. These are used by the renderer and the ```Scene``` objects.
