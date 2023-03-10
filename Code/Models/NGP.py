@@ -214,6 +214,9 @@ class NGP_TCNN(nn.Module):
     def max(self):
         return self.volume_max
     
+    def get_volume_extents(self):
+        return self.opt['full_shape']
+    
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         y = self.model((x+1)/2).float()
         y = y * (self.volume_max - self.volume_min) + self.volume_min

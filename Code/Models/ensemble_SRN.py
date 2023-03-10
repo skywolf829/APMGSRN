@@ -89,6 +89,9 @@ class Ensemble_SRN(nn.Module):
             val = torch.max(val, self.models[i].max())
         return val
     
+    def get_volume_extents(self):
+        return self.opt['full_shape']
+    
     def forward(self, x):    
 
         # divide by slightly larger than 2

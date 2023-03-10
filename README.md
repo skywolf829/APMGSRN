@@ -176,7 +176,7 @@ Example of testing a trained model named plume:
 We have two ways to access our renderer. 
 An offline command-line version is available at at ```Code/renderer.py```, which we will explain in this document.
 The online renderer with a GUI is in ```Code/UI```. 
-Please see that folder if you'd like to use the realtime renderer with interactivity.
+Please see that folder's README if you'd like to use the realtime renderer with interactivity.
 
 To start the Python server, run ```flask Code/Renderer/app.py```, which will host serve to localhost at endpoint 5000. In a web browser, navigate to localhost:5000 to view the renderer. If the port is open, you can connect to it from other machines as well, such as a laptop that is not CUDA-accelerated.
 

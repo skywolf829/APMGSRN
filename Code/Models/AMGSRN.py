@@ -311,6 +311,9 @@ class AMGSRN(nn.Module):
             persistent=False
         )
 
+    def get_volume_extents(self):
+        return self.opt['full_shape']
+    
     def reset_parameters(self):
         with torch.no_grad():
             feat_grid_shape = self.feature_grid_shape

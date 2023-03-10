@@ -95,7 +95,10 @@ class fVSRN(nn.Module):
 
     def max(self):
         return self.volume_max
-                            
+    
+    def get_volume_extents(self):
+        return self.opt['full_shape']
+                       
     def forward(self, x):     
         
         feats = F.grid_sample(self.feature_grid,

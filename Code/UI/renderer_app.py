@@ -660,9 +660,9 @@ class RendererThread(QObject):
         print(f"Loading model {first_model}")
         self.parent.status_text_update.emit(f"Loading model {first_model}...")
         self.opt = load_options(os.path.abspath(os.path.join('SavedModels', first_model)))
-        self.full_shape = self.opt['full_shape']
         self.model = load_model(self.opt, self.device).to(self.device)
         self.model.eval()
+        self.full_shape = self.model.get_volume_extents()
         print(f"Min/max: {self.model.min().item():0.02f}/{self.model.max().item():0.02f}")
         self.tf.set_minmax(self.model.min(), self.model.max())  
         self.parent.status_text_update.emit(f"")   
@@ -671,12 +671,9 @@ class RendererThread(QObject):
         render_mutex.lock()
         print(f"Loading model {s}")
         self.opt = load_options(os.path.abspath(os.path.join('SavedModels', s)))
-        different_size = (self.full_shape[0] != self.opt['full_shape'][0] or
-                          self.full_shape[1] != self.opt['full_shape'][1] or
-                          self.full_shape[2] != self.opt['full_shape'][2])
-        self.full_shape = self.opt['full_shape']
         self.model = load_model(self.opt, self.device).to(self.device)
         self.model.eval()
+        self.full_shape = self.model.get_volume_extents()
         self.tf.set_minmax(self.model.min(), self.model.max())        
         self.scene.model = self.model
         self.scene.set_aabb([ 
@@ -684,18 +681,6 @@ class RendererThread(QObject):
                 self.full_shape[1]-1,
                 self.full_shape[0]-1
                 ])
-        if(different_size and False):
-            
-            self.camera.update_coi(
-                np.array([ 
-                self.full_shape[2]/2,
-                self.full_shape[1]/2,
-                self.full_shape[0]/2
-                ], dtype=np.float32)            
-            )
-            self.camera.update_dist((self.full_shape[0]**2 + \
-                    self.full_shape[1]**2 + \
-                    self.full_shape[2]**2)**0.5)
         #self.scene.precompute_occupancy_grid()
         print(f"Min/max: {self.model.min().item():0.02f}/{self.model.max().item():0.02f}")
         self.scene.on_setting_change()
