@@ -4,6 +4,8 @@ This repo contains code for adaptive multi-grid scene representation network (AM
 Materials are prepared for submission to VIS2023 for our paper titled "Adaptive Multi-Grid Scene Representation Networks for Large-Scale Data Visualization", submission ID 1036, submitted on March 31, 2023.
 Included is all code used to train networks giving performance metrics shown in our submitted manuscript. A CUDA accelerated device, preferably a NVidia 2060 or newer, is required.
 
+![Adatpive feature grids fitting to scientific data.](/Figures/Training%20Sequence%20Overlapped.mp4)
+
 ## Installation
 
 We recommend the use of conda for management of Python version and packages. To install, run the following:
@@ -26,21 +28,20 @@ Next, install a few pip packages (mostly needed for the renderer) with
 pip install -r requirements.txt
 ```
 
-We also highly recommend using TinyCUDA-NN for improved decoder performance if you have TensorCores available.
-In our paper, all models used TCNN and see a significant speedup and lower memory requirment due to half precision training.
+We also highly recommend using TinyCUDA-NN (TCNN) for improved decoder performance if you have TensorCores available.
+In our paper, all models used TCNN and see a significant speedup and lower memory requirment due to half precision training and the fully-fused MLP.
 See installation guide on their github: https://github.com/NVlabs/tiny-cuda-nn.
 Installation on Linux (or WSL) is straightforward, but Windows requires more effort.
-Our code should automatically detect if you have it installed, and use it
-if available.
+For this reason, we highly recommend Windows users use WSL, as there are no performance decreases, but the OS is more suited for the existing packages and enviroments.
+With or without TCNN Our code should automatically detect if you have it installed, and use it if available.
 For linux/WSL, the following will install TCNN:
 ```
 pip install git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
 ```
-If you trained on a machine with TCNN installed, but are running on a machine without TCNN, our testing/rendering code will automatically convert the TCNN model into a pure pytorch model, so there is no issue with this translation.
-All of our models given are trained with TCNN, and this conversion will automatically happen for those if you do not have TCNN.
+Regardless of if a model was trained with/without TCNN, the machine it is loaded on will convert it to PyTorch if necessary.
 
 Lastly, install nerfacc: https://github.com/KAIR-BAIR/nerfacc.
-Preferably use the pre-built wheels for your torch+cuda version, as compiling from the latest release occasionally has some bugs.
+Preferably use the pre-built wheels for your torch+cuda version, as compiling from the latest release occasionally has some bugs (which we find will still be okay if you just run the same code again).
 We use torch 1.13 and cuda 11.7, so we install with:
 ```
 pip install nerfacc -f https://nerfacc-bucket.s3.us-west-2.amazonaws.com/whl/torch-1.13.0_cu117.html
@@ -50,9 +51,6 @@ The training/testing code has been tested on:
 
 - Windows 11 using WSL with Python 3.9.12, Pytorch 1.13.1 (with CUDA 11.7)
 - Ubuntu 20.04.4 LTS with Python 3.9.13, Pytorch 1.12.1 (with CUDA 11.4)
-
-The code has been tested on the Windows 11 machine using WSL specifically. 
-We find there are some incompatibilities with TCNN and NerfACC on Windows, but the code works without issue when using windows subsystem for linux (WSL) and recommend users do that as well.
 
 ### Verify installation
 
@@ -75,6 +73,7 @@ python Code/start_jobs.py --settings test.json
 
 In the test log, you should see the throughput (154/302 million point per second without/with TCNN on our 2080Ti), and the trained PSNR (about 53 dB for us).
 Performance may vary based on computer load, feel free to run multiple times to see outputs.
+On smaller graphics cards, you may have to reduce the batch size used for tests
 This test will also save a reconstructed scalar field sampled from the network at the same resolution of the original data in ```Output/Reconstruction/temp.nc```, which may be readily visualized in Paraview.
 
 To check that the offline renderer works:
@@ -175,7 +174,7 @@ Example of testing a trained model named plume:
 ## Renderer Use
 
 We have two ways to access our renderer. 
-An offline, command-line version is available at at ```Code/renderer.py```, which we will explain in this document.
+An offline command-line version is available at at ```Code/renderer.py```, which we will explain in this document.
 The online renderer with a GUI is in ```Code/UI```. 
 Please see that folder if you'd like to use the realtime renderer with interactivity.
 
