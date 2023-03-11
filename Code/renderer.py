@@ -70,6 +70,8 @@ class TransferFunction():
         
         self.min_value = min_value
         self.max_value = max_value
+        self.mapping_minmax = torch.tensor([min_value, max_value], device=self.device)
+        
         self.num_dict_entries = 4096
         if(colormap is None):
             self.coolwarm()
@@ -202,6 +204,16 @@ class TransferFunction():
     def set_minmax(self, min, max):
         self.min_value = min
         self.max_value = max
+        self.mapping_minmax = torch.tensor([min, max], device=self.device)
+    
+    def set_mapping_minmax(self, min, max):
+        self.mapping_minmax = torch.tensor([min, max], device=self.device)
+    
+    def remap_value_inplace(self, values):
+        new_min = self.min_value - self.mapping_minmax[0]
+        new_max = self.max_value + self.mapping_minmax[1]
+        values *= (new_max - new_min)
+        values += new_min
     
     def update_opacities(self, opacity_control_points, opacity_values):
         self.opacity_control_points = torch.tensor(opacity_control_points,
@@ -213,14 +225,20 @@ class TransferFunction():
         self.precompute_opacity_map()
         
     def color_at_value(self, value:torch.Tensor):
-        value_ind = (value[:,0] - self.min_value) / (self.max_value - self.min_value)
+        value_ind = (
+            (value[:,0] - self.min_value) / (self.max_value - self.min_value) *
+            (self.mapping_minmax[1] - self.mapping_minmax[0]) + self.mapping_minmax[0]
+        )
         value_ind *= self.num_dict_entries
         value_ind = value_ind.long()
         value_ind.clamp_(0,self.num_dict_entries-1)
         return torch.index_select(self.precomputed_color_map, dim=0, index=value_ind)
     
     def opacity_at_value(self, value:torch.Tensor):
-        value_ind = (value[:,0] - self.min_value) / (self.max_value - self.min_value)
+        value_ind = (
+            (value[:,0] - self.min_value) / (self.max_value - self.min_value) *
+            (self.mapping_minmax[1] - self.mapping_minmax[0]) + self.mapping_minmax[0]
+        )
         value_ind *= self.num_dict_entries
         value_ind = value_ind.type(torch.long)
         value_ind.clamp_(0,self.num_dict_entries-1)
@@ -229,6 +247,7 @@ class TransferFunction():
     def color_opacity_at_value(self, value:torch.Tensor):
         value -= self.min_value
         value /= (self.max_value-self.min_value)
+        self.remap_value_inplace(value)
         value *= self.num_dict_entries
         value = value.type(torch.long)
         value.clamp_(0,self.num_dict_entries-1)

@@ -245,15 +245,18 @@ class MainWindow(QMainWindow):
         self.transfer_function_box = QVBoxLayout()
         self.tf_editor = TransferFunctionEditor(self)
 
+        self.tf_rescale_slider_box = QHBoxLayout()  
+        self.tf_rescale_slider_mintxt = QLabel(f"data range: {0:3}%")
+        self.tf_rescale_slider_maxtxt = QLabel(f"{100}%")
         self.tf_rescale_slider = QRangeSlider(Qt.Horizontal)
-        # self.tf_rescale_slider.setRange(0, 1000)
-        # self.tf_rescale_slider.setValue((250, 750))
-        # self.tf_rescale_slider.setTickInterval(1)
-        # self.tf_rescale_slider = QSlider(Qt.Horizontal)
-        # self.tf_rescale_slider.setRange(0, 1000)
-        # self.tf_rescale_slider.setTickInterval(1)
-        # self.tf_rescale_slider.setRange(250, 750)
-        # self.tf_rescale_slider.setSliderDown(True)
+        self.tf_rescale_slider.setRange(0, 1000)
+        self.tf_rescale_slider.setValue((0, 1000))
+        self.tf_rescale_slider.setTickInterval(1)
+        self.tf_rescale_slider.valueChanged.connect(self.change_tf_range_visual)
+        self.tf_rescale_slider.sliderReleased.connect(self.change_tf_range)
+        self.tf_rescale_slider_box.addWidget(self.tf_rescale_slider_mintxt)
+        self.tf_rescale_slider_box.addWidget(self.tf_rescale_slider)
+        self.tf_rescale_slider_box.addWidget(self.tf_rescale_slider_maxtxt)
         
         x = np.linspace(0.0, 1.0, 4)
         pos = np.column_stack((x, x))
@@ -292,7 +295,7 @@ class MainWindow(QMainWindow):
         self.settings_ui.addLayout(self.spp_slider_box)
         self.settings_ui.addWidget(self.view_xy_button)
         self.settings_ui.addLayout(self.transfer_function_box)
-        self.settings_ui.addWidget(self.tf_rescale_slider)
+        self.settings_ui.addLayout(self.tf_rescale_slider_box)
         self.settings_ui.addStretch()
         self.settings_ui.addWidget(self.status_text)
         self.settings_ui.addWidget(self.memory_use_label)
@@ -428,6 +431,15 @@ class MainWindow(QMainWindow):
         self.spp_slider_label.setText(f"Samples per ray: {2**val}")
         self.render_worker.change_spp.emit(2**val)
      
+    def change_tf_range_visual(self):
+        dmin, dmax = [int(v) for v in self.tf_rescale_slider.value()]
+        self.tf_rescale_slider_mintxt.setText(f"data range: {dmin//10:3}%")
+        self.tf_rescale_slider_maxtxt.setText(f"{dmax//10}%")
+    
+    def change_tf_range(self):
+        dmin, dmax = [int(v) for v in self.tf_rescale_slider.value()]
+        self.render_worker.tf_rescale.emit(dmin/1000, dmax/1000)
+     
     def mouseReleased(self, event):
         if event.type() == QEvent.MouseButtonRelease:
             if(event.button()) == Qt.LeftButton:
@@ -493,6 +505,7 @@ class RendererThread(QObject):
     change_batch_size = pyqtSignal(int)
     change_opacity_controlpoints = pyqtSignal(np.ndarray, np.ndarray)
     view_xy = pyqtSignal()
+    tf_rescale = pyqtSignal(float, float)
     
     def __init__(self, parent=None):
         super(RendererThread, self).__init__()
@@ -533,6 +546,7 @@ class RendererThread(QObject):
         self.load_new_model.connect(self.do_change_model)
         self.load_new_data.connect(self.do_change_data)
         self.view_xy.connect(self.do_view_xy)
+        self.tf_rescale.connect(self.do_tf_rescale)
         self.parent.status_text_update.emit(f"")
         
     def run(self):
@@ -611,6 +625,12 @@ class RendererThread(QObject):
                     self.full_shape[1]**2 + \
                     self.full_shape[2]**2)**0.5   
             )
+        self.scene.on_rotate_zoom_pan()
+        render_mutex.unlock()
+
+    def do_tf_rescale(self, dmin, dmax):
+        render_mutex.lock()
+        self.tf.set_mapping_minmax(dmin, dmax)
         self.scene.on_rotate_zoom_pan()
         render_mutex.unlock()
 
