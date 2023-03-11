@@ -3,3 +3,4 @@ opencv-python==4.7.0.72
 pyopenssl==22.0.0
 pyquaternion==0.9.9
 Ninja
+superqt
