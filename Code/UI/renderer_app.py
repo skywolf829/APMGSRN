@@ -11,6 +11,7 @@ from PyQt5.QtGui import QImage, QPixmap, QPalette, QColor, QIcon
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, \
     QWidget, QLabel, QHBoxLayout, QVBoxLayout, QStackedLayout, \
     QComboBox, QSlider, QFileDialog
+from superqt import QRangeSlider
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, QEvent, Qt
 from Code.renderer import Camera, Scene, TransferFunction, RawData
 from Code.UI.utils import Arcball, torch_float_to_numpy_uint8
@@ -243,6 +244,17 @@ class MainWindow(QMainWindow):
         
         self.transfer_function_box = QVBoxLayout()
         self.tf_editor = TransferFunctionEditor(self)
+
+        self.tf_rescale_slider = QRangeSlider(Qt.Horizontal)
+        # self.tf_rescale_slider.setRange(0, 1000)
+        # self.tf_rescale_slider.setValue((250, 750))
+        # self.tf_rescale_slider.setTickInterval(1)
+        # self.tf_rescale_slider = QSlider(Qt.Horizontal)
+        # self.tf_rescale_slider.setRange(0, 1000)
+        # self.tf_rescale_slider.setTickInterval(1)
+        # self.tf_rescale_slider.setRange(250, 750)
+        # self.tf_rescale_slider.setSliderDown(True)
+        
         x = np.linspace(0.0, 1.0, 4)
         pos = np.column_stack((x, x))
         win = pg.GraphicsLayoutWidget() 
@@ -280,6 +292,7 @@ class MainWindow(QMainWindow):
         self.settings_ui.addLayout(self.spp_slider_box)
         self.settings_ui.addWidget(self.view_xy_button)
         self.settings_ui.addLayout(self.transfer_function_box)
+        self.settings_ui.addWidget(self.tf_rescale_slider)
         self.settings_ui.addStretch()
         self.settings_ui.addWidget(self.status_text)
         self.settings_ui.addWidget(self.memory_use_label)
