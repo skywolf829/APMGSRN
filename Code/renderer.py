@@ -204,14 +204,20 @@ class TransferFunction():
     def set_minmax(self, min, max):
         self.min_value = min
         self.max_value = max
-        self.mapping_minmax = torch.tensor([min, max], device=self.device)
     
     def set_mapping_minmax(self, min, max):
         self.mapping_minmax = torch.tensor([min, max], device=self.device)
-    
+        
+    def remap_value(self, values):
+        new_min = -(self.mapping_minmax[0])
+        new_max = 2 - self.mapping_minmax[1]
+        values = values * (new_max - new_min)
+        values += new_min
+        return values
+        
     def remap_value_inplace(self, values):
-        new_min = self.min_value - self.mapping_minmax[0]
-        new_max = self.max_value + self.mapping_minmax[1]
+        new_min = -(self.mapping_minmax[0])
+        new_max = 2 - self.mapping_minmax[1]
         values *= (new_max - new_min)
         values += new_min
     
@@ -255,7 +261,7 @@ class TransferFunction():
             torch.index_select(self.precomputed_opacity_map, dim=0, index=value))
     
     def color_opacity_at_value_inplace(self, value:torch.Tensor, rgbs, alphas, start_ind):
-        value_ind = (value[:,0] - self.min_value) / (self.max_value - self.min_value)
+        value_ind = self.remap_value((value[:,0] - self.min_value) / (self.max_value - self.min_value))
         value_ind *= self.num_dict_entries
         value_ind = value_ind.type(torch.long)
         value_ind.clamp_(0,self.num_dict_entries-1)
