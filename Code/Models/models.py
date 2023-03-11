@@ -101,23 +101,38 @@ def save_model(model,opt):
 
 def load_model(opt, device):
     path_to_load = os.path.join(save_folder, opt["save_name"])
-    model = create_model(opt)
+    
+    try:
+        import tinycudann
+        tcnn_installed = True
+    except ImportError:
+        tcnn_installed = False
+
     if(not opt['ensemble']):
         ckpt = torch.load(os.path.join(path_to_load, 'model.ckpt.tar'), 
             map_location = device)   
 
         if('decoder.params' in ckpt['state_dict']):
-            #print(f"Model was trained with TCNN")
-            try:
-                import tinycudann
+            if(tcnn_installed):
+                print(f"Model was trained with TCNN and TCNN is available.")
+                model = create_model(opt)
                 model.load_state_dict(ckpt['state_dict'])
-            except ImportError:
+            else:
+                print(f"Model was trained with TCNN and TCNN is not available. Converting to PyTorch linear layers.")
                 new_ckpt = convert_tcnn_to_pytorch(ckpt, opt)
                 model = create_model(opt)
                 model.load_state_dict(new_ckpt['state_dict'])
         else:
+            if(tcnn_installed):
+                print(f"Model was trained without TCNN and TCNN is available. Keeping model in pure PyTorch")
+                opt['use_tcnn_if_available'] = False
+            else:
+                print(f"Model was trained without TCNN and is being loaded without TCNN.")
+        
+            model = create_model(opt)
             model.load_state_dict(ckpt['state_dict'])
-
+    else:
+        model = create_model(opt)
     return model
 
 def create_model(opt):
@@ -134,7 +149,7 @@ def create_model(opt):
             opt['n_layers'], 
             opt['num_positional_encoding_terms'], opt['use_tcnn_if_available'],
             opt['use_bias'], opt['requires_padded_feats'],
-            opt['data_min'], opt['data_max'])
+            opt['data_min'], opt['data_max'], opt['full_shape'])
         elif(opt['model'] == "AMGSRN"):
             from Models.AMGSRN import AMGSRN
             return AMGSRN(opt['n_grids'], opt['n_features'], 
@@ -143,13 +158,14 @@ def create_model(opt):
             opt['n_layers'], opt['use_tcnn_if_available'], opt['use_bias'],
             opt['requires_padded_feats'],
             opt['data_min'], opt['data_max'],
-            opt['grid_initialization'])
+            opt['grid_initialization'], opt['full_shape'])
         elif(opt['model'] == "NGP"):
             from Models.NGP import NGP
             return NGP(opt)
         elif(opt['model'] == "NGP_TCNN"):        
             from Models.NGP import NGP_TCNN
             return NGP_TCNN(opt)
+   
 
 def sample_grid(model, grid, align_corners:bool = False,
                 device:str="cuda", data_device:str="cuda", max_points:int = 100000):

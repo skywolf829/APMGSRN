@@ -396,6 +396,4 @@ def checkerboard_render(w,h):
 
 if __name__ == '__main__':
 
-    order = checkerboard_render(7,7)
-    print(order)
     quit()

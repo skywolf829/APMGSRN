@@ -89,6 +89,9 @@ class Ensemble_SRN(nn.Module):
             val = torch.max(val, self.models[i].max())
         return val
     
+    def get_volume_extents(self):
+        return self.opt['full_shape']
+    
     def forward(self, x):    
 
         # divide by slightly larger than 2
@@ -110,7 +113,6 @@ class Ensemble_SRN(nn.Module):
             x_i = x[mask]
             y[mask] = self.models[i](-1+2*((x_i-self.local_min_extents[i])/\
                 (self.local_max_extents[i]-self.local_min_extents[i])))
-
         return y
 
         

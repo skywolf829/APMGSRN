@@ -2,8 +2,14 @@
 
 This repo contains code for adaptive multi-grid scene representation network (AMGSRN), an ensemble training routine for large-scale data, and a neural volume renderer.
 Materials are prepared for submission to VIS2023 for our paper titled "Adaptive Multi-Grid Scene Representation Networks for Large-Scale Data Visualization", submission ID 1036, submitted on March 31, 2023.
-Included is all code used to train networks giving performance metrics shown in our submitted manuscript.
+Included is all code used to train networks giving performance metrics shown in our submitted manuscript. A CUDA accelerated device, preferably a NVidia 2060 or newer, is required.
 
+## Videos
+
+[![AMGSRN grids during training](https://img.youtube.com/vi/utYqmFmyRaE/0.jpg)](https://www.youtube.com/watch?v=utYqmFmyRaE)
+[![AMGSRN grids during training](https://img.youtube.com/vi/mFsk2LYAJ-E/0.jpg)](https://www.youtube.com/watch?v=mFsk2LYAJ-E)
+
+https://youtu.be/mFsk2LYAJ-E
 ## Installation
 
 We recommend the use of conda for management of Python version and packages. To install, run the following:
@@ -12,51 +18,112 @@ conda env create --file environment.yml
 conda activate AMGSRN
 ```
 
-Creating the environment will take a while. If the above fails, use this as a backup:
-```
-conda create --name NeuralStreamFunction python=3.9
-conda activate NeuralStreamFunction
-```
-and then do ```conda install packageName1 packageName2 ...``` for each package name in env.yml.
-
-Once thats finished and the environment has been activated, navigate to https://pytorch.org/get-started/locally/ and follow instructions to install pytorch on your machine.
+Once thats finished (could take a minute depending on system) and the environment has been activated, navigate to https://pytorch.org/get-started/locally/ and follow instructions to install pytorch on your machine.
 
 For instance:
 ```
-conda install pytorch torchvision torchaudio pytorch-cuda=11.6 -c pytorch -c nvidia
+conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
 ```
 
 was the command we used to install pytorch on our Windows machine for testing.
 
-This code has been tested on:
-
-Windows 11/WSL with Python 3.9.12, Pytorch 1.13.1 (with CUDA 11.6)
-
-Ubuntu 20.04.4 LTS with Python 3.9.13, Pytorch 1.12.1 (with CUDA 11.4)
-
-A number of additional packaged should be installed with pip, including TODO, TODO, TODO.
-Install these with
-
+Next, install a few pip packages (mostly needed for the renderer) with 
 ```
 pip install -r requirements.txt
 ```
 
-### Data
+We also highly recommend using TinyCUDA-NN (TCNN) for improved decoder performance if you have TensorCores available.
+In our paper, all models used TCNN and see a significant speedup and lower memory requirment due to half precision training and the fully-fused MLP.
+See installation guide on their github: https://github.com/NVlabs/tiny-cuda-nn.
+Installation on Linux (or WSL) is straightforward, but Windows requires more effort.
+For this reason, we highly recommend Windows users use WSL, as there are no performance decreases, but the OS is more suited for the existing packages and enviroments.
+With or without TCNN Our code should automatically detect if you have it installed, and use it if available.
+For linux/WSL, the following will install TCNN:
+```
+pip install git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
+```
+Regardless of if a model was trained with/without TCNN, the machine it is loaded on will convert it to PyTorch if necessary.
+
+Lastly, install nerfacc: https://github.com/KAIR-BAIR/nerfacc.
+Preferably use the pre-built wheels for your torch+cuda version, as compiling from the latest release occasionally has some bugs (which we find will still be okay if you just run the same code again).
+We use torch 1.13 and cuda 11.7, so we install with:
+```
+pip install nerfacc -f https://nerfacc-bucket.s3.us-west-2.amazonaws.com/whl/torch-1.13.0_cu117.html
+```
+
+The training/testing code has been tested on:
+
+- Windows 11 using WSL with Python 3.9.12, Pytorch 1.13.1 (with CUDA 11.7)
+- Ubuntu 20.04.4 LTS with Python 3.9.13, Pytorch 1.12.1 (with CUDA 11.4)
+
+### Verify installation
+
+After all the packages are downloaded, try to do a small training run. 
+First, see our Data section to download three of our scalar fields used in our paper.
+Then, run:
+
+```
+python Code/start_jobs.py --settings train.json
+```
+
+This will train a model on the plume dataset for 10000 iterations.
+A training/testing log for every trained model can be found in ```/SavedModels/modelname/train_log.txt``` and ```/SavedModels/modelname/test_log.txt```.
+Our 2080Ti machine with and without TCNN trains in about 1 minute.
+
+Next, test the model with:
+```
+python Code/start_jobs.py --settings test.json
+```
+
+In the test log, you should see the throughput (154/302 million point per second without/with TCNN on our 2080Ti), and the trained PSNR (about 53 dB for us).
+Performance may vary based on computer load, feel free to run multiple times to see outputs.
+On smaller graphics cards, you may have to reduce the batch size used for tests
+This test will also save a reconstructed scalar field sampled from the network at the same resolution of the original data in ```Output/Reconstruction/temp.nc```, which may be readily visualized in Paraview.
+
+To check that the offline renderer works:
+
+```
+python Code/renderer.py --load_from temp
+```
+
+This will render a 512x512 image with 256 samples per ray and save it to ```/Output/render.png```.
+It will also render 10 more frames and give you an average framerate and print out frame times (24/31 fps on our machine without/with TCNN).
+
+The renderer with GUI is the last check:
+
+```
+python Code/UI/renderer_app.py
+```
+
+which should automatically load the first model in the SavedModels folder and begin rendering.
+
+---
+
+## Data
 
 A few of our datasets are too large to be hosted for download, but can independently be downloaded from Johns Hopkins Turbulence Database: https://turbulence.pha.jhu.edu/.
 However, we do host 3 smaller-scale datasets and provide pretrained models for all models tested in the paper in an anonymous Google Drive folder: https://drive.google.com/file/d/1FXRxMdcJ53cdeZ6mlAyDI254IvZ2OFoo/view?usp=sharing.
-Extract the folder and make sure the ```Data``` and ```SavedModels``` folders are at the same directory as ```Code```. ```/Data``` hosts the volume data as NetCDF files, which can readily be visualized in ParaView, and ```/SavedModels``` is where all the models are saved and loaded from.
+Extract the folder and make sure the ```Data``` and ```SavedModels``` folders are at the same directory as ```Code```. ```Data``` hosts the volume data as NetCDF files, which can readily be visualized in ParaView, and ```SavedModels``` is where all the models are saved and loaded from.
+
+---
 
 ## Training and Testing Use
 
 ### ```start_jobs.py```
-This script is responsible for starting a set of jobs hosted in a JSON file in ```/Code/BatchRunSettings```, and issuing each job to available GPUs on the system. The jobs in the JSON file can be training (```train.py```) or testing (```test.py```), and one job will be addressed to each device available for training/testing. When a job completes on a device, the device is released and becomes available for other jobs to be designated that device. The jobs are not run in sequential order unless you only have 1 device, so do not expect this script to train+test a model sequentially unless you use only one device. Please see ```/Code/BatchRunSettings``` for examples of settings files - each job to run is either ```train.py``` or ```test.py``` with the command line arguments for those files. When an ensemble model is trained, ```start_jobs.py``` is responsible for splitting the training of the volume into a grid of models belonging to an ensemble, including domain partitioning with ghost cells.
+This script is where jobs, both training and testing, get started from.
+In all situations, it is preferred to used this rather than directly laumch ```train.py``` or ```test.py```.
+This script is will start a set of jobs hosted in a JSON file in ```/Code/BatchRunSettings```, and issuing each job to available GPUs (or cpu/mps) on the system. 
+The jobs in the JSON file can be training (```train.py```) or testing (```test.py```), and one job will be addressed to each device available. 
+When a job completes on a device, the device is released and becomes available for other jobs to be designated that device. 
+The jobs are not run in sequential order unless you only have 1 device, so do not expect this script to train+test a model sequentially unless you use only one device. 
+Please see ```/Code/BatchRunSettings``` for examples of settings files - each job to run is either ```train.py``` or ```test.py``` with the command line arguments for those files. 
+When an ensemble model is trained, ```start_jobs.py``` is responsible for splitting the training of the volume into a grid of models belonging to an ensemble, including domain partitioning with ghost cells.
 
 Command line arguments are:
 
-```--settings```: the .json file (located in /Code/Batch_run_settings/) with the training/testing setups to run. See the examples in the folder for how to create a new settings file. Required argument.
+```--settings```: the .json file (located in ```/Code/Batch_run_settings/```) with the training/testing setups to run. See the examples in the folder for how to create a new settings file. Required argument.
 
-```--devices```: the list of devices (comma separated) to issue jobs to. By default, "all" available CUDA devices are used. If no CUDA devices are detected, the CPU is used. 
+```--devices```: the list of devices (comma separated) to issue jobs to. By default, "all" available CUDA devices are used. If no CUDA devices are detected, the CPU is used. Can also be "mps" for metal performance shaders with PyTorch on an M1 or M2 Mac.
 
 ```--data_devices```: the device to host the data on. In some cases, the data may be too large to host on the same GPU that training is happening on, using system RAM instead of GPU VRAM may be preferred. Options are "same", implying using the same device for the data as is used for the model, and "cpu", which puts the data on system RAM. Default is "same".
 
@@ -74,33 +141,48 @@ The following will run the jobs defined in example_file.json on cuda devices 1 a
 
 ```python Code/start_jobs.py --settings example_file.json --devices cuda:1,cuda:2 --data_devices cpu```
 
-The following will run the jobs defined in example_file.json on cuda devices 1 and cpu, with the data hosted on the same devices as the model.
+The following will run the jobs defined in example_file.json on cuda devices 3 and cpu, with the data hosted on the same devices as the model.
 
-```python Code/start_jobs.py --settings example_file.json --devices cuda:1,cpu```
+```python Code/start_jobs.py --settings example_file.json --devices cuda:3,cpu```
 
-(For M1 Macs with MPS) - The following will run the jobs defined in example_file.json on MPS (metal performance shaders), which is Apple's hardware for acceleration. Many PyTorch functions are not yet implemented for MPS as of Torch version 1.13.1, and as such our code cannot natively run on MPS at this time, but as more releases of PyTorch come out, we expect this to run without issue in the future.
+(For M1 Macs with MPS) - The following will run the jobs defined in example_file.json on MPS (metal performance shaders), which is Apple's hardware for acceleration. 
+Many PyTorch functions are not yet implemented for MPS as of Torch version 1.13.1, and as such our code cannot natively run on MPS at this time, but as more releases of PyTorch come out, we expect this to run without issue in the future.
 
 ```python Code/start_jobs.py --settings example_file.json --devices mps```
 
 ### ```train.py```
-This script will begin training a defined model with chosen hyperparameters and selected volume with extents. Default hyperparemeter values are what is shown in ```/Code/Models/options.py```, and will only be changed if added as a command line argument when running ```train.py```. A description of each argument can be seen by running ```python Code/train.py --help```. The only data format currently supported is NetCDF, although you could add your own dataloader as well.
+This script will begin training a defined model with chosen hyperparameters and selected volume with extents. 
+Default hyperparemeter values are what is shown in ```/Code/Models/options.py```, and will only be changed if added as a command line argument when running ```train.py```. 
+A description of each argument can be seen by running ```python Code/train.py --help```. 
+The only data format currently supported is NetCDF, although you could add your own dataloader in ```Code/Datasets/datasets.py``` as well.
 
 Example of training an AMGSRN model on the plume data:
 
-```python Code/train.py --model fSRN --data Plume.nc```
+```python Code/train.py --model AMGSRN --data Plume.nc```
 
 More examples of usage of this code are encoded into the settings JSON files which are used by ```start_jobs.py```, and we recommend not launching ```train.py``` from the command line yourself, and instead letting ```start_jobs.py``` do it.
 
 ### ```test.py```
-This script is responsible for the testing of trained models for PSNR, error, and reconstruction. Output is saved to the correct folder in```/Output/``` depending on task chosen. Similar to ```train.py```, it is usually ran from our ```start_jobs.py``` script, but can also be ran on its own. A description of each command line argument can be seen by running ```python Code/test.py --help```. Just as with ```train.py```, only NetCDF file formats are supported for loading data to evaluate against.
+This script is responsible for the testing of trained models for PSNR, error, and reconstruction. 
+Output is saved to the correct folder in```/Output/``` depending on task chosen. 
+Similar to ```train.py```, it is usually ran from our ```start_jobs.py``` script, but can also be ran on its own. 
+A description of each command line argument can be seen by running ```python Code/test.py --help```. 
+Just as with ```train.py```, only NetCDF file formats are supported for loading data to evaluate against.
 
 Example of testing a trained model named plume:
 
 ```python Code/Tests/test.py --load_from plume --tests_to_run psnr,reconstruction```
 
+---
+
 ## Renderer Use
 
-Our renderer uses a Python backend and a HTML/JS frontend. To start the Python server, run ```flask Code/Renderer/app.py```, which will host serve to localhost at endpoint 5000. In a web browser, navigate to localhost:5000 to view the renderer. If the port is open, you can connect to it from other machines as well, such as a laptop that is not CUDA-accelerated.
+We have two ways to access our renderer. 
+An offline command-line version is available at at ```Code/renderer.py```, which we will explain in this document.
+The online renderer with a GUI is in ```Code/UI```. 
+Please see that folder's README if you'd like to use the realtime renderer with interactivity.
+
+To start the Python server, run ```flask Code/Renderer/app.py```, which will host serve to localhost at endpoint 5000. In a web browser, navigate to localhost:5000 to view the renderer. If the port is open, you can connect to it from other machines as well, such as a laptop that is not CUDA-accelerated.
 
 Inside the renderer, you can choose which model to load to render with as well as transfer function. Rotate the camera by clicking and dragging, pan the camera with middle mouse clicking and dragging, and zoom with mousewheel. Our progressive renderer will update the image in a checkerboard pattern with mip maps to give a resonable view of the render while pixels are still being evaluated on the backend.
 

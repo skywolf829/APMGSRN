@@ -227,7 +227,8 @@ class AMGSRN(nn.Module):
         feature_grid_shape: List[int], n_dims : int, 
         n_outputs: int, nodes_per_layer: int, n_layers: int, 
         use_tcnn:bool,use_bias:bool,requires_padded_feats:bool,
-        data_min:float, data_max:float, grid_initialization:str):
+        data_min:float, data_max:float, grid_initialization:str,
+        full_shape:List[int]):
         super().__init__()
         
         self.n_grids : int = n_grids
@@ -239,6 +240,7 @@ class AMGSRN(nn.Module):
         self.n_layers : int = n_layers
         self.requires_padded_feats : bool = requires_padded_feats
         self.padding_size : int = 0
+        self.full_shape = full_shape
         if(requires_padded_feats):
             self.padding_size : int = 16*int(math.ceil(max(1, (n_grids*n_features)/16))) - n_grids*n_features
             
@@ -274,15 +276,17 @@ class AMGSRN(nn.Module):
                 first_layer_input_size = n_features*n_grids + self.padding_size
                                            
             layer = ReLULayer(first_layer_input_size, 
-                nodes_per_layer, bias=use_bias)
+                nodes_per_layer, bias=use_bias, dtype=torch.float32)
             decoder.append(layer)
             
             for i in range(n_layers):
                 if i == n_layers - 1:
-                    layer = nn.Linear(nodes_per_layer, n_outputs, bias=use_bias)
+                    layer = nn.Linear(nodes_per_layer, n_outputs, 
+                        bias=use_bias, dtype=torch.float32)
                     decoder.append(layer)
                 else:
-                    layer = ReLULayer(nodes_per_layer, nodes_per_layer, bias=use_bias)
+                    layer = ReLULayer(nodes_per_layer, nodes_per_layer, 
+                        bias=use_bias, dtype=torch.float32)
                     decoder.append(layer)
             decoder = torch.nn.Sequential(*decoder)
             return decoder
@@ -309,6 +313,9 @@ class AMGSRN(nn.Module):
             persistent=False
         )
 
+    def get_volume_extents(self):
+        return self.full_shape
+    
     def reset_parameters(self):
         with torch.no_grad():
             feat_grid_shape = self.feature_grid_shape
@@ -357,8 +364,8 @@ class AMGSRN(nn.Module):
         feats = self.encoder.forward_pre_transformed(x)    
         if(self.requires_padded_feats):
             feats = F.pad(feats, (0, self.padding_size), value=1.0) 
-        y = self.decoder(feats).float()
-        y = y * (self.volume_max - self.volume_min + 1e-16) + self.volume_min     
+        y = self.decoder(feats)
+        y = y.float() * (self.volume_max - self.volume_min) + self.volume_min     
         return y
 
     def forward(self, x):

@@ -64,7 +64,7 @@ def save_options(opt, save_location):
     
 def load_options(load_location):
     opt = Options.get_default()
-    print(load_location)
+    #print(load_location)
     if not os.path.exists(load_location):
         print("%s doesn't exist, load failed" % load_location)
         return

@@ -74,5 +74,20 @@
         {        
         "load_from": "Channel_AMGSRN_ensemble_medium",
         "tests": "throughput"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Isotropic_AMGSRN_ensemble",
+        "tests": "throughput"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Isotropic_AMGSRN_medium",
+        "tests": "throughput"
+    }],
+    [ "test.py",
+        {        
+        "load_from": "Isotropic_AMGSRN_small",
+        "tests": "throughput"
     }]
 ]

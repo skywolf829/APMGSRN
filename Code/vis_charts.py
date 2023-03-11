@@ -12,9 +12,10 @@ from Other.utility_functions import create_path
 #plt.style.use('Solarize_Light2')
 #plt.style.use('fivethirtyeight')
 #plt.style.use('ggplot')
-#plt.style.use('seaborn')
+plt.style.use('seaborn')
 #plt.style.use('seaborn-paper')
-plt.style.use('seaborn-v0_8-whitegrid')
+#plt.style.use('seaborn-v0_8-whitegrid')
+
 font = {#'font.family' : 'normal',
     #'font.weight' : 'bold',
     'font.size'   : 16,
@@ -162,35 +163,23 @@ data_sizes = {
     "Rotstrat": 286435456,
     "Supernova": 314929
 }
-# in lists of KB, PSNR
+# in lists of KB, PSNR, compression time (s), decomp time (s)
 compression_results = {
-    
-    "Nyx": {
-        "TTHRESH": [
-            [4202.0, 46.230],
-            [3486.0, 44.608],
-            [1137.0, 37.864],
-            [211.0, 29.499] 
-        ],
+    "Isotropic":{
         "AMGSRN": [
-            [65858.0, 46.230],
-            [65574.0, 44.608],
-            [4127.0, 37.864],
-            [283.0, 29.499]            
-        ]
-    },
-    "Plume": {
-        "TTHRESH": [
-            [99.7237, 58.829],  
-            [114.242, 57.702],          
-            [124.611, 56.459],       
-            [304.084, 49.172]
+            [64248, 40.762, 106, 2.8],
+            [4127, 31.860, 66, 1.7],
+            [283, 27.629, 56, 1.37]
         ],
-        "AMGSRN": [
-            [65644.0, 57.702],
-            [65574.0, 58.829],
-            [4127.0, 56.459],
-            [283.0, 49.172]            
+        "TTHRESH": [
+            [25962, 41.516, 241, 57],
+            [3912, 32.217, 469, 45],
+            [1073, 27.682, 575, 39]
+        ],
+        "SZ": [
+            [59107, 40.21, 17.8, 7.41], # REL err 0.03
+            [10271, 37.20, 17.589, 6.28],
+            [4904, 32.66, 17.25, 4.59]
         ]
     },
     "Rotstrat": {
@@ -199,20 +188,6 @@ compression_results = {
         ],
         "AMGSRN": [
             [885600.0, 49.160]        
-        ]
-    },
-    "Supernova": {
-        "TTHRESH": [
-            [8928.0, 50.991],
-            [7922.0, 49.695],
-            [5099.0, 46.787],
-            [2065.0, 41.914] 
-        ],
-        "AMGSRN": [
-            [65744.0, 50.991],
-            [65574.0, 49.695],
-            [4127.0, 46.787],
-            [283.0, 41.914]            
         ]
     }
 }
@@ -360,7 +335,46 @@ def rotation_performance_chart():
     data_to_figure(plume_results, "Plume_rotation")    
     data_to_figure(isotropic_results, "Isotropic_rotation")    
     data_to_figure(nyx_results, "Nyx_rotation")
-    
+
+def compression_charts():
+    create_path(os.path.join(output_folder, "Charts"))
+    markers = ['o', 'v', 's']
+    idx = 0
+    isotropic_comp_results = compression_results['Isotropic']
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, sharey=True)
+    ax1.set_box_aspect(1)
+    ax2.set_box_aspect(1)
+    ax3.set_box_aspect(1)
+    #ax1.set_title("Reconstruction")
+    ax1.set_ylabel("Compression ratio")
+    ax1.set_xlabel("PSNR (dB)")
+    #ax2.set_title("Compression time")
+    ax2.set_xlabel("Compression time (sec.)")
+    #ax3.set_title("Decompression time")
+    ax3.set_xlabel("Decompression time (sec.)")
+    idx = 0
+    for method in isotropic_comp_results.keys():
+        method_data = isotropic_comp_results[method]        
+        label = method
+
+        data = np.array(method_data)
+        crs = data_sizes["Isotropic"]/data[:,0] 
+        psnrs = data[:,1]
+        comp_times = data[:,2]
+        decomp_times = data[:,3]
+
+        ax1.plot(psnrs, crs, label=label, marker = markers[idx])
+        ax2.plot(comp_times, crs, label=label, marker = markers[idx])
+        ax3.plot(decomp_times, crs, label=label, marker = markers[idx])
+        idx += 1
+    plt.legend()
+    plt.yscale("log") 
+    plt.yticks([10**i for i in range(1, 5)], 
+               labels=[f"1:{10**i}" for i in range(1,5)])
+    plt.savefig(os.path.join(save_folder, "Compression.png"),
+                bbox_inches='tight',
+                dpi=200)
+
 def flat_top_chart():
     create_path(os.path.join(output_folder, "Charts"))
 
@@ -581,7 +595,8 @@ def do_all_renders():
         "Supernova_model.mp4", 
         fps=60)
    
-    
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Test a trained SSR model')
     
@@ -593,6 +608,7 @@ if __name__ == '__main__':
     #model_size_performance_chart()
     #ensemble_comparison(ensemble_results)
     #flat_top_chart()
-    do_all_renders()
+    #do_all_renders()
+    compression_charts()
     
     quit()

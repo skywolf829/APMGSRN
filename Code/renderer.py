@@ -1,19 +1,14 @@
 import torch
-from nerfacc import ray_marching, rendering, OccupancyGrid, Grid
+from nerfacc import ray_marching, rendering, OccupancyGrid
 import argparse
 import os
 from Models.models import load_model
 from Models.options import load_options
-import matplotlib.pyplot as plt
 import numpy as np
 from Other.utility_functions import make_coord_grid, str2bool
 import time
 import torch.nn.functional as F
-from typing import Dict, List, Tuple
-from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtGui import QImage, QPixmap
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget, QLabel
-import sys
+from typing import List, Tuple
 from math import ceil
 
 def sync_time():
@@ -68,7 +63,6 @@ class RawData(torch.nn.Module):
                 mode='bilinear', align_corners=True).squeeze().unsqueeze(1)
         return y.to(x_device)
 
-
 class TransferFunction():
     def __init__(self, device, 
                  min_value :float = 0.0, max_value:float = 1.0, colormap=None):
@@ -118,7 +112,6 @@ class TransferFunction():
                         device=self.device)
         self.color_values = torch.stack([r,g,b], dim=1)
         
-        
         # If alpha points set, load those, otherwise ramp opacity  
         if("Points" in color_data.keys()):
             a_data = color_data['Points']
@@ -158,22 +151,22 @@ class TransferFunction():
                                 dtype=torch.float32,
                                 device=self.device)
         self.precompute_maps()
-        
+      
     def precompute_maps(self):
+        self.precompute_color_map()
+        self.precompute_opacity_map()
+    
+    def precompute_color_map(self):
         self.precomputed_color_map = torch.zeros([self.num_dict_entries, 3],
-                                dtype=torch.float32,
-                                device=self.device)
-        self.precomputed_opacity_map = torch.zeros([self.num_dict_entries, 1],
-                                dtype=torch.float32,
-                                device=self.device)
-        
+                            dtype=torch.float32,
+                            device=self.device)
         for ind in range(self.color_control_points.shape[0]-1):
             color_a = self.color_values[ind]
             color_b = self.color_values[ind+1]
             
-            section_range = self.color_control_points[ind+1]-self.color_control_points[ind]
             start_ind = int(self.num_dict_entries*self.color_control_points[ind])
-            num_elements = int(self.num_dict_entries*section_range)
+            end_ind = int(self.num_dict_entries*self.color_control_points[ind+1])
+            num_elements = end_ind - start_ind
             if(num_elements > 0):
                 color_a = color_a.unsqueeze(0).repeat(num_elements, 1)
                 color_b = color_b.unsqueeze(0).repeat(num_elements, 1)
@@ -181,16 +174,21 @@ class TransferFunction():
                 lerp_values = torch.arange(0.0, 1.0, step=(1/num_elements),
                                 dtype=torch.float32,
                                 device=self.device).unsqueeze(1).repeat(1, 3)
-                self.precomputed_color_map[start_ind:start_ind+num_elements] =\
+                self.precomputed_color_map[start_ind:end_ind] =\
                     color_a * (1-lerp_values) + color_b*lerp_values
+                    
+    def precompute_opacity_map(self):       
+        self.precomputed_opacity_map = torch.zeros([self.num_dict_entries, 1],
+                                dtype=torch.float32,
+                                device=self.device)
         
         for ind in range(self.opacity_control_points.shape[0]-1):
             opacity_a = self.opacity_values[ind]
             opacity_b = self.opacity_values[ind+1]
             
-            section_range = self.opacity_control_points[ind+1]-self.opacity_control_points[ind]
             start_ind = int(self.num_dict_entries*self.opacity_control_points[ind])
-            num_elements = int(self.num_dict_entries*section_range)
+            end_ind = int(self.num_dict_entries*self.opacity_control_points[ind+1])
+            num_elements = end_ind - start_ind
             if(num_elements > 0):
                 opacity_a = opacity_a.unsqueeze(0).repeat(num_elements, 1)
                 opacity_b = opacity_b.unsqueeze(0).repeat(num_elements, 1)
@@ -198,13 +196,22 @@ class TransferFunction():
                 lerp_values = torch.arange(0.0, 1.0, step=(1/num_elements),
                                 dtype=torch.float32,
                                 device=self.device).unsqueeze(1)[0:num_elements]
-                self.precomputed_opacity_map[start_ind:start_ind+num_elements] =\
+                self.precomputed_opacity_map[start_ind:end_ind] =\
                     opacity_a * (1-lerp_values) + opacity_b*lerp_values
-
+        
     def set_minmax(self, min, max):
         self.min_value = min
         self.max_value = max
     
+    def update_opacities(self, opacity_control_points, opacity_values):
+        self.opacity_control_points = torch.tensor(opacity_control_points,
+                                    dtype=torch.float32,
+                                    device=self.device)  
+        self.opacity_values = torch.tensor(opacity_values,
+                                    dtype=torch.float32,
+                                    device=self.device)
+        self.precompute_opacity_map()
+        
     def color_at_value(self, value:torch.Tensor):
         value_ind = (value[:,0] - self.min_value) / (self.max_value - self.min_value)
         value_ind *= self.num_dict_entries
@@ -380,7 +387,6 @@ class Scene(torch.nn.Module):
                         full_shape[1]-1,
                         full_shape[2]-1], 
             device=self.device)
-        print(f"Bounding box: {self.scene_aabb}")
         self.image_resolution : Tuple[int]= image_resolution
         self.batch_size : int = batch_size
         self.spp = spp
@@ -474,7 +480,7 @@ class Scene(torch.nn.Module):
             sample_locs = self.rays_o[ray_indices[ray_ind_start:ray_ind_end]] + \
                 self.rays_d[ray_indices[ray_ind_start:ray_ind_end]] * \
                     (t_starts[ray_ind_start:ray_ind_end] + t_ends[ray_ind_start:ray_ind_end]) / 2
-            sample_locs /= self.scene_aabb[3:]
+            sample_locs /= (self.scene_aabb[3:]-1)
             sample_locs *= 2
             sample_locs -= 1
             densities = self.model(sample_locs)
@@ -634,7 +640,19 @@ class Scene(torch.nn.Module):
         self.passes = 0
         self.mip_level = 0
         torch.cuda.empty_cache()
-    
+   
+    def on_tf_change(self):
+        self.image.zero_()
+        self.mask.zero_()
+        self.temp_image.zero_()
+        self.mip = torch.zeros([ceil(self.height/self.strides), 
+                                ceil(self.width/self.strides), 3],
+                              device=self.device, dtype=torch.float32)
+        self.current_order_spot = 0       
+        self.passes = 0
+        self.mip_level = 0
+        torch.cuda.empty_cache() 
+         
     def on_rotate_zoom_pan(self):
         self.image.zero_()
         self.mask.zero_()
@@ -740,26 +758,6 @@ class Scene(torch.nn.Module):
         return self.image, imgs
     
 
-# Subclass QMainWindow to customize your application's main window
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-
-        self.setWindowTitle("My App")
-    
-        self.render_view = QLabel()
-    
-        # Set the central widget of the Window.
-        self.setCentralWidget(self.render_view)
-        
-    def set_render_image(self, img):    
-        height, width, channel = img.shape
-        bytesPerLine = channel * width
-        qImg = QImage(img, width, height, bytesPerLine, QImage.Format_RGB888)
-        self.render_view.setPixmap(QPixmap(qImg))
-
-
-            
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate a model on some tests')
 
@@ -829,55 +827,7 @@ if __name__ == '__main__':
         full_shape = model.shape
     
     batch_size = 2**23
-    
-    if(args['tensorrt']):
-        import torch_tensorrt as torchtrt
-        # Convert model to torch.jit.scriptmodule
-        if("NGP" in opt['model']):
-            print(f"Cannot convert model type {opt['model']} to torchscript for ONNX conversion. Exiting.")
-            quit()
-        # Check if TCNN was used in this model and convert if necessary
-        if("decoder.params" in model.state_dict().keys()):
-            print(f"TCNN decoder used in model. Converting to pytorch for tracing.")
-            from model_to_torchscript import convert_tcnn_to_pytorch
-            new_model_name = convert_tcnn_to_pytorch(opt['save_name'])
-            opt = load_options(os.path.join(save_folder, new_model_name))
-            opt["device"] = args['device']    
-            model = load_model(opt, opt['device'])
-            model = model.to(opt['device'])
-        model = model.eval()
-        print(model)
-        #model = torch.jit.script(model)
-        
-        '''  
-        # Convert model to onnx
-        onnx_file_path = os.path.join(save_folder, opt['save_name'], "model.onnx")
-        torch.onnx.export(model, torch.rand([1, 3],
-                                dtype=torch.float32, 
-                                device=opt['device']),
-                          onnx_file_path,
-                          export_params=True, 
-                          input_names=["input"],
-                          output_names=['output'],
-                          opset_version=16 #needed for grid_sampler
-                          )
-        model = onnx.load(onnx_file_path)
-        onnx.checker.check_model(model)
-        '''
-        
-        os.environ["CUDA_MODULE_LOADING"] = "LAZY"
-        # Convert to torch_tensorrt
-        inputs = [
-            torchtrt.Input([batch_size, 3],
-                dtype=torch.float32
-            )
-        ]
-        enabled_precisions = {torch.float}#, torch.half}
-        model = torchtrt.compile(model, 
-                inputs = inputs, 
-                enabled_precisions = enabled_precisions,
-                workspace_size = 1 << 33)
-             
+            
     if("cuda" in args['device']):        
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.benchmark = True
@@ -887,14 +837,16 @@ if __name__ == '__main__':
                           0.0,1.0,
                           #model.min(), model.max(), 
                           args['colormap'])
-    aabb = np.array([0.0, 0.0, 0.0, 
+    aabb = torch.tensor([0.0, 0.0, 0.0, 
                         full_shape[0]-1,
                         full_shape[1]-1,
                         full_shape[2]-1])
+    if(args['dist'] is None):
+        args['dist'] = (aabb[3]**2 + aabb[4]**2 + aabb[5]**2)**0.5
     camera = Camera(
         device,
         scene_aabb=aabb,
-        coi=aabb[3:].mean(), # camera lookat center of aabb,
+        coi=aabb.reshape(2,3).mean(dim=0), # camera lookat center of aabb,
         azi_deg=args['azi'],
         polar_deg=args['polar'],
         dist=args['dist']
@@ -906,14 +858,14 @@ if __name__ == '__main__':
         args['dist'] = (scene.scene_aabb.max(0)[0] - scene.scene_aabb.min(0)[0])*1.8
         print("Camera distance to center of AABB:", args['dist'])
         
-    print(camera.get_c2w())
+    #print(camera.get_c2w())
     free_mem, total_mem = torch.cuda.mem_get_info(device)
     free_mem /= (1024)**3
     total_mem /= (1024)**3
     print(f"GPU memory free/total {free_mem:0.02f}GB/{total_mem:0.02f}GB")
     
     # One warm up is always slower    
-    img, seq = scene.render_checkerboard(camera)
+    img, seq = scene.render_checkerboard()
 
     from imageio import imsave
     imsave("Output/render.png", (img*255).cpu().numpy().astype(np.uint8))
@@ -955,13 +907,14 @@ if __name__ == '__main__':
     imsave("Output/model.png", img.cpu().numpy())
     '''
     
-    '''
+    
     timesteps = 10
     times = np.zeros([timesteps])
     for i in range(timesteps):
         torch.cuda.empty_cache()
         t0 = sync_time()
-        img = scene.render_checkerboard(camera)   
+        scene.current_order_spot = 0
+        img = scene.render_checkerboard()   
         t1 = sync_time()
         times[i] = t1-t0
     print(times)
@@ -970,20 +923,8 @@ if __name__ == '__main__':
     print(f"Min frame time: {times.min():0.04f}")
     print(f"Max frame time: {times.max():0.04f}")
     print(f"Average FPS: {1/times.mean():0.02f}")
-    '''
+    
     GBytes = (torch.cuda.max_memory_allocated(device=device) \
                 / (1024**3))
     print(f"{GBytes : 0.02f}GB of memory used (max reserved) during render.")
     
-    # #plt.imshow(np.flip(img, 0))
-    # #plt.show()
-    
-    # app = QApplication([])
-
-    # window = MainWindow()
-    # img = img*255
-    # img = img.astype(np.uint8)
-    # window.set_render_image(img)
-    # window.show()
-
-    # app.exec()

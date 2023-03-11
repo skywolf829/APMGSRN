@@ -32,7 +32,7 @@ def model_reconstruction(model, opt):
 
 def model_reconstruction_chunked(model, opt):
     
-    chunk_size = 768
+    chunk_size = 512
     full_shape = opt['full_shape']
     
     output = torch.empty(opt['full_shape'], 
@@ -239,7 +239,7 @@ def scale_distribution(model, opt):
 
 def test_throughput(model, opt):
 
-    batch = 2**24
+    batch = 2**23
     num_forward = 1000
 
     with torch.no_grad():
@@ -382,6 +382,7 @@ if __name__ == '__main__':
     model = model.to(opt['device'])
     model.train(False)
     model.eval()
+    print(model)
     
     # Perform tests
     perform_tests(model, tests_to_run, opt)

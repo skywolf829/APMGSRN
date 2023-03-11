@@ -1,23 +1,7 @@
 [
     [ "train.py",
         {        
-            "save_name": "Asteroid_featgridlogging",
-            "model": "AMGSRN",
-            "data": "asteroid.nc",
-            "n_features": 4,
-            "n_grids": 16,
-            "feature_grid_shape": "64,64,64",
-            "n_layers": 2,
-            "nodes_per_layer": 64,
-            "precondition": false,
-            "log_every": 50,
-            "log_features_every": 50,
-            "lr": 0.01,
-            "iterations": 50000
-    }],
-    [ "train.py",
-        {        
-            "save_name": "Plume_featgridlogging",
+            "save_name": "temp",
             "model": "AMGSRN",
             "data": "Plume.nc",
             "n_features": 2,
@@ -26,9 +10,9 @@
             "n_layers": 2,
             "nodes_per_layer": 64,
             "precondition": false,
-            "log_every": 50,
-            "log_features_every": 50,
+            "log_every": 100,
+            "log_features_every": 0,
             "lr": 0.01,
-            "iterations": 50000
+            "iterations": 10000
     }]
 ]
