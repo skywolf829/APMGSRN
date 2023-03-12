@@ -216,10 +216,12 @@ class TransferFunction():
         return values
         
     def remap_value_inplace(self, values):
-        new_min = -(self.mapping_minmax[0])
-        new_max = 2 - self.mapping_minmax[1]
-        values *= (new_max - new_min)
-        values += new_min
+        #new_min = -(self.mapping_minmax[0])
+        #new_max = 2 - self.mapping_minmax[1]
+        values -= self.mapping_minmax[0]
+        values /= (self.mapping_minmax[1] - self.mapping_minmax[0])
+        #values *= (new_max - new_min)
+        #values += new_min
     
     def update_opacities(self, opacity_control_points, opacity_values):
         self.opacity_control_points = torch.tensor(opacity_control_points,
