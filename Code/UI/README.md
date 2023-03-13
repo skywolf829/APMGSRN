@@ -93,7 +93,7 @@ Add your saved model into our ```SavedModels``` folder (matching our format of h
 1. It is required to have a CUDA enabled GPU to do any rendering.
 2. The renderer uses only "cuda:0", and does not currently support using any other slots unless that is overwritten in the code. (see init for ```RendererThread``` where it is defined).
 3. A 3 channel coordinate is expected as input, and only single channel output is expected from the network for use in a transfer function, which makes this incompatible with radiance fields networks that may expect 3D coordinate + viewing angle input, and (r,g,b,a) output. 
-4. Renderer was only tested on a 2080Ti 11GB and a 3070 8GB, so performance on cards older (or newer!) than these is unknown.
+4. Renderer was only tested with a GTX 1060 3GB, RTX 2080Ti 11GB and an RTX 3070 8GB, so performance on cards older (or newer!) than these is unknown. However, even the GTX 1060 was performant during renders, but smaller batch sizes were necessary to fit in the VRAM.
 
 ---
 ## Known issues/bugs

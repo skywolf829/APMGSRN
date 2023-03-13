@@ -182,7 +182,19 @@ An offline command-line version is available at at ```Code/renderer.py```, which
 The online renderer with a GUI is in ```Code/UI```. 
 Please see that folder's README if you'd like to use the realtime renderer with interactivity.
 
-To start the Python server, run ```flask Code/Renderer/app.py```, which will host serve to localhost at endpoint 5000. In a web browser, navigate to localhost:5000 to view the renderer. If the port is open, you can connect to it from other machines as well, such as a laptop that is not CUDA-accelerated.
+For offline single-frame rendering of a network or NetCDF file, see the descriptions of command line arguments with
 
-Inside the renderer, you can choose which model to load to render with as well as transfer function. Rotate the camera by clicking and dragging, pan the camera with middle mouse clicking and dragging, and zoom with mousewheel. Our progressive renderer will update the image in a checkerboard pattern with mip maps to give a resonable view of the render while pixels are still being evaluated on the backend.
+```python Code/renderer.py --help```
+
+Noteable options are:
+1. ```--hw```: the height and width for the output image, separated by comma
+2. ```--load_from```: the model name to load from for the render
+3. ```--spp```: samples per ray on a pixel
+4. ```--azi, --polar, --dist```: viewing parameters for the arcball camera
+5. ```colormap```: pick the colormap json file from ```Colormaps``` folder
+
+Examples:
+
+```python Code/renderer.py --hw 1024,1024 --spp 512 --azi 45 --polar 45 --load_from Supernova_AMGSRN_small --colormap Viridis.json```
+```python Code/renderer.py --azi 45 --polar 45 --raw_data true --load_from Supernova.nc```
 
