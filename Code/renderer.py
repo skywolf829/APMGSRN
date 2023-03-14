@@ -791,8 +791,6 @@ if __name__ == '__main__':
     parser.add_argument('--load_from',default=None,type=str,help="Model name to load")
     parser.add_argument('--device',default="cuda:0",type=str,
                         help="Device to load model to")
-    parser.add_argument('--tensorrt',default=False,type=str2bool,
-                        help="Use TensorRT acceleration")
     parser.add_argument('--colormap',default=None,type=str,
                         help="The colormap file to use for visualization.")
     parser.add_argument('--raw_data',default="false",type=str2bool,
@@ -829,6 +827,12 @@ if __name__ == '__main__':
         type=lambda s: [int(item) for item in s.split(",")],
         help="comma seperated height and width of image. Ex: --hw=512,512"
     )
+    parser.add_argument(
+        '--batch_size',
+        default=2**20,
+        type=int,
+        help="batch size for feedforward. Larger batch size renders faster. Use smaller values for smaller VRAM. Typically between 2^19 - 2^25."
+    )
     
     # rendering args ********* <-
     
@@ -853,7 +857,7 @@ if __name__ == '__main__':
         model = RawData(args['load_from'], args['device'])
         full_shape = model.shape
     
-    batch_size = 2**23
+    batch_size = args['batch_size']
             
     if("cuda" in args['device']):        
         torch.backends.cuda.matmul.allow_tf32 = True
