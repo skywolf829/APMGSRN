@@ -259,7 +259,7 @@ class TransferFunction():
         value = value.to(self.device)
         value -= self.min_value
         value /= (self.max_value-self.min_value)
-        self.remap_value_inplace(value)
+        #self.remap_value_inplace(value)
         value *= self.num_dict_entries
         value = value.type(torch.long)
         value.clamp_(0,self.num_dict_entries-1)
