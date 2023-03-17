@@ -746,7 +746,7 @@ class Scene(torch.nn.Module):
             self.rays_o = self.cam_origin.expand(num_rays, 3)
             
             ray_indices, t_starts, t_ends = ray_marching(
-                self.rays_o, self.rays_d,
+                self.rays_o.cuda(), self.rays_d.cuda(),
                 scene_aabb=self.scene_aabb, 
                 render_step_size = self.max_view_dist/self.spp,
                 #grid=self.occupancy_grid
