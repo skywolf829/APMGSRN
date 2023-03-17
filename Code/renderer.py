@@ -481,7 +481,7 @@ class Scene(torch.nn.Module):
         # print(self.rays_d.shape)
         # print(self.rays_o.shape)
         
-        max_view_dist = ((self.scene_aabb[3]/2)**2 + (self.scene_aabb[4]/2)**2 + (self.scene_aabb[5]/2)**2)**0.5
+        max_view_dist = (self.scene_aabb[3]**2 + self.scene_aabb[4]**2 + self.scene_aabb[5]**2)**0.5
         ray_indices, t_starts, t_ends = ray_marching(
             self.rays_o, self.rays_d,
             scene_aabb=self.scene_aabb, 
@@ -655,7 +655,7 @@ class Scene(torch.nn.Module):
         return order
 
     def on_setting_change(self):
-        self.max_view_dist = ((self.scene_aabb[3]/2)**2 + (self.scene_aabb[4]/2)**2 + (self.scene_aabb[5]/2)**2)**0.5
+        self.max_view_dist = (self.scene_aabb[3]**2 + self.scene_aabb[4]**2 + self.scene_aabb[5]**2)**0.5
         self.height, self.width = self.image_resolution[:2]
         n_point_evals = self.width * self.height * self.spp * (1-self.amount_empty)
         n_passes = n_point_evals / self.batch_size
