@@ -398,4 +398,7 @@ if __name__ == '__main__':
 
     d, _ = nc_to_tensor(os.path.join(data_folder, "rotstrat4096.nc"))
     print(d.shape)
+    d = d[:,:,::11,::11,::11]
+    print(d.shape)
+    tensor_to_cdf(d, os.path.join(data_folder, "rotstrat_downsampled.nc"))
     quit()
