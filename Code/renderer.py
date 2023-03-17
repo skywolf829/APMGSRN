@@ -833,6 +833,13 @@ if __name__ == '__main__':
         type=int,
         help="batch size for feedforward. Larger batch size renders faster. Use smaller values for smaller VRAM. Typically between 2^19 - 2^25."
     )
+
+    parser.add_argument(
+        '--img_name',
+        default="render.png",
+        type=str,
+        help="The save name for the rendered image."
+    )
     
     # rendering args ********* <-
     
@@ -899,7 +906,8 @@ if __name__ == '__main__':
     img, seq = scene.render_checkerboard()
 
     from imageio import imsave
-    imsave("Output/render.png", (img*255).cpu().numpy().astype(np.uint8))
+    imsave(os.path.join(output_folder, args['img_name']), 
+           (img*255).cpu().numpy().astype(np.uint8))
 
     '''
     total_time = 1.43
@@ -938,7 +946,7 @@ if __name__ == '__main__':
     imsave("Output/model.png", img.cpu().numpy())
     '''
     
-    
+    '''
     timesteps = 10
     times = np.zeros([timesteps])
     for i in range(timesteps):
@@ -954,7 +962,8 @@ if __name__ == '__main__':
     print(f"Min frame time: {times.min():0.04f}")
     print(f"Max frame time: {times.max():0.04f}")
     print(f"Average FPS: {1/times.mean():0.02f}")
-    
+    '''
+
     GBytes = (torch.cuda.max_memory_allocated(device=device) \
                 / (1024**3))
     print(f"{GBytes : 0.02f}GB of memory used (max reserved) during render.")
