@@ -259,7 +259,7 @@ class TransferFunction():
         value = value.to(self.device)
         value -= self.min_value
         value /= (self.max_value-self.min_value)
-        #self.remap_value_inplace(value)
+        self.remap_value_inplace(value)
         value *= self.num_dict_entries
         value = value.type(torch.long)
         value.clamp_(0,self.num_dict_entries-1)
@@ -880,9 +880,8 @@ if __name__ == '__main__':
         torch.backends.cudnn.benchmark = True
     device = args['device']
     
-    tf = TransferFunction(device, 
-                          0.0,1.0,
-                          #model.min(), model.max(), 
+    tf = TransferFunction(device,
+                          model.min(), model.max(), 
                           args['colormap'])
     aabb = torch.tensor([0.0, 0.0, 0.0, 
                         full_shape[0]-1,
