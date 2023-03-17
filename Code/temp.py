@@ -396,4 +396,6 @@ def checkerboard_render(w,h):
 
 if __name__ == '__main__':
 
+    d, _ = nc_to_tensor(os.path.join(data_folder, "rotstrat4096.nc"))
+    print(d.shape)
     quit()
