@@ -905,10 +905,10 @@ if __name__ == '__main__':
         print("Camera distance to center of AABB:", args['dist'])
         
     #print(camera.get_c2w())
-    free_mem, total_mem = torch.cuda.mem_get_info(device)
-    free_mem /= (1024)**3
-    total_mem /= (1024)**3
-    print(f"GPU memory free/total {free_mem:0.02f}GB/{total_mem:0.02f}GB")
+    #free_mem, total_mem = torch.cuda.mem_get_info(device)
+    #free_mem /= (1024)**3
+    #total_mem /= (1024)**3
+    #print(f"GPU memory free/total {free_mem:0.02f}GB/{total_mem:0.02f}GB")
     
     # One warm up is always slower    
     img, seq = scene.render_checkerboard()
@@ -972,7 +972,7 @@ if __name__ == '__main__':
     print(f"Average FPS: {1/times.mean():0.02f}")
     '''
 
-    GBytes = (torch.cuda.max_memory_allocated(device=device) \
-                / (1024**3))
-    print(f"{GBytes : 0.02f}GB of memory used (max reserved) during render.")
+    #GBytes = (torch.cuda.max_memory_allocated(device=device) \
+    #            / (1024**3))
+    #print(f"{GBytes : 0.02f}GB of memory used (max reserved) during render.")
     
