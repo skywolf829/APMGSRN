@@ -412,10 +412,11 @@ class Scene(torch.nn.Module):
         image_resolution:Tuple[int], 
         batch_size : int, spp : int,
         transfer_function:TransferFunction,
-        device):
+        device="cuda:0", data_device="cuda:0"):
         super().__init__()
         self.model = model
         self.device : str = device
+        self.data_device : str = data_device
         self.scene_aabb = \
             torch.tensor([0.0, 0.0, 0.0, 
                         full_shape[0]-1,
@@ -496,7 +497,7 @@ class Scene(torch.nn.Module):
         sample_locs /= self.scene_aabb[3:]
         sample_locs *= 2 
         sample_locs -= 1
-        densities = self.model(sample_locs.to(self.device))
+        densities = self.model(sample_locs.to(self.data_device)).to(self.device)
         rgbs, alphas = self.transfer_function.color_opacity_at_value(densities[:,0])
         alphas += 1
         alphas.log_()
@@ -746,8 +747,8 @@ class Scene(torch.nn.Module):
             self.rays_o = self.cam_origin.expand(num_rays, 3)
             
             ray_indices, t_starts, t_ends = ray_marching(
-                self.rays_o.cuda(), self.rays_d.cuda(),
-                scene_aabb=self.scene_aabb.cuda(), 
+                self.rays_o, self.rays_d,
+                scene_aabb=self.scene_aabb, 
                 render_step_size = self.max_view_dist/self.spp,
                 #grid=self.occupancy_grid
             )
@@ -798,7 +799,9 @@ if __name__ == '__main__':
 
     parser.add_argument('--load_from',default=None,type=str,help="Model name to load")
     parser.add_argument('--device',default="cuda:0",type=str,
-                        help="Device to load model to")
+                        help="Device to perform rendering on (requires CUDA)")
+    parser.add_argument('--data_device',default="cuda:0",type=str,
+                        help="Device to load and perform model/data inference/sampling")
     parser.add_argument('--colormap',default=None,type=str,
                         help="The colormap file to use for visualization.")
     parser.add_argument('--raw_data',default="false",type=str2bool,
@@ -864,17 +867,17 @@ if __name__ == '__main__':
         opt = load_options(os.path.join(save_folder, args['load_from']))
         opt['data_min'] = 0
         opt['data_max'] = 1
-        opt['device'] = args['device']
-        model = load_model(opt, args['device']).to(opt['device'])
+        opt['device'] = args['data_device']
+        model = load_model(opt, args['data_device']).to(opt['data_device'])
         full_shape = opt['full_shape']
         model.eval()
     else:
-        model = RawData(args['load_from'], args['device'])
+        model = RawData(args['load_from'], args['data_device'])
         full_shape = model.shape
     
     batch_size = args['batch_size']
             
-    if("cuda" in args['device']):        
+    if("cuda" in args['device'] or "cuda" in args['data_device']):        
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.benchmark = True
     device = args['device']
@@ -898,7 +901,9 @@ if __name__ == '__main__':
         dist=args['dist']
     )
         
-    scene = Scene(model, camera, full_shape, args['hw'], batch_size, args['spp'], tf, device)
+    scene = Scene(model, camera, full_shape, args['hw'], 
+                  batch_size, args['spp'], tf, device, 
+                  args['data_device'])
     if args['dist'] is None:
         # set default camera distance to COI by a ratio to AABB
         args['dist'] = (scene.scene_aabb.max(0)[0] - scene.scene_aabb.min(0)[0])*1.8
