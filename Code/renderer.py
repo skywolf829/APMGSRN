@@ -70,7 +70,7 @@ class TransferFunction():
         
         self.min_value = min_value
         self.max_value = max_value
-        self.mapping_minmax = torch.tensor([min_value, max_value], device=self.device)
+        self.mapping_minmax = torch.tensor([0.0, 1.0], device=self.device)
         
         self.num_dict_entries = 4096
         if(colormap is None):
