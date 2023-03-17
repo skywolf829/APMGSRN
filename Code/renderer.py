@@ -233,6 +233,8 @@ class TransferFunction():
         self.precompute_opacity_map()
         
     def color_at_value(self, value:torch.Tensor):
+        value_device = value.device
+        value = value.to(self.device)
         value_ind = (
             (value[:,0] - self.min_value) / (self.max_value - self.min_value) *
             (self.mapping_minmax[1] - self.mapping_minmax[0]) + self.mapping_minmax[0]
@@ -240,9 +242,11 @@ class TransferFunction():
         value_ind *= self.num_dict_entries
         value_ind = value_ind.long()
         value_ind.clamp_(0,self.num_dict_entries-1)
-        return torch.index_select(self.precomputed_color_map, dim=0, index=value_ind)
+        return torch.index_select(self.precomputed_color_map, dim=0, index=value_ind).to(value_device)
     
     def opacity_at_value(self, value:torch.Tensor):
+        value_device = value.device
+        value = value.to(self.device)
         value_ind = (
             (value[:,0] - self.min_value) / (self.max_value - self.min_value) *
             (self.mapping_minmax[1] - self.mapping_minmax[0]) + self.mapping_minmax[0]
@@ -250,27 +254,31 @@ class TransferFunction():
         value_ind *= self.num_dict_entries
         value_ind = value_ind.type(torch.long)
         value_ind.clamp_(0,self.num_dict_entries-1)
-        return torch.index_select(self.precomputed_opacity_map, dim=0, index=value_ind)
+        return torch.index_select(self.precomputed_opacity_map, dim=0, index=value_ind).to(value_device)
 
     def color_opacity_at_value(self, value:torch.Tensor):
+        value_device = value.device
+        value = value.to(self.device)
         value -= self.min_value
         value /= (self.max_value-self.min_value)
         self.remap_value_inplace(value)
         value *= self.num_dict_entries
         value = value.type(torch.long)
         value.clamp_(0,self.num_dict_entries-1)
-        return (torch.index_select(self.precomputed_color_map, dim=0, index=value),
-            torch.index_select(self.precomputed_opacity_map, dim=0, index=value))
+        return (torch.index_select(self.precomputed_color_map, dim=0, index=value).to(value_device),
+            torch.index_select(self.precomputed_opacity_map, dim=0, index=value).to(value_device))
     
     def color_opacity_at_value_inplace(self, value:torch.Tensor, rgbs, alphas, start_ind):
+        value_device = value.device
+        value = value.to(self.device)
         value_ind = self.remap_value((value[:,0] - self.min_value) / (self.max_value - self.min_value))
         value_ind *= self.num_dict_entries
         value_ind = value_ind.type(torch.long)
         value_ind.clamp_(0,self.num_dict_entries-1)
         rgbs[start_ind:start_ind+value.shape[0]] = \
-            torch.index_select(self.precomputed_color_map, dim=0, index=value_ind)
+            torch.index_select(self.precomputed_color_map, dim=0, index=value_ind).to(value_device)
         alphas[start_ind:start_ind+value.shape[0]] = \
-            torch.index_select(self.precomputed_opacity_map, dim=0, index=value_ind)
+            torch.index_select(self.precomputed_opacity_map, dim=0, index=value_ind).to(value_device)
 
 class Camera():
     def __init__(self, device,
@@ -472,7 +480,7 @@ class Scene(torch.nn.Module):
         # print(self.rays_d.shape)
         # print(self.rays_o.shape)
         
-        max_view_dist = (self.scene_aabb[3]**2 + self.scene_aabb[4]**2 + self.scene_aabb[5]**2)**0.5
+        max_view_dist = ((self.scene_aabb[3]/2)**2 + (self.scene_aabb[4]/2)**2 + (self.scene_aabb[5]/2)**2)**0.5
         ray_indices, t_starts, t_ends = ray_marching(
             self.rays_o, self.rays_d,
             scene_aabb=self.scene_aabb, 
@@ -488,7 +496,7 @@ class Scene(torch.nn.Module):
         sample_locs /= self.scene_aabb[3:]
         sample_locs *= 2 
         sample_locs -= 1
-        densities = self.model(sample_locs)
+        densities = self.model(sample_locs.to(self.device))
         rgbs, alphas = self.transfer_function.color_opacity_at_value(densities[:,0])
         alphas += 1
         alphas.log_()
@@ -528,7 +536,7 @@ class Scene(torch.nn.Module):
         with torch.no_grad():
             for start in range(0, coords.shape[0], self.batch_size):
                 output[start:min(start+self.batch_size, coords.shape[0])] = \
-                    model(coords[start:min(start+self.batch_size, coords.shape[0])])
+                    model(coords[start:min(start+self.batch_size, coords.shape[0])].to(self.device))
         return output
 
     def render_rays(self, t_starts, t_ends, ray_indices, n_rays):
@@ -646,7 +654,7 @@ class Scene(torch.nn.Module):
         return order
 
     def on_setting_change(self):
-        self.max_view_dist = (self.scene_aabb[3]**2 + self.scene_aabb[4]**2 + self.scene_aabb[5]**2)**0.5
+        self.max_view_dist = ((self.scene_aabb[3]/2)**2 + (self.scene_aabb[4]/2)**2 + (self.scene_aabb[5]/2)**2)**0.5
         self.height, self.width = self.image_resolution[:2]
         n_point_evals = self.width * self.height * self.spp * (1-self.amount_empty)
         n_passes = n_point_evals / self.batch_size
