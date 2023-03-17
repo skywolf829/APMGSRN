@@ -891,7 +891,7 @@ if __name__ == '__main__':
                         full_shape[1]-1,
                         full_shape[2]-1])
     if(args['dist'] is None):
-        args['dist'] = ((aabb[3]/2)**2 + (aabb[4]/2)**2 + (aabb[5]/2)**2)**0.5
+        args['dist'] = (aabb[3]**2 + aabb[4]**2 + aabb[5]**2)**0.5
     camera = Camera(
         device,
         scene_aabb=aabb,
