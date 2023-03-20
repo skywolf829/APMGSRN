@@ -449,47 +449,6 @@ def tensor_to_h5(t, location):
     h['data'] = t[0].clone().detach().cpu().numpy()
     h.close()
 
-# x,y,z coordiantes either numpy / vtk array 
-def get_vtr(dims, xCoords, yCoords, zCoords, 
-            scalar_fields={}, vector_fields={}):
-    
-    import vtk
-    from vtkmodules.util import numpy_support  
-    assert type(xCoords) == type(yCoords) and type(yCoords) == type(zCoords)
-    assert isinstance(xCoords, np.ndarray) or isinstance(xCoords, vtk.vtkDataArray)
-
-
-    grid = vtk.vtkRectilinearGrid()
-    grid.SetDimensions(dims)
-
-    if isinstance(xCoords, np.ndarray):
-        xCoords = numpy_support.numpy_to_vtk(xCoords)
-        yCoords = numpy_support.numpy_to_vtk(yCoords)
-        zCoords = numpy_support.numpy_to_vtk(zCoords)
-
-    grid.SetXCoordinates(xCoords)
-    grid.SetYCoordinates(yCoords)
-    grid.SetZCoordinates(zCoords)
-
-    pd = grid.GetPointData()
-    
-    for i, (k, v) in enumerate(scalar_fields.items()):
-        vtk_array = numpy_support.numpy_to_vtk(v)
-        vtk_array.SetName(k)
-        if i == 0:
-            pd.SetScalars(vtk_array)
-        else:
-            pd.AddArray(vtk_array)
-
-    for i, (k, v) in enumerate(vector_fields.items()):
-        vtk_array = numpy_support.numpy_to_vtk(v)
-        vtk_array.SetName(k)
-        if i == 0:
-            pd.SetVectors(vtk_array)
-        else:
-            pd.AddArray(vtk_array)
-    return grid
-
 def solution_to_cdf(data, location, channel_names = ['data']):
     '''
     Saves a 3D grid of data as a NetCDF file.

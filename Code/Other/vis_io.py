@@ -13,35 +13,6 @@ def np_zeropad(arr, length, axis):
   padded = np.concatenate((arr, npad), axis=axis)
   return padded
 
-def get_streamline_data(slPD: vtk.vtkPolyData):
-  sls = [0]*slPD.GetNumberOfCells()
-  ids = [0]*slPD.GetNumberOfCells()
-  sl_lens = np.zeros(slPD.GetNumberOfCells(), dtype=np.int32)
-  for i in range(slPD.GetNumberOfCells()):
-    sl = slPD.GetCell(i)
-    points = sl.GetPoints()
-    # WHY? ISSUE: if don't do points_np.copy(), then all the streamline will be the same.
-    points_np = np.copy(numpy_support.vtk_to_numpy(points.GetData()))
-
-    # DEBUG: check vtkPoints address and np address
-    # print(f'vtkPoints address: {hex(id(points.GetData()))}, numpy address: {hex(id(points_np))}', end="         start point coord : ")
-    # print(points_np[0])
-
-    if (points_np.max() > 1 or points_np.min() < 0):
-      print(f'For this streamline --- max coord: {points_np.max()}      min coord: {points_np.min()}')
-    
-    id_np = i*np.ones((len(points_np), 1))
-
-    sl_lens[i] = len(points_np)
-    # print(f"Current streamline length: {sl_lens[i]}")
-    ids[i] = id_np
-    sls[i] = points_np
-
-  sl_points_pos = np.concatenate(sls)
-  sl_points_id = np.concatenate(ids)
-  print(f"Average Line lengths (# of points): {sl_lens.mean()}")
-  return sls, sl_lens, ids, sl_points_pos, sl_points_id
-
 # create a mesh matrix of shape (D1, ..., Di, #ofDim). Di = dimension i length
 def get_mesh(*dims):
   mesh_coords = []
@@ -299,22 +270,3 @@ def write_pvd(vtkPath:list, outPath:str, timesteps=None):
   
   pvd_et = ET.ElementTree(vtkfile)
   pvd_et.write(outPath, xml_declaration=True)
-
-# def tracer_to_pvd(tracer_paths, vtk_directory_path):
-
-#   if not os.path.exists(vtk_directory_path):
-#     os.makedirs(vtk_directory_path)
-
-#   timesteps = [int(tp[-15:-7]) for tp in tracer_paths]
-#   vtk_paths = [f'{vtk_directory_path}/tracer{t:08}.vtu' for t in timesteps]
-
-#   loader = TracerLoader()
-#   for i in trange(len(timesteps)):
-#     loader.write_vtk(tracer_paths[i], vtk_paths[i])
-  
-#   vtk_directory_idx = vtk_directory_path.rfind('/')
-
-#   vtk_paths_to_pvd = [vp[vtk_directory_idx+1:] for vp in vtk_paths]
-#   vtk_parent_directory = vtk_directory_path[:vtk_directory_idx]
-
-#   loader.write_pvd(vtk_paths_to_pvd, timesteps, f'{vtk_parent_directory}/tracers.pvd')
