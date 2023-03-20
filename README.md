@@ -1,15 +1,28 @@
 # AMGSRN
 
+![Image unavailable](/Figures/AMGSRN_teaser.jpg "Adaptive grids fitting to the data")
+
 This repo contains code for adaptive multi-grid scene representation network (AMGSRN), an ensemble training routine for large-scale data, and a neural volume renderer.
 Materials are prepared for submission to VIS2023 for our paper titled "Adaptive Multi-Grid Scene Representation Networks for Large-Scale Data Visualization", submission ID 1036, submitted on March 31, 2023.
 Included is all code used to train networks giving performance metrics shown in our submitted manuscript. A CUDA accelerated device, preferably a NVidia 2060 or newer, is required.
 
+![Image unavailable](/Figures/AMGSRN_architecture.jpg "Network architecture")
+
+## Architecture
+
+Our model encodes 3D input coordinates to a high-dimensional feature space using a set of adaptive feature grids.
+During training, the adaptive grids learn to scale, translate, share, and rotate to overlap the features of the grids with regions of high complexity, helping the model perform better in areas the need more network parameters.
+After finding a good spot, the grids freeze, allowing the decoder to fine-tune the feature grids to their spatial position.
+
 ## Videos
+
+Click to watch videos:
 
 [![AMGSRN grids during training](https://img.youtube.com/vi/utYqmFmyRaE/0.jpg)](https://www.youtube.com/watch?v=utYqmFmyRaE)
 [![AMGSRN grids during training](https://img.youtube.com/vi/mFsk2LYAJ-E/0.jpg)](https://www.youtube.com/watch?v=mFsk2LYAJ-E)
 
-https://youtu.be/mFsk2LYAJ-E
+Timestamps are available on YouTube for jumping to points of interest.
+
 ## Installation
 
 We recommend the use of conda for management of Python version and packages. To install, run the following:
@@ -103,7 +116,7 @@ which should automatically load the first model in the SavedModels folder and be
 
 A few of our datasets are too large to be hosted for download, but can independently be downloaded from Johns Hopkins Turbulence Database: https://turbulence.pha.jhu.edu/.
 However, we do host 3 smaller-scale datasets and provide pretrained models for all models tested in the paper in an anonymous Google Drive folder: https://drive.google.com/file/d/1FXRxMdcJ53cdeZ6mlAyDI254IvZ2OFoo/view?usp=sharing.
-Extract the folder and make sure the ```Data``` and ```SavedModels``` folders are at the same directory as ```Code```. ```Data``` hosts the volume data as NetCDF files, which can readily be visualized in ParaView, and ```SavedModels``` is where all the models are saved and loaded from.
+Extract the folder and make sure the ```Data``` and ```SavedModels``` folders are at the same directory level as the ```Code``` folder. ```Data``` hosts the volume data as NetCDF files, which can readily be visualized in ParaView, and ```SavedModels``` is where all the models are saved and loaded from.
 
 ---
 
