@@ -1,12 +1,12 @@
 [
     [ "test.py",
         {        
-        "load_from": "Supernova_AMGSRN_grid_logged_small",
+        "load_from": "Supernova_AMGSRN_grid_logged_default",
         "tests": "psnr"
     }],
     [ "test.py",
         {        
-        "load_from": "Supernova_AMGSRN_grid_logged_default",
+        "load_from": "Supernova_AMGSRN_grid_logged_small",
         "tests": "psnr"
     }],
     [ "test.py",

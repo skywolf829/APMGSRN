@@ -1,7 +1,0 @@
-[
-    [ "test.py",
-        {        
-        "load_from": "Supernova_test_AMRSRN_TCNN_16grids_2feats_11",
-        "tests": "reconstruction,error_volume,feature_density"
-    }]
-]
