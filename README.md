@@ -11,7 +11,7 @@ Included is all code used to train networks giving performance metrics shown in 
 ## Architecture
 
 Our model encodes 3D input coordinates to a high-dimensional feature space using a set of adaptive feature grids.
-During training, the adaptive grids learn to scale, translate, share, and rotate to overlap the features of the grids with regions of high complexity, helping the model perform better in areas that need more network parameters.
+During training, the adaptive grids learn to scale, translate, shear, and rotate to overlap the features of the grids with regions of high complexity, helping the model perform better in areas that need more network parameters.
 After finding a good spot, the grids freeze, allowing the decoder to fine-tune the feature grids to their spatial position.
 
 ## Videos
@@ -50,7 +50,7 @@ In our paper, all models used TCNN and see a significant speedup and lower memor
 See installation guide on their github: https://github.com/NVlabs/tiny-cuda-nn.
 Installation on Linux (or WSL) is straightforward, but Windows requires more effort.
 For this reason, we highly recommend Windows users use WSL, as there are no performance decreases, but the OS is more suited for the existing packages and enviroments.
-With or without TCNN, our code should automatically detects if you have it installed  and uses it if available.
+With or without TCNN, our code should automatically detect if you have it installed  and uses it if available.
 For linux/WSL, the following will install TCNN:
 ```
 pip install git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
