@@ -13,6 +13,7 @@ Click to watch videos:
 
 Please see the top-level readme for installation instructions. 
 We note that this renderer does require CUDA support, as our dependencies use CUDA.
+It also requires that you have a ```/Data``` and ```/SavedModels``` folder at the top level directory, with at least one model already saved in the folder.
 
 ---
 
@@ -111,3 +112,4 @@ Add your saved model into our ```SavedModels``` folder (matching our format of h
 2. Resizing to small heights can cause the right side editor look a bit strange.
 3. The image saving feature will save the current frame the renderer is on, even if it is not complete with rendering all pixels.
 4. The app may silently crash if you exceed GPU memory, which is easiest to do if you increase the batch size too high with a viewpoint with dense rays.
+5. Requires a SavedModels and Data folder at the top level to run, and at least 1 model saved.
