@@ -114,8 +114,12 @@ which should automatically load the first model in the SavedModels folder and be
 ## Data
 
 A few of our datasets are too large to be hosted for download, but can independently be downloaded from Johns Hopkins Turbulence Database: https://turbulence.pha.jhu.edu/.
-However, we do host 3 smaller-scale datasets and provide pretrained models for all models tested in the paper in an anonymous Google Drive folder: https://drive.google.com/file/d/1FXRxMdcJ53cdeZ6mlAyDI254IvZ2OFoo/view?usp=sharing (~3GB).
-Extract the folder and make sure the ```Data``` and ```SavedModels``` folders are at the same directory level as the ```Code``` folder. ```Data``` hosts the volume data as NetCDF files, which can readily be visualized in ParaView, and ```SavedModels``` is where all the models are saved and loaded from.
+However, we do host 3 smaller-scale datasets and provide pretrained models for all models tested in the paper in an anonymous Google Drive folder.
+
+- Data (360 MB compressed, 664 MB decompressed): https://drive.google.com/file/d/1a1363lnv154kWcIeg8cvtjnx8uTE9xe2/view?usp=sharing
+- SavedModels (3.2 GB compressed, 3.5 GB decompressed): 
+
+Extract the folders and make sure the ```Data``` and ```SavedModels``` folders are at the same directory level as the ```Code``` folder. ```Data``` hosts the volume data as NetCDF files, which can readily be visualized in ParaView, and ```SavedModels``` is where all the models are saved and loaded from.
 
 ---
 
