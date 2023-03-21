@@ -11,7 +11,7 @@ Included is all code used to train networks giving performance metrics shown in 
 ## Architecture
 
 Our model encodes 3D input coordinates to a high-dimensional feature space using a set of adaptive feature grids.
-During training, the adaptive grids learn to scale, translate, share, and rotate to overlap the features of the grids with regions of high complexity, helping the model perform better in areas the need more network parameters.
+During training, the adaptive grids learn to scale, translate, share, and rotate to overlap the features of the grids with regions of high complexity, helping the model perform better in areas that need more network parameters.
 After finding a good spot, the grids freeze, allowing the decoder to fine-tune the feature grids to their spatial position.
 
 ## Videos
@@ -50,7 +50,7 @@ In our paper, all models used TCNN and see a significant speedup and lower memor
 See installation guide on their github: https://github.com/NVlabs/tiny-cuda-nn.
 Installation on Linux (or WSL) is straightforward, but Windows requires more effort.
 For this reason, we highly recommend Windows users use WSL, as there are no performance decreases, but the OS is more suited for the existing packages and enviroments.
-With or without TCNN Our code should automatically detect if you have it installed, and use it if available.
+With or without TCNN, our code should automatically detects if you have it installed  and uses it if available.
 For linux/WSL, the following will install TCNN:
 ```
 pip install git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
@@ -124,8 +124,8 @@ Extract the folder and make sure the ```Data``` and ```SavedModels``` folders ar
 
 ### ```start_jobs.py```
 This script is where jobs, both training and testing, get started from.
-In all situations, it is preferred to used this rather than directly laumch ```train.py``` or ```test.py```.
-This script is will start a set of jobs hosted in a JSON file in ```/Code/BatchRunSettings```, and issuing each job to available GPUs (or cpu/mps) on the system. 
+In all situations, it is preferred to use this rather than directly launch ```train.py``` or ```test.py```.
+This script will start a set of jobs hosted in a JSON file in ```/Code/BatchRunSettings```, and issuing each job to available GPUs (or cpu/mps) on the system. 
 The jobs in the JSON file can be training (```train.py```) or testing (```test.py```), and one job will be addressed to each device available. 
 When a job completes on a device, the device is released and becomes available for other jobs to be designated that device. 
 The jobs are not run in sequential order unless you only have 1 device, so do not expect this script to train+test a model sequentially unless you use only one device. 
