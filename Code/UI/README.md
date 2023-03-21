@@ -53,21 +53,21 @@ When inferring from the model, a number of pixels, their rays, and samples along
 We call the desired number of samples per network inference the batch.
 A smaller batch uses less GPU memory, but will take longer for a full render.
 The batch size can be decreased for improved interactivity, or can be increased for shorter total frame times.
-We initialize the batch size somewhat low ($2^20$), but suggest increasing this if your GPU can handle it. 
-Our 2080Ti works best at $2^23$ or $2^24$ batch size.
+We initialize the batch size somewhat low ($2^{20}$), but suggest increasing this if your GPU can handle it. 
+Our 2080Ti works best at $2^{23}$ or $2^{24}$ batch size.
 Update fps should remain constant for the same batch size, regardless of window resolution.
 6. Samples per pixel.
 This controls how many samples are taken along each ray. 
 We use the maximum corner-to-corner distance and divide that by this samples per pixel setting to get a step size for the renderer.
 7. Reset view button.
 When dataset/model extents change, you may want to reset your view. 
-This button does exactly that, since we dont change your view between models by default, in case you are trying to compare some region between two models.
+This button does exactly that, since we don't change your view between models by default, in case you are trying to compare some regions between two models.
 8. Opacity transfer function editor.
-For exploring feature of the data, we use a ParaView-like transfer function editor for opacity specifically.
+For exploring features of the data, we use a ParaView-like transfer function editor for opacity specifically.
 Click and drag on existing points to change the opacity.
 Click (and release) anywhere between two points to create a new control point.
 Click a point and then press the delete key to remove a control point.
-Endpoints cannot be deleted or moved along the x-axis, and control points cannot move past their neighbor.
+Endpoints cannot be deleted or moved along the x-axis, and control points cannot move past their neighbors.
 Selecting a new color map will reset the opacity transfer function.
 9. Data range slider for colormapping. Choose which range of the data to apply the colormap to. (useful if you know the data distribution)
 10. Renderer statistics.
@@ -100,7 +100,7 @@ Add your saved model into our ```SavedModels``` folder (matching our format of h
 
 1. It is required to have a CUDA enabled GPU to do any rendering.
 2. The renderer uses only "cuda:0", and does not currently support using any other slots unless that is overwritten in the code. (see init for ```RendererThread``` where it is defined).
-3. A 3 channel coordinate is expected as input, and only single channel output is expected from the network for use in a transfer function, which makes this incompatible with radiance fields networks that may expect 3D coordinate + viewing angle input, and (r,g,b,a) output. 
+3. A 3-channel-coordinate is expected as input, and only single channel output is expected from the network for use in a transfer function, which makes this incompatible with radiance fields networks that may expect 3D coordinate + viewing angle input, and (r,g,b,a) output. 
 4. Renderer was only tested with a GTX 1060 3GB, RTX 2080Ti 11GB and an RTX 3070 8GB, so performance on cards older (or newer!) than these is unknown. However, even the GTX 1060 was performant during renders, but smaller batch sizes were necessary to fit in the VRAM.
 
 
