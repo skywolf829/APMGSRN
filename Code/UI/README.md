@@ -7,7 +7,7 @@ In this readme, we'll explain how to use the renderer and how to plug in your ow
 Click to watch videos:
 
 [![Renderer use](https://img.youtube.com/vi/slepZiP0Ojo/0.jpg)](https://www.youtube.com/watch?v=slepZiP0Ojo)
-[![Image-hierarchy checkerboard rendering](https://img.youtube.com/vi/mXY6sNmBe_E/0.jpg)](https://www.youtube.com/watch?v=mXY6sNmBe_E)
+[![Image-hierarchy checkerboard rendering](https://img.youtube.com/vi/aCPtuteGfSE/0.jpg)](https://www.youtube.com/watch?v=aCPtuteGfSE)
 
 ## Installation
 
