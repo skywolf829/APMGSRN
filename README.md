@@ -4,14 +4,14 @@
 
 This repo contains code for adaptive multi-grid scene representation network (AMGSRN), an ensemble training routine for large-scale data, and a neural volume renderer.
 Materials are prepared for submission to VIS2023 for our paper titled "Adaptive Multi-Grid Scene Representation Networks for Large-Scale Data Visualization", submission ID 1036, submitted on March 31, 2023.
-Included is all code used to train networks giving performance metrics shown in our submitted manuscript. A CUDA accelerated device, preferably a NVidia 2060 or newer, is required.
+Included is all code used to train networks giving performance metrics shown in our submitted manuscript.
 
 ![Image unavailable](/Figures/AMGSRN_architecture.jpg "Network architecture")
 
 ## Architecture
 
 Our model encodes 3D input coordinates to a high-dimensional feature space using a set of adaptive feature grids.
-During training, the adaptive grids learn to scale, translate, share, and rotate to overlap the features of the grids with regions of high complexity, helping the model perform better in areas the need more network parameters.
+During training, the adaptive grids learn to scale, translate, shear, and rotate to overlap the features of the grids with regions of high complexity, helping the model perform better in areas that need more network parameters.
 After finding a good spot, the grids freeze, allowing the decoder to fine-tune the feature grids to their spatial position.
 
 ## Videos
@@ -50,7 +50,7 @@ In our paper, all models used TCNN and see a significant speedup and lower memor
 See installation guide on their github: https://github.com/NVlabs/tiny-cuda-nn.
 Installation on Linux (or WSL) is straightforward, but Windows requires more effort.
 For this reason, we highly recommend Windows users use WSL, as there are no performance decreases, but the OS is more suited for the existing packages and enviroments.
-With or without TCNN Our code should automatically detect if you have it installed, and use it if available.
+With or without TCNN, our code should automatically detect if you have it installed  and uses it if available.
 For linux/WSL, the following will install TCNN:
 ```
 pip install git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
@@ -90,7 +90,7 @@ python Code/start_jobs.py --settings test.json
 
 In the test log, you should see the throughput (154/302 million point per second without/with TCNN on our 2080Ti), and the trained PSNR (about 53 dB for us).
 Performance may vary based on computer load, feel free to run multiple times to see outputs.
-On smaller graphics cards, you may have to reduce the batch size used for tests
+On smaller graphics cards, you may have to reduce the batch size used for tests.
 This test will also save a reconstructed scalar field sampled from the network at the same resolution of the original data in ```Output/Reconstruction/temp.nc```, which may be readily visualized in Paraview.
 
 To check that the offline renderer works:
@@ -100,7 +100,6 @@ python Code/renderer.py --load_from temp
 ```
 
 This will render a 512x512 image with 256 samples per ray and save it to ```/Output/render.png```.
-It will also render 10 more frames and give you an average framerate and print out frame times (24/31 fps on our machine without/with TCNN).
 
 The renderer with GUI is the last check:
 
@@ -112,11 +111,16 @@ which should automatically load the first model in the SavedModels folder and be
 
 ---
 
-## Data
+## Pre-trained Models and Data
 
 A few of our datasets are too large to be hosted for download, but can independently be downloaded from Johns Hopkins Turbulence Database: https://turbulence.pha.jhu.edu/.
-However, we do host 3 smaller-scale datasets and provide pretrained models for all models tested in the paper in an anonymous Google Drive folder: https://drive.google.com/file/d/1FXRxMdcJ53cdeZ6mlAyDI254IvZ2OFoo/view?usp=sharing (~3GB).
-Extract the folder and make sure the ```Data``` and ```SavedModels``` folders are at the same directory level as the ```Code``` folder. ```Data``` hosts the volume data as NetCDF files, which can readily be visualized in ParaView, and ```SavedModels``` is where all the models are saved and loaded from.
+However, we do host 3 smaller-scale datasets and provide pretrained models for all models tested in the paper in an anonymous Google Drive folder.
+We also make available all models used in our paper for all experiments, both AMGSRN as well as baseline fVSRN and NGP models.
+
+- Data (360 MB compressed, 664 MB decompressed): https://drive.google.com/file/d/1a1363lnv154kWcIeg8cvtjnx8uTE9xe2/view?usp=sharing
+- SavedModels (3.2 GB compressed, 3.5 GB decompressed): https://drive.google.com/file/d/118nTcYEkD6qvUYFpGN-RBnzglmzPqMac/view?usp=share_link
+
+Extract the folders and make sure the ```Data``` and ```SavedModels``` folders are at the same directory level as the ```Code``` folder. ```Data``` hosts the volume data as NetCDF files, which can readily be visualized in ParaView, and ```SavedModels``` is where all the models are saved and loaded from.
 
 ---
 
@@ -124,8 +128,8 @@ Extract the folder and make sure the ```Data``` and ```SavedModels``` folders ar
 
 ### ```start_jobs.py```
 This script is where jobs, both training and testing, get started from.
-In all situations, it is preferred to used this rather than directly laumch ```train.py``` or ```test.py```.
-This script is will start a set of jobs hosted in a JSON file in ```/Code/BatchRunSettings```, and issuing each job to available GPUs (or cpu/mps) on the system. 
+In all situations, it is preferred to use this rather than directly launch ```train.py``` or ```test.py```.
+This script will start a set of jobs hosted in a JSON file in ```/Code/BatchRunSettings```, and issuing each job to available GPUs (or cpu/mps) on the system. 
 The jobs in the JSON file can be training (```train.py```) or testing (```test.py```), and one job will be addressed to each device available. 
 When a job completes on a device, the device is released and becomes available for other jobs to be designated that device. 
 The jobs are not run in sequential order unless you only have 1 device, so do not expect this script to train+test a model sequentially unless you use only one device. 
@@ -142,7 +146,7 @@ Command line arguments are:
 
 #### Example training/testing:
 
-The following will run the jobs defined in example_file.json on all available CUDA devices (if available) or the CPU if no CUDA devices are detected by PyTorch. The vector field data will be hosted on the same device that the models train on.
+The following will run the jobs defined in example_file.json on all available CUDA devices (if available) or the CPU if no CUDA devices are detected by PyTorch. The scalar field data will be hosted on the same device that the models train on.
 
 ```python Code/start_jobs.py --settings example_file.json```
 
@@ -209,5 +213,6 @@ Noteable options are:
 Examples:
 
 ```python Code/renderer.py --hw 1024,1024 --spp 512 --azi 45 --polar 45 --load_from Supernova_AMGSRN_small --colormap Viridis.json```
+
 ```python Code/renderer.py --azi 45 --polar 45 --raw_data true --load_from Supernova.nc```
 

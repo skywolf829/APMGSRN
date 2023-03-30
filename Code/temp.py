@@ -396,4 +396,17 @@ def checkerboard_render(w,h):
 
 if __name__ == '__main__':
 
+    import imageio.v3 as imageio
+    a = checkerboard_render(4,4)
+    print(len(a))
+    d = np.zeros((16,16,1), np.uint8)
+    seq = []
+    for _ in range(15):
+        seq.append(d.copy())
+    for i in range(len(a)):
+        b = a[i]
+        d[b[0]*4:b[0]*4+4,b[1]*4:b[1]*4+4] = 255
+        for _ in range(15):
+            seq.append(d.copy())
+    imageio.imwrite("checkerboard.mp4", seq, fps=15)
     quit()
