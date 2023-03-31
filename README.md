@@ -93,7 +93,7 @@ Performance may vary based on computer load, feel free to run multiple times to 
 On smaller graphics cards, you may have to reduce the batch size used for tests.
 This test will also save a reconstructed scalar field sampled from the network at the same resolution of the original data in ```Output/Reconstruction/temp.nc```, which may be readily visualized in Paraview.
 
-To check that the offline renderer works:
+To check that the offline renderer works (this may take a minute to work the first time for setup):
 
 ```
 python Code/renderer.py --load_from temp
