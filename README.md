@@ -25,6 +25,10 @@ Timestamps are available on YouTube for jumping to points of interest.
 
 ## Installation
 
+Installation is for any platform with a CUDA device. 
+If using Windows, we highly recommend using Windows Subsystem for Linux (WSL) as the installation is smoother and there are no performance downsides. 
+The installation will still work without WSL (on native Windows), but there may be difficulties with some of the packages used for our renderer.
+
 We recommend the use of conda for management of Python version and packages. To install, run the following:
 ```
 conda env create --file environment.yml
