@@ -426,6 +426,7 @@ class Scene(torch.nn.Module):
         self.spp = spp
         self.estimator = nerfacc.OccGridEstimator(self.scene_aabb,
             resolution=1, levels=1).to(self.device)
+        # Overwrite the binary to be 1 (meaning full) everywhere
         self.estimator.binaries = torch.ones_like(self.estimator.binaries)
         self.transfer_function = transfer_function
         self.amount_empty = 0.0
