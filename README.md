@@ -36,7 +36,6 @@ conda activate AMGSRN
 ```
 
 Once thats finished (could take a minute depending on system) and the environment has been activated, navigate to https://pytorch.org/get-started/locally/ and follow instructions to install pytorch on your machine.
-
 For instance:
 ```
 conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
@@ -49,23 +48,23 @@ Next, install a few pip packages (mostly needed for the renderer) with
 pip install -r requirements.txt
 ```
 
-We also highly recommend using TinyCUDA-NN (TCNN) for improved decoder performance if you have TensorCores available.
+For building the following 2 packages from source (as recommended), install the matching version of CUDA Toolkit to what version your PyTorch installation uses from https://developer.nvidia.com/cuda-toolkit-archive.
+For example, we install CUDA Toolkit 11.7.1.
+
+We highly recommend using TinyCUDA-NN (TCNN) for improved decoder performance if you have TensorCores available.
 In our paper, all models used TCNN and see a significant speedup and lower memory requirment due to half precision training and the fully-fused MLP.
 See installation guide on their github: https://github.com/NVlabs/tiny-cuda-nn.
-Installation on Linux (or WSL) is straightforward, but Windows requires more effort.
-For this reason, we highly recommend Windows users use WSL, as there are no performance decreases, but the OS is more suited for the existing packages and enviroments.
-With or without TCNN, our code should automatically detect if you have it installed  and uses it if available.
-For linux/WSL, the following will install TCNN:
+With or without TCNN, our code should automatically detect if you have it installed and uses it if available.
+The following will install TCNN by building it from source:
 ```
 pip install git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
 ```
 Regardless of if a model was trained with/without TCNN, the machine it is loaded on will convert it to PyTorch if necessary.
 
-Lastly, install nerfacc: https://github.com/KAIR-BAIR/nerfacc.
-Preferably use the pre-built wheels for your torch+cuda version, as compiling from the latest release occasionally has some bugs (which we find will still be okay if you just run the same code again).
-We use torch 1.13 and cuda 11.7, so we install with:
+Lastly, install nerfacc for CUDA-accelerated rendering: https://github.com/KAIR-BAIR/nerfacc.
+Run the following to download the latest source code from git and install it for your version of PyTorch+CUDA with:
 ```
-pip install nerfacc -f https://nerfacc-bucket.s3.us-west-2.amazonaws.com/whl/torch-1.13.0_cu117.html
+pip install git+https://github.com/KAIR-BAIR/nerfacc.git
 ```
 
 The training/testing code has been tested on:

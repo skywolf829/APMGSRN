@@ -13,8 +13,8 @@ from torch.utils.tensorboard import SummaryWriter
 from Models.losses import *
 import shutil
 from Other.utility_functions import make_coord_grid, create_path, tensor_to_cdf
-from Other.vis_io import get_vts, write_vts, write_pvd, write_vtm
-from vtk import vtkMultiBlockDataSet
+#from Other.vis_io import get_vts, write_vts, write_pvd, write_vtm
+#from vtk import vtkMultiBlockDataSet
 import glob
 import numpy as np
 from torch.utils.data import DataLoader

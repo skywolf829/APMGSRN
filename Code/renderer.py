@@ -1,5 +1,5 @@
 import torch
-from nerfacc import ray_marching, rendering, OccupancyGrid
+import nerfacc
 import argparse
 import os
 from Models.models import load_model
@@ -424,9 +424,11 @@ class Scene(torch.nn.Module):
         self.image_resolution : Tuple[int]= image_resolution
         self.batch_size : int = batch_size
         self.spp = spp
+        self.estimator = nerfacc.OccGridEstimator(self.scene_aabb,
+            resolution=1, levels=1).to(self.device)
+        self.estimator.binaries = torch.ones_like(self.estimator.binaries)
         self.transfer_function = transfer_function
         self.amount_empty = 0.0
-        #self.occupancy_grid = self.precompute_occupancy_grid()
         self.camera = camera
         self.on_setting_change()
     
@@ -480,18 +482,14 @@ class Scene(torch.nn.Module):
         # print(self.rays_o.shape)
         
         max_view_dist = (self.scene_aabb[3]**2 + self.scene_aabb[4]**2 + self.scene_aabb[5]**2)**0.5
-        ray_indices, t_starts, t_ends = ray_marching(
+        ray_indices, t_starts, t_ends = self.estimator.sampling(
             self.rays_o, self.rays_d,
-            scene_aabb=self.scene_aabb, 
-            render_step_size = max_view_dist/self.spp,
-            grid=self.occupancy_grid
-            #grid=None
+            render_step_size = max_view_dist/self.spp
         )
         return ray_indices, t_starts, t_ends
         
     def rgb_alpha_fn(self, t_starts, t_ends, ray_indices):
-        
-        sample_locs = self.rays_o[ray_indices] + self.rays_d[ray_indices] * (t_starts + t_ends) / 2.0
+        sample_locs = self.rays_o[ray_indices] + self.rays_d[ray_indices] * (t_starts + t_ends)[:,None] / 2.0
         sample_locs /= self.scene_aabb[3:]
         sample_locs *= 2 
         sample_locs -= 1
@@ -500,7 +498,7 @@ class Scene(torch.nn.Module):
         alphas += 1
         alphas.log_()
         
-        return rgbs, alphas
+        return rgbs, alphas[:,0]
     
     def rgb_alpha_fn_batch(self, t_starts, t_ends, ray_indices):
         '''
@@ -513,7 +511,7 @@ class Scene(torch.nn.Module):
             ray_ind_end = min(ray_ind_start+self.batch_size, t_starts.shape[0])
             sample_locs = self.rays_o[ray_indices[ray_ind_start:ray_ind_end]] + \
                 self.rays_d[ray_indices[ray_ind_start:ray_ind_end]] * \
-                    (t_starts[ray_ind_start:ray_ind_end] + t_ends[ray_ind_start:ray_ind_end]) / 2
+                    (t_starts[ray_ind_start:ray_ind_end] + t_ends[ray_ind_start:ray_ind_end])[:,None] / 2
             sample_locs /= (self.scene_aabb[3:]-1)
             sample_locs *= 2
             sample_locs -= 1
@@ -521,7 +519,7 @@ class Scene(torch.nn.Module):
             self.transfer_function.color_opacity_at_value_inplace(densities, rgbs, alphas, ray_ind_start)
         alphas += 1
         alphas.log_()
-        return rgbs, alphas
+        return rgbs, alphas[:,0]
 
     def forward_maxpoints(self, model, coords):
         '''
@@ -540,11 +538,11 @@ class Scene(torch.nn.Module):
 
     def render_rays(self, t_starts, t_ends, ray_indices, n_rays):
         
-        colors, _, _ = rendering(
+        colors, _, _, _ = nerfacc.rendering(
             t_starts, t_ends, ray_indices, n_rays, 
             rgb_alpha_fn=self.rgb_alpha_fn,
-            render_bkgd=torch.tensor([1.0, 1.0, 1.0],
-                dtype=torch.float32,device=self.device))
+            render_bkgd=torch.tensor([1.0, 1.0, 1.0],dtype=torch.float32,device=self.device)
+            )
         colors.clip_(0.0, 1.0)
         
         #print(f"Renderer {ray_indices.shape[0]} samples on {self.image_resolution[0]*self.image_resolution[1]} rays.")
@@ -744,11 +742,9 @@ class Scene(torch.nn.Module):
             num_rays = rays_this_iter.shape[0]
             self.rays_o = self.cam_origin.expand(num_rays, 3)
             
-            ray_indices, t_starts, t_ends = ray_marching(
+            ray_indices, t_starts, t_ends = self.estimator.sampling(
                 self.rays_o, self.rays_d,
-                scene_aabb=self.scene_aabb, 
-                render_step_size = self.max_view_dist/self.spp,
-                #grid=self.occupancy_grid
+                render_step_size = self.max_view_dist/self.spp
             )
             new_colors = self.render_rays(
                 t_starts, t_ends, 
