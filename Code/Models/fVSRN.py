@@ -5,28 +5,101 @@ from Models.layers import ReLULayer, PositionalEncoding
 from typing import List
 import math
 
-class fVSRN(nn.Module):
-    def __init__(self, n_features: int, 
-        feature_grid_shape: List[int], n_dims : int, 
-        n_outputs: int, nodes_per_layer: int, n_layers: int, 
-        num_positional_encoding_terms, use_tcnn:bool, use_bias:bool,
-        requires_padded_feats:bool,data_min:float, data_max:float,
-        full_shape:List[int]):
+
+
+class fVSRN_proxy(nn.Module):
+    def __init__(self, opt):
         super().__init__()
         
         
-        self.requires_padded_feats : bool = requires_padded_feats
+        self.requires_padded_feats : bool = opt['requires_padded_feats']
         self.padding_size : int = 0
-        self.full_shape = full_shape
-
-        if(requires_padded_feats):
-            self.padding_size : int = \
-                16*int(math.ceil(max(1, (n_features+num_positional_encoding_terms*n_dims*2)/16))) - \
-                    (n_features+num_positional_encoding_terms*n_dims*2)
+        self.full_shape = opt['full_shape']
             
-        self.pe = PositionalEncoding(num_positional_encoding_terms, n_dims)        
-        feat_shape : List[int] = [1, n_features] + feature_grid_shape
-        self.full_shape = full_shape
+        res = 1
+        res_grid = [eval(i) for i in opt['feature_grid_shape'].split(',')]
+        for i in range(len(res_grid)):
+            res *= res_grid[i]
+
+        import tinycudann as tcnn
+        self.model = tcnn.NetworkWithInputEncoding(
+            n_input_dims=opt['n_dims']*2,
+            n_output_dims=opt['n_outputs'],
+            encoding_config={
+                "otype": "Composite",
+                "nested": [
+                    {
+                        "otype": "Grid",
+                        "type": "Dense",
+                        "n_levels": 1,
+                        "n_features_per_level": int(opt['n_features']),
+                        "base_resolution": int(res**(1.0/len(res_grid)))+1,
+                        "interpolation": "Linear",
+                        "n_dims_to_encode": opt['n_dims']
+                    },
+                    {
+                        "n_frequencies": int(opt['num_positional_encoding_terms']), 
+                        "otype": "Frequency",
+                        "n_dims_to_encode": opt['n_dims']
+                    }
+                ]                
+            },
+            network_config={
+                "otype": "FullyFusedMLP",
+                "activation": "ReLU",
+                "output_activation": "None",
+                "n_neurons": opt['nodes_per_layer'],
+                "n_hidden_layers": opt['n_layers'],
+            },
+        )
+        
+        self.register_buffer(
+            "volume_min",
+            torch.tensor([opt['data_min']], requires_grad=False, dtype=torch.float32),
+            persistent=False
+        )
+        self.register_buffer(
+            "volume_max",
+            torch.tensor([opt['data_max']], requires_grad=False, dtype=torch.float32),
+            persistent=False
+        )
+    
+    def min(self):
+        return self.volume_min
+
+    def max(self):
+        return self.volume_max
+    
+    def get_volume_extents(self):
+        return self.full_shape
+                       
+    def forward(self, x):     
+        
+        y = self.model(x.repeat(1, 2)).float()
+        y = y * (self.volume_max - self.volume_min) + self.volume_min
+        return y
+
+        
+
+class fVSRN(nn.Module):
+    def __init__(self, opt):
+        super().__init__()
+        
+        
+        self.requires_padded_feats : bool = opt['requires_padded_feats']
+        self.padding_size : int = 0
+        self.full_shape = opt['full_shape']
+        feature_grid_shape = [eval(i) for i in opt['feature_grid_shape'].split(",")]
+
+
+        if(opt['requires_padded_feats']):
+            self.padding_size : int = \
+                16*int(math.ceil(max(1, (opt['n_features'] +opt['num_positional_encoding_terms']*opt['n_dims']*2)/16))) - \
+                    (opt['n_features'] +opt['num_positional_encoding_terms']*opt['n_dims']*2)
+            
+        self.pe = PositionalEncoding(opt['num_positional_encoding_terms'], opt['n_dims'])        
+        feat_shape : List[int] = [1, opt['n_features'] ] + feature_grid_shape
+        self.full_shape = opt['full_shape']
         self.feature_grid = torch.rand(feat_shape, 
             dtype=torch.float32)
         self.feature_grid = torch.nn.Parameter(self.feature_grid, 
@@ -35,19 +108,19 @@ class fVSRN(nn.Module):
         def init_decoder_tcnn():
             import tinycudann as tcnn 
             
-            input_size:int = n_features+num_positional_encoding_terms*n_dims*2
-            if(requires_padded_feats):
-                input_size = n_features+num_positional_encoding_terms*n_dims*2 + self.padding_size
+            input_size:int = opt['n_features'] +opt['num_positional_encoding_terms']*opt['n_dims']*2
+            if(opt['requires_padded_feats']):
+                input_size = opt['n_features'] +opt['num_positional_encoding_terms']*opt['n_dims']*2 + self.padding_size
                 
             decoder = tcnn.Network(
                 n_input_dims=input_size,
-                n_output_dims=n_outputs,
+                n_output_dims=opt['n_outputs'],
                 network_config={
                     "otype": "FullyFusedMLP",
                     "activation": "ReLU",
                     "output_activation": "None",
-                    "n_neurons": nodes_per_layer,
-                    "n_hidden_layers": n_layers,
+                    "n_neurons": opt['nodes_per_layer'],
+                    "n_hidden_layers": opt['n_layers'] ,
                 }
             )
             return decoder
@@ -55,25 +128,25 @@ class fVSRN(nn.Module):
         def init_decoder_pytorch():
             decoder = nn.ModuleList()
             
-            input_size:int = n_features+num_positional_encoding_terms*n_dims*2
-            if(requires_padded_feats):
-                input_size = n_features+num_positional_encoding_terms*n_dims*2 + self.padding_size
+            input_size:int = opt['n_features'] +opt['num_positional_encoding_terms']*opt['n_dims']*2
+            if(opt['requires_padded_feats']):
+                input_size = opt['n_features'] +opt['num_positional_encoding_terms']*opt['n_dims']*2 + self.padding_size
                                     
             layer = ReLULayer(input_size, 
-                nodes_per_layer, bias=use_bias)
+                opt['nodes_per_layer'], bias=False)
             decoder.append(layer)
             
-            for i in range(n_layers):
-                if i == n_layers - 1:
-                    layer = nn.Linear(nodes_per_layer, n_outputs, bias=use_bias)
+            for i in range(opt['n_layers'] ):
+                if i == opt['n_layers']  - 1:
+                    layer = nn.Linear(opt['nodes_per_layer'], opt['n_outputs'], bias=False)
                     decoder.append(layer)
                 else:
-                    layer = ReLULayer(nodes_per_layer, nodes_per_layer, bias=use_bias)
+                    layer = ReLULayer(opt['nodes_per_layer'], opt['nodes_per_layer'], bias=False)
                     decoder.append(layer)
             decoder = torch.nn.Sequential(*decoder)
             return decoder
 
-        if(use_tcnn):
+        if(opt['use_tcnn_if_available']):
             try:
                 self.decoder = init_decoder_tcnn()
             except ImportError:
@@ -84,12 +157,12 @@ class fVSRN(nn.Module):
 
         self.register_buffer(
             "volume_min",
-            torch.tensor([data_min], requires_grad=False, dtype=torch.float32),
+            torch.tensor([opt['data_min']], requires_grad=False, dtype=torch.float32),
             persistent=False
         )
         self.register_buffer(
             "volume_max",
-            torch.tensor([data_max], requires_grad=False, dtype=torch.float32),
+            torch.tensor([opt['data_max']], requires_grad=False, dtype=torch.float32),
             persistent=False
         )
     
