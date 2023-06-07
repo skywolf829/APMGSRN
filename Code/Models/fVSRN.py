@@ -75,7 +75,7 @@ class fVSRN_NGP(nn.Module):
                        
     def forward(self, x):     
         
-        y = self.model((x.repeat(1, 2)+1)/2).float()
+        y = self.model(x.repeat(1, 2)).float()
         y = y * (self.volume_max - self.volume_min) + self.volume_min
         return y
 
