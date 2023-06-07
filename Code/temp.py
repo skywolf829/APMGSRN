@@ -9,6 +9,7 @@ from Other.utility_functions import create_path, nc_to_tensor, tensor_to_cdf, ma
 import h5py
 import numpy as np
 
+
 project_folder_path = os.path.dirname(os.path.abspath(__file__))
 project_folder_path = os.path.join(project_folder_path, "..")
 data_folder = os.path.join(project_folder_path, "Data")
@@ -394,8 +395,7 @@ def checkerboard_render(w,h):
 
     return offset_order
 
-if __name__ == '__main__':
-
+def checkerboard_code():
     import imageio.v3 as imageio
     a = checkerboard_render(4,4)
     print(len(a))
@@ -409,4 +409,52 @@ if __name__ == '__main__':
         for _ in range(15):
             seq.append(d.copy())
     imageio.imwrite("checkerboard.mp4", seq, fps=15)
+    
+def psnr_test(x, y):
+    from Other.utility_functions import PSNR
+    p = PSNR(torch.tensor(x).permute(2, 0, 1).unsqueeze(0), torch.tensor(y).permute(2, 0, 1).unsqueeze(0))
+    print(f"PSNR: {p:0.04f} dB")
+    
+def ssim_test(x, y):
+    from Other.utility_functions import ssim
+    s = ssim(torch.tensor(x).permute(2, 0, 1).unsqueeze(0), torch.tensor(y).permute(2, 0, 1).unsqueeze(0))
+    print(f"SSIM: {s:0.04f}")
+  
+def table2_test():
+    import imageio.v3 as imageio
+    gt_img = imageio.imread(os.path.join(output_folder, "Table2_GT.png")) / 255.0
+    amgsrn_img = imageio.imread(os.path.join(output_folder, "Table2_AMGSRN.png")) / 255.0
+    amgsrn_ensemble_img = imageio.imread(os.path.join(output_folder, "Table2_AMGSRN_ensemble.png")) / 255.0
+    fvsrn_img = imageio.imread(os.path.join(output_folder, "Table2_fVSRN.png")) / 255.0
+    ngp_img = imageio.imread(os.path.join(output_folder, "Table2_NGP.png")) / 255.0
+    
+    print(f"===================")
+    print(f"AMGSRN")
+    psnr_test(gt_img, amgsrn_img)
+    ssim_test(gt_img, amgsrn_img)
+    print(f"===================")
+    print()
+    print()
+    print(f"AMGSRN ensemble")
+    psnr_test(gt_img, amgsrn_ensemble_img)
+    ssim_test(gt_img, amgsrn_ensemble_img)
+    print(f"===================")
+    print()
+    print()
+    print(f"fVSRN")
+    psnr_test(gt_img, fvsrn_img)
+    ssim_test(gt_img, fvsrn_img)
+    print(f"===================")
+    print()
+    print()
+    print(f"NGP")
+    psnr_test(gt_img, ngp_img)
+    ssim_test(gt_img, ngp_img)
+    print(f"===================")
+    print()
+    print()
+    
+if __name__ == '__main__':
+    
+    
     quit()

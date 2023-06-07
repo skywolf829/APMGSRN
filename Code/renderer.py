@@ -835,7 +835,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--batch_size',
-        default=2**20,
+        default=2**23,
         type=int,
         help="batch size for feedforward. Larger batch size renders faster. Use smaller values for smaller VRAM. Typically between 2^19 - 2^25."
     )
@@ -863,7 +863,10 @@ if __name__ == '__main__':
         opt['data_min'] = 0
         opt['data_max'] = 1
         opt['device'] = args['data_device']
-        model = load_model(opt, args['data_device']).to(opt['data_device'])
+        opt['data_device'] = args['data_device']
+        model = load_model(opt, args['data_device'])
+        print(opt['data_device'])
+        model = model.to(opt['data_device'])
         full_shape = opt['full_shape']
         model.eval()
     else:
@@ -953,7 +956,7 @@ if __name__ == '__main__':
     imsave("Output/model.png", img.cpu().numpy())
     '''
     
-    '''
+    
     timesteps = 10
     times = np.zeros([timesteps])
     for i in range(timesteps):
@@ -969,9 +972,7 @@ if __name__ == '__main__':
     print(f"Min frame time: {times.min():0.04f}")
     print(f"Max frame time: {times.max():0.04f}")
     print(f"Average FPS: {1/times.mean():0.02f}")
-    '''
-
-    #GBytes = (torch.cuda.max_memory_allocated(device=device) \
-    #            / (1024**3))
-    #print(f"{GBytes : 0.02f}GB of memory used (max reserved) during render.")
+    GBytes = (torch.cuda.max_memory_allocated(device=device) \
+                / (1024**3))
+    print(f"{GBytes : 0.02f}GB of memory used (max reserved) during render.")
     
