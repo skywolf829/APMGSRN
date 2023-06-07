@@ -61,6 +61,8 @@ class NGP_TCNN(nn.Module):
         return self.opt['full_shape']
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # HashGrid seems to perform better with input scaled [0,1],
+        # as I believe the negative input is clipped to 0
         y = self.model((x+1)/2).float()
         y = y * (self.volume_max - self.volume_min) + self.volume_min
         return y

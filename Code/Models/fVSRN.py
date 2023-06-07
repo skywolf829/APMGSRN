@@ -7,7 +7,7 @@ import math
 
 
 
-class fVSRN_proxy(nn.Module):
+class fVSRN_NGP(nn.Module):
     def __init__(self, opt):
         super().__init__()
         
@@ -75,7 +75,7 @@ class fVSRN_proxy(nn.Module):
                        
     def forward(self, x):     
         
-        y = self.model(x.repeat(1, 2)).float()
+        y = self.model((x.repeat(1, 2)+1)/2).float()
         y = y * (self.volume_max - self.volume_min) + self.volume_min
         return y
 

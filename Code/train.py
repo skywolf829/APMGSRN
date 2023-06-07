@@ -309,12 +309,13 @@ def train( model, dataset, opt):
     if("AMGSRN" in opt['model']):
         train_step = train_step_AMGSRN
         optimizer = [
-            optim.Adam([
-                {"params": [model.encoder.feature_grids], "lr": opt["lr"]},
-                {"params": model.decoder.parameters(), "lr": opt["lr"]}
-            ], betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15),
             optim.Adam(
-                model.encoder.get_transform_parameters(), 
+                model.get_model_parameters(), 
+                lr=opt["lr"],
+                betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15
+                ),
+            optim.Adam(
+                model.get_transform_parameters(), 
                 lr=opt['lr'] * 0.05, 
                 betas=[opt['beta_1'], opt['beta_2']], eps = 10e-15
                 )

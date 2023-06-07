@@ -142,17 +142,11 @@ def create_model(opt):
         return Ensemble_SRN(opt)
     else:
         if(opt['model'] == "fVSRN"):
-            from Models.fVSRN import fVSRN_proxy
-            return fVSRN_proxy(opt)
+            from Models.fVSRN import fVSRN_NGP
+            return fVSRN_NGP(opt)
         elif(opt['model'] == "AMGSRN"):
             from Models.AMGSRN import AMGSRN
-            return AMGSRN(opt['n_grids'], opt['n_features'], 
-            [eval(i) for i in opt['feature_grid_shape'].split(",")], 
-            opt['n_dims'], opt['n_outputs'], opt['nodes_per_layer'], 
-            opt['n_layers'], opt['use_tcnn_if_available'], opt['use_bias'],
-            opt['requires_padded_feats'],
-            opt['data_min'], opt['data_max'],
-            opt['grid_initialization'], opt['full_shape'])
+            return AMGSRN(opt)
         elif(opt['model'] == "NGP"):
             from Models.NGP import NGP
             return NGP(opt)
