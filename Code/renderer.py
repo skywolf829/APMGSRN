@@ -444,31 +444,11 @@ class Scene(torch.nn.Module):
                         full_shape[1]-1,
                         full_shape[2]-1], 
             device=self.device)   
-            
-    def precompute_occupancy_grid(self, grid_res:List[int]=[64, 64, 64]):
-        # pre-allocate an occupancy grid from a dense sampling that gets max-pooled
-        scale_amount = 8
-        sample_grid : List[int] = [grid_res[0]*scale_amount, 
-                                   grid_res[1]*scale_amount, 
-                                   grid_res[2]*scale_amount]
-        with torch.no_grad():
-            grid = OccupancyGrid(self.scene_aabb, grid_res)
-            query_points = make_coord_grid(sample_grid, device=self.device)
-            output = self.forward_maxpoints(self.model, query_points)
-            output_density = self.transfer_function.opacity_at_value(output)
-            output_density = output_density.reshape(sample_grid)
-            output_density = F.max_pool3d(output_density.unsqueeze(0).unsqueeze(0), 
-                                          kernel_size=scale_amount)
-            filter_size : int = 17
-            output_density = F.max_pool3d(output_density,
-                kernel_size = filter_size, stride=1, padding = filter_size//2)
-            output_density = output_density.squeeze()
-            output_density = (output_density>0.001)
-            grid._binary = output_density.clone()
-        self.amount_empty = ((grid._binary.numel()-grid._binary.sum())/grid._binary.numel())
-        print(f"{100*self.amount_empty:0.02f}% of space empty for skipping!")
-        return grid
-    
+        self.estimator = nerfacc.OccGridEstimator(self.scene_aabb,
+            resolution=1, levels=1).to(self.device)
+        # Overwrite the binary to be 1 (meaning full) everywhere
+        self.estimator.binaries = torch.ones_like(self.estimator.binaries)
+                
     def generate_viewpoint_rays(self, camera: Camera):
         height, width = self.image_resolution[:2]
         batch_size = self.image_resolution[0]*self.image_resolution[1]
