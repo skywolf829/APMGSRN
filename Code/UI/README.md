@@ -113,3 +113,4 @@ Add your saved model into our ```SavedModels``` folder (matching our format of h
 3. The image saving feature will save the current frame the renderer is on, even if it is not complete with rendering all pixels.
 4. The app may silently crash if you exceed GPU memory, which is easiest to do if you increase the batch size too high with a viewpoint with dense rays.
 5. Requires a SavedModels and Data folder at the top level to run, and at least 1 model saved.
+6. We notice that the same code and the same models on 2 different systems with different versions of PyTorch (1.13.1 vs 2.0.1) may have the xyz dimensions reversed in our renderer, creating incorrect visualizations for non-cube shaped data, likely due to some change in order returned from a meshgrid function. We add a boolean to our scene in ```renderer.py``` line 418 that reverses the dimensions. Please enable this boolean if you experience this issue.
