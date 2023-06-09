@@ -7,6 +7,7 @@ Materials are prepared for submission to VIS2023 for our paper titled "Adaptive 
 Included is all code used to train networks giving performance metrics shown in our submitted manuscript.
 
 ![Image unavailable](/Figures/AMGSRN_architecture.jpg "Network architecture")
+![Figure unavailable](/Figures/All_qualitative.jpg "Qualitative comparison")
 
 ## Architecture
 
