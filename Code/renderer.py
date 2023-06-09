@@ -415,12 +415,21 @@ class Scene(torch.nn.Module):
         self.model = model
         self.device : str = device
         self.data_device : str = data_device
-        self.scene_aabb = \
-            torch.tensor([0.0, 0.0, 0.0, 
-                        full_shape[0]-1,
-                        full_shape[1]-1,
-                        full_shape[2]-1], 
-            device=self.device)
+        self.swapxyz = False
+        if(self.swapxyz):
+            self.scene_aabb = \
+                torch.tensor([0.0, 0.0, 0.0, 
+                            full_shape[2]-1,
+                            full_shape[1]-1,
+                            full_shape[0]-1], 
+                device=self.device)
+        else:
+            self.scene_aabb = \
+                torch.tensor([0.0, 0.0, 0.0, 
+                            full_shape[0]-1,
+                            full_shape[1]-1,
+                            full_shape[2]-1], 
+                device=self.device)
         self.image_resolution : Tuple[int]= image_resolution
         self.batch_size : int = batch_size
         self.spp = spp
@@ -438,12 +447,20 @@ class Scene(torch.nn.Module):
                 / (1024**3)
         
     def set_aabb(self, full_shape : np.ndarray):
-        self.scene_aabb = \
-            torch.tensor([0.0, 0.0, 0.0, 
-                        full_shape[0]-1,
-                        full_shape[1]-1,
-                        full_shape[2]-1], 
-            device=self.device)   
+        if(self.swapxyz):
+            self.scene_aabb = \
+                torch.tensor([0.0, 0.0, 0.0, 
+                            full_shape[2]-1,
+                            full_shape[1]-1,
+                            full_shape[0]-1], 
+                device=self.device)
+        else:
+            self.scene_aabb = \
+                torch.tensor([0.0, 0.0, 0.0, 
+                            full_shape[0]-1,
+                            full_shape[1]-1,
+                            full_shape[2]-1], 
+                device=self.device)
         self.estimator = nerfacc.OccGridEstimator(self.scene_aabb,
             resolution=1, levels=1).to(self.device)
         # Overwrite the binary to be 1 (meaning full) everywhere
