@@ -1,8 +1,8 @@
 [
     [ "train.py",
     {        
-        "save_name": "Supernova_AMGSRN_small_logged",
-        "model": "AMGSRN",
+        "save_name": "Supernova_APMGSRN_small_logged",
+        "model": "APMGSRN",
         "data": "Supernova.nc",
         "n_features": 1,
         "n_grids": 16,

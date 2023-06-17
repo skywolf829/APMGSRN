@@ -1,8 +1,8 @@
 [
     [ "train.py",
     {        
-        "save_name": "Supernova_AMGSRN_grid_logged_default",
-        "model": "AMGSRN",
+        "save_name": "Supernova_APMGSRN_grid_logged_default",
+        "model": "APMGSRN",
         "data": "Supernova.nc",
         "n_features": 1,
         "n_grids": 16,
@@ -18,8 +18,8 @@
     }],
     [ "train.py",
     {        
-        "save_name": "Supernova_AMGSRN_grid_logged_small",
-        "model": "AMGSRN",
+        "save_name": "Supernova_APMGSRN_grid_logged_small",
+        "model": "APMGSRN",
         "data": "Supernova.nc",
         "n_features": 1,
         "n_grids": 16,
@@ -35,8 +35,8 @@
     }],
     [ "train.py",
     {        
-        "save_name": "Supernova_AMGSRN_grid_logged_large",
-        "model": "AMGSRN",
+        "save_name": "Supernova_APMGSRN_grid_logged_large",
+        "model": "APMGSRN",
         "data": "Supernova.nc",
         "n_features": 1,
         "n_grids": 16,

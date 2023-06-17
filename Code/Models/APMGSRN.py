@@ -12,7 +12,7 @@ def weights_init(m):
         if(m.bias is not None):
             torch.nn.init.normal_(m.bias, 0, 0.001) 
 
-class AMG_encoder(nn.Module):
+class APMG_encoder(nn.Module):
     def __init__(self, n_grids:int, n_features:int,
                  feat_grid_shape:List[int], n_dims:int,
                  grid_initializaton:str):
@@ -219,7 +219,7 @@ class AMG_encoder(nn.Module):
         x = self.transform(x)
         return self.forward_pre_transformed(x)
 
-class AMGSRN(nn.Module):
+class APMGSRN(nn.Module):
     def __init__(self, opt):
         super().__init__()
         
@@ -237,7 +237,7 @@ class AMGSRN(nn.Module):
             self.padding_size : int = 16*int(math.ceil(max(1, (opt['n_grids']*opt['n_features'] )/16))) - \
                 opt['n_grids']*opt['n_features'] 
             
-        self.encoder = AMG_encoder(opt['n_grids'], opt['n_features'] , 
+        self.encoder = APMG_encoder(opt['n_grids'], opt['n_features'] , 
             self.feature_grid_shape, opt['n_dims'], opt['grid_initialization'])
         
         def init_decoder_tcnn():
@@ -375,7 +375,7 @@ class AMGSRN(nn.Module):
 
 # Works, but is slower and less accurate the the PyTorch version. 
 # May provide a useful speed-up in the future if fixed.
-class AMGSRN_NGP(nn.Module):
+class APMGSRN_NGP(nn.Module):
     def __init__(self, opt):
         super().__init__()
         

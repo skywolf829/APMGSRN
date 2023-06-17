@@ -144,9 +144,9 @@ def create_model(opt):
         if(opt['model'] == "fVSRN"):
             from Models.fVSRN import fVSRN_NGP
             return fVSRN_NGP(opt)
-        elif(opt['model'] == "AMGSRN"):
-            from Models.AMGSRN import AMGSRN
-            return AMGSRN(opt)
+        elif(opt['model'] == "APMGSRN"):
+            from Models.APMGSRN import APMGSRN
+            return APMGSRN(opt)
         elif(opt['model'] == "NGP"):
             from Models.NGP import NGP
             return NGP(opt)

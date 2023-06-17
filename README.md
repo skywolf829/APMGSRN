@@ -1,12 +1,12 @@
-# AMGSRN
+# APMGSRN
 
-![Image unavailable](/Figures/AMGSRN_teaser.jpg "Adaptive grids fitting to the data")
+![Image unavailable](/Figures/APMGSRN_teaser.jpg "Adaptive grids fitting to the data")
 
-This repo contains code for adaptive multi-grid scene representation network (AMGSRN), an ensemble training routine for large-scale data, and a neural volume renderer.
-Materials are prepared for submission to VIS2023 for our paper titled "Adaptive Multi-Grid Scene Representation Networks for Large-Scale Data Visualization", submission ID 1036, submitted on March 31, 2023.
+This repo contains code for adaptively placed multi-grid scene representation network (APMGSRN), an ensemble training routine for large-scale data, and a neural volume renderer.
+Materials are prepared for submission to VIS2023 for our paper titled "Adaptively Placed Multi-Grid Scene Representation Networks for Large-Scale Data Visualization", submission ID 1036, submitted on March 31, 2023 and revised by July 1st.
 Included is all code used to train networks giving performance metrics shown in our submitted manuscript.
 
-![Image unavailable](/Figures/AMGSRN_architecture.jpg "Network architecture")
+![Image unavailable](/Figures/APMGSRN_architecture.jpg "Network architecture")
 ![Figure unavailable](/Figures/All_qualitative.jpg "Qualitative comparison")
 
 ## Architecture
@@ -19,8 +19,8 @@ After finding a good spot, the grids freeze, allowing the decoder to fine-tune t
 
 Click to watch videos:
 
-[![AMGSRN grids during training](https://img.youtube.com/vi/utYqmFmyRaE/0.jpg)](https://www.youtube.com/watch?v=utYqmFmyRaE)
-[![AMGSRN grids during training](https://img.youtube.com/vi/mFsk2LYAJ-E/0.jpg)](https://www.youtube.com/watch?v=mFsk2LYAJ-E)
+[![APMGSRN grids during training](https://img.youtube.com/vi/utYqmFmyRaE/0.jpg)](https://www.youtube.com/watch?v=utYqmFmyRaE)
+[![APMGSRN grids during training](https://img.youtube.com/vi/mFsk2LYAJ-E/0.jpg)](https://www.youtube.com/watch?v=mFsk2LYAJ-E)
 
 Timestamps are available on YouTube for jumping to points of interest.
 
@@ -33,7 +33,7 @@ The installation will still work without WSL (on native Windows), but there may 
 We recommend the use of conda for management of Python version and packages. To install, run the following:
 ```
 conda env create --file environment.yml
-conda activate AMGSRN
+conda activate APMGSRN
 ```
 
 Once thats finished (could take a minute depending on system) and the environment has been activated, navigate to https://pytorch.org/get-started/locally/ and follow instructions to install pytorch on your machine.
@@ -119,7 +119,7 @@ which should automatically load the first model in the SavedModels folder and be
 
 A few of our datasets are too large to be hosted for download, but can independently be downloaded from Johns Hopkins Turbulence Database: https://turbulence.pha.jhu.edu/.
 However, we do host 3 smaller-scale datasets and provide pretrained models for all models tested in the paper in an anonymous Google Drive folder.
-We also make available all models used in our paper for all experiments, both AMGSRN as well as baseline fVSRN and NGP models.
+We also make available all models used in our paper for all experiments, both APMGSRN as well as baseline fVSRN and NGP models.
 
 - Data (360 MB compressed, 664 MB decompressed): https://drive.google.com/file/d/1a1363lnv154kWcIeg8cvtjnx8uTE9xe2/view?usp=sharing
 - SavedModels (2.98 GB compressed, 3.23 GB decompressed): https://drive.google.com/file/d/1Z3Kt51enaWRXyTDcsK9MxH8XXp5Zdlc3/view?usp=sharing
@@ -177,9 +177,9 @@ Default hyperparemeter values are what is shown in ```/Code/Models/options.py```
 A description of each argument can be seen by running ```python Code/train.py --help```. 
 The only data format currently supported is NetCDF, although you could add your own dataloader in ```Code/Datasets/datasets.py``` as well.
 
-Example of training an AMGSRN model on the plume data:
+Example of training an APMGSRN model on the plume data:
 
-```python Code/train.py --model AMGSRN --data Plume.nc```
+```python Code/train.py --model APMGSRN --data Plume.nc```
 
 More examples of usage of this code are encoded into the settings JSON files which are used by ```start_jobs.py```, and we recommend not launching ```train.py``` from the command line yourself, and instead letting ```start_jobs.py``` do it.
 
@@ -216,7 +216,7 @@ Noteable options are:
 
 Examples:
 
-```python Code/renderer.py --hw 1024,1024 --spp 512 --azi 45 --polar 45 --load_from Supernova_AMGSRN_small --colormap Viridis.json```
+```python Code/renderer.py --hw 1024,1024 --spp 512 --azi 45 --polar 45 --load_from Supernova_APMGSRN_small --colormap Viridis.json```
 
 ```python Code/renderer.py --azi 45 --polar 45 --raw_data true --load_from Supernova.nc```
 

@@ -11,7 +11,7 @@
     }],
     [ "test.py",
         {        
-        "load_from": "Supernova_AMGSRN_large",
+        "load_from": "Supernova_APMGSRN_large",
         "tests": "psnr"
     }],
     [ "test.py",
@@ -26,7 +26,7 @@
     }],
     [ "test.py",
         {        
-        "load_from": "Nyx_AMGSRN_large",
+        "load_from": "Nyx_APMGSRN_large",
         "tests": "psnr"
     }],
     [ "test.py",
@@ -41,7 +41,7 @@
     }],
     [ "test.py",
         {        
-        "load_from": "Plume_AMGSRN_large",
+        "load_from": "Plume_APMGSRN_large",
         "tests": "psnr"
     }],
     [ "test.py",
@@ -56,7 +56,7 @@
     }],
     [ "test.py",
         {        
-        "load_from": "Isotropic_AMGSRN_large",
+        "load_from": "Isotropic_APMGSRN_large",
         "tests": "psnr"
     }],
     [ "test.py",
@@ -71,7 +71,7 @@
     }],
     [ "test.py",
         {        
-        "load_from": "Asteroid_AMGSRN_large",
+        "load_from": "Asteroid_APMGSRN_large",
         "tests": "psnr"
     }]
 ]

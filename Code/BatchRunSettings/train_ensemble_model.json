@@ -1,8 +1,8 @@
 [
     [ "train.py",
         {        
-            "save_name": "Plume_AMGSRN_ensemble",
-            "model": "AMGSRN",
+            "save_name": "Plume_APMGSRN_ensemble",
+            "model": "APMGSRN",
             "ensemble": true,
             "ensemble_grid": "4,1,1",
             "ensemble_ghost_cells": 0,
@@ -19,8 +19,8 @@
     }],
     [ "train.py",
         {        
-            "save_name": "Supernova_AMGSRN_ensemble",
-            "model": "AMGSRN",
+            "save_name": "Supernova_APMGSRN_ensemble",
+            "model": "APMGSRN",
             "ensemble": true,
             "ensemble_grid": "2,2,2",
             "ensemble_ghost_cells": 0,
@@ -37,8 +37,8 @@
     }],
     [ "train.py",
         {        
-            "save_name": "Isotropic_AMGSRN_ensemble",
-            "model": "AMGSRN",
+            "save_name": "Isotropic_APMGSRN_ensemble",
+            "model": "APMGSRN",
             "ensemble": true,
             "ensemble_grid": "2,2,2",
             "ensemble_ghost_cells": 0,
@@ -55,8 +55,8 @@
     }],
     [ "train.py",
         {        
-            "save_name": "Nyx_AMGSRN_ensemble",
-            "model": "AMGSRN",
+            "save_name": "Nyx_APMGSRN_ensemble",
+            "model": "APMGSRN",
             "ensemble": true,
             "ensemble_grid": "2,2,2",
             "ensemble_ghost_cells": 0,
@@ -73,8 +73,8 @@
     }],
     [ "train.py",
         {        
-            "save_name": "Asteroid_AMGSRN_ensemble",
-            "model": "AMGSRN",
+            "save_name": "Asteroid_APMGSRN_ensemble",
+            "model": "APMGSRN",
             "ensemble": true,
             "ensemble_grid": "2,2,2",
             "ensemble_ghost_cells": 0,

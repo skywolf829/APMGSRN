@@ -2,7 +2,7 @@
     [ "train.py",
         {        
             "save_name": "temp",
-            "model": "AMGSRN",
+            "model": "APMGSRN",
             "data": "Plume.nc",
             "n_features": 2,
             "n_grids": 16,

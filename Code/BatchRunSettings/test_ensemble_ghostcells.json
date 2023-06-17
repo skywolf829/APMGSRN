@@ -1,22 +1,22 @@
 [
     [ "test.py",
         {        
-        "load_from": "Isotropic_AMGSRN_ensemble_0ghost",
+        "load_from": "Isotropic_APMGSRN_ensemble_0ghost",
         "tests": "psnr"
     }],
     [ "test.py",
         {        
-        "load_from": "Isotropic_AMGSRN_ensemble_16ghost",
+        "load_from": "Isotropic_APMGSRN_ensemble_16ghost",
         "tests": "psnr"
     }],
     [ "test.py",
         {        
-        "load_from": "Supernova_AMGSRN_ensemble_0ghost",
+        "load_from": "Supernova_APMGSRN_ensemble_0ghost",
         "tests": "psnr"
     }],
     [ "test.py",
         {        
-        "load_from": "Supernova_AMGSRN_ensemble_16ghost",
+        "load_from": "Supernova_APMGSRN_ensemble_16ghost",
         "tests": "psnr"
     }]
 ]

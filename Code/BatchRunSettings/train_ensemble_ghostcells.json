@@ -1,8 +1,8 @@
 [
     [ "train.py",
         {        
-            "save_name": "Isotropic_AMGSRN_ensemble_0ghost",
-            "model": "AMGSRN",
+            "save_name": "Isotropic_APMGSRN_ensemble_0ghost",
+            "model": "APMGSRN",
             "ensemble": true,
             "ensemble_grid": "3,3,3",
             "ensemble_ghost_cells": 0,
@@ -19,8 +19,8 @@
     }],
     [ "train.py",
         {        
-            "save_name": "Isotropic_AMGSRN_ensemble_16ghost",
-            "model": "AMGSRN",
+            "save_name": "Isotropic_APMGSRN_ensemble_16ghost",
+            "model": "APMGSRN",
             "ensemble": true,
             "ensemble_grid": "3,3,3",
             "ensemble_ghost_cells": 16,
@@ -37,8 +37,8 @@
     }],
     [ "train.py",
         {        
-            "save_name": "Supernova_AMGSRN_ensemble_0ghost",
-            "model": "AMGSRN",
+            "save_name": "Supernova_APMGSRN_ensemble_0ghost",
+            "model": "APMGSRN",
             "ensemble": true,
             "ensemble_grid": "2,2,2",
             "ensemble_ghost_cells": 0,
@@ -55,8 +55,8 @@
     }],
     [ "train.py",
         {        
-            "save_name": "Supernova_AMGSRN_ensemble_16ghost",
-            "model": "AMGSRN",
+            "save_name": "Supernova_APMGSRN_ensemble_16ghost",
+            "model": "APMGSRN",
             "ensemble": true,
             "ensemble_grid": "2,2,2",
             "ensemble_ghost_cells": 16,
