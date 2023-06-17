@@ -220,3 +220,9 @@ Examples:
 
 ```python Code/renderer.py --azi 45 --polar 45 --raw_data true --load_from Supernova.nc```
 
+## Supplemental Figures
+
+Artifacts from underparameterized models on the asteroid dataset.
+Models are 280 KB while the original data is 3.7 GB.
+Our model has extra density in regions the grids have moved to, while NGP and fVSRN have floaters or noise in the area outside.
+![Figure unavailable](/Figures/APMGSRN-artifacts.jpg "Artifacts")
