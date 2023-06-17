@@ -17,6 +17,7 @@ After finding a good spot, the grids freeze, allowing the decoder to fine-tune t
 
 ## Videos
 
+All videos can be seen on this account: https://www.youtube.com/channel/UC8Zx9EUCzDUeoS7AA_om3lA
 Click to watch videos:
 
 [![APMGSRN grids during training](https://img.youtube.com/vi/utYqmFmyRaE/0.jpg)](https://www.youtube.com/watch?v=utYqmFmyRaE)
