@@ -30,7 +30,7 @@ def convert_tcnn_to_pytorch(ckpt, opt):
         output_dim = opt['n_outputs']
         output_dim_padded = next_highest_multiple(output_dim, base)
         
-    elif(opt['model'] == "AMGSRN"):
+    elif(opt['model'] == "APMGSRN"):
         input_dim = opt['n_features']*opt['n_grids']
         input_dim_padded = next_highest_multiple(input_dim, base)
         if(input_dim != input_dim_padded):
