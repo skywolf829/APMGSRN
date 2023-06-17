@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F 
-from Models.layers import ReLULayer, PositionalEncoding
+from Models.layers import ReLULayer
 from typing import List, Dict, Optional
 import math
 
