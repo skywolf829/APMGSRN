@@ -13,8 +13,8 @@ from torch.utils.tensorboard import SummaryWriter
 from Models.losses import *
 import shutil
 from Other.utility_functions import make_coord_grid, create_path, tensor_to_cdf
-#from Other.vis_io import get_vts, write_vts, write_pvd, write_vtm
-#from vtk import vtkMultiBlockDataSet
+from Other.vis_io import get_vts, write_vts, write_pvd, write_vtm
+from vtk import vtkMultiBlockDataSet
 import glob
 import numpy as np
 from torch.utils.data import DataLoader
@@ -48,8 +48,7 @@ def logging(writer, iteration, losses, model, opt, grid_to_sample, dataset,
     if(opt['log_every'] > 0 and iteration % opt['log_every'] == 0):
         log_to_writer(iteration, losses, writer, opt, preconditioning)
     if(opt['log_features_every'] > 0 and \
-        iteration % opt['log_features_every'] == 0 and \
-        preconditioning is not None and "grid" in preconditioning):
+        iteration % opt['log_features_every'] == 0):
         log_feature_points(model, dataset, opt, iteration)
 
 def log_feature_density(model, dataset, opt):
@@ -152,7 +151,7 @@ def log_feature_grids_from_points(opt):
             vtm.SetBlock(j, vts)
         write_vtm(os.path.join(vtm_dir, f"grids_{i:03}.vtm", ), vtm)
 
-def train_step_AMGSRN_precondition(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
+def train_step_APMGSRN_precondition(opt, iteration, batch, dataset, model, optimizer, scheduler, profiler, writer):
     opt['iteration_number'] = iteration
     optimizer.zero_grad() 
                  
@@ -174,7 +173,7 @@ def train_step_AMGSRN_precondition(opt, iteration, batch, dataset, model, optimi
             {"Fitting loss": loss}, 
             model, opt, dataset.data.shape[2:], dataset)
 
-def train_step_AMGSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, writer, 
+def train_step_APMGSRN(opt, iteration, batch, dataset, model, optimizer, scheduler, writer, 
                       early_stopping_data=None):
     early_stop_reconstruction = early_stopping_data[0]
     early_stop_grid = early_stopping_data[1]
@@ -306,8 +305,8 @@ def train( model, dataset, opt):
 
     # choose the specific training iteration function based on the model
     
-    if("AMGSRN" in opt['model']):
-        train_step = train_step_AMGSRN
+    if("APMGSRN" in opt['model']):
+        train_step = train_step_APMGSRN
         optimizer = [
             optim.Adam(
                 model.get_model_parameters(), 
@@ -380,7 +379,7 @@ if __name__ == '__main__':
     parser.add_argument('--n_features',default=None,type=int,
         help='Number of features in the feature grid')       
     parser.add_argument('--n_grids',default=None,type=int,
-        help='Number of grids for AMGSRN')
+        help='Number of grids for APMGSRN')
     parser.add_argument('--num_positional_encoding_terms',default=None,type=int,
         help='Number of positional encoding terms')   
     parser.add_argument('--extents',default=None,type=str,
@@ -406,7 +405,7 @@ if __name__ == '__main__':
     parser.add_argument('--model',default=None,type=str,
         help='The model architecture to use')
     parser.add_argument('--grid_initialization',default=None,type=str,
-        help='How to initialize AMGSRN grids. choices: default, large, small')
+        help='How to initialize APMGSRN grids. choices: default, large, small')
     parser.add_argument('--save_name',default=None,type=str,
         help='Save name for the model')
     parser.add_argument('--align_corners',default=None,type=str2bool,
