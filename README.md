@@ -227,3 +227,9 @@ Artifacts from underparameterized models on the asteroid dataset.
 Models are 280 KB while the original data is 3.7 GB.
 Our model has extra density in regions the grids have moved to, while NGP and fVSRN have floaters or noise in the area outside.
 ![Figure unavailable](/Figures/APMGSRN-artifacts.jpg "Artifacts")
+
+Tensorboard visualization of loss values during training for a typical APMGSRN.
+The left shows the L2 reconstruction loss for the sampled batch each iteration (shown on log-scale).
+The right shows the density loss of the grids during training.
+Note that the density loss stops around 15k iterations since the grids have converged, at which point the reconstruction loss sees a sharp dip before converging as well.
+![Figure unavailable](/Figures/Tensorboard.jpg "Tensorboard")
