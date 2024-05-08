@@ -3,11 +3,26 @@
 ![Image unavailable](/Figures/APMGSRN_teaser.jpg "Adaptive grids fitting to the data")
 
 This repo contains code for adaptively placed multi-grid scene representation network (APMGSRN), an ensemble training routine for large-scale data, and a neural volume renderer.
-Materials are prepared for submission to VIS2023 for our paper titled "Adaptively Placed Multi-Grid Scene Representation Networks for Large-Scale Data Visualization", submission ID 1036, submitted on March 31, 2023 and revised by July 1st.
-Included is all code used to train networks giving performance metrics shown in our submitted manuscript.
+This work was accepted to VIS23, and included is all code used to train networks giving performance metrics shown in our submitted manuscript.
 
 ![Image unavailable](/Figures/APMGSRN_architecture.jpg "Network architecture")
 ![Figure unavailable](/Figures/All_qualitative.jpg "Qualitative comparison")
+
+<section class="section" id="BibTeX">
+  <div class="container is-max-desktop content">
+    <h2 class="title">BibTeX</h2>
+    <pre><code>@Article{wurster23_APMGSRN,
+      author={Wurster, Skylar W. and Xiong, Tianyu and Shen, Han-Wei and Guo, Hanqi and Peterka, Tom},
+      journal={IEEE Transactions on Visualization and Computer Graphics}, 
+      title={Adaptively Placed Multi-Grid Scene Representation Networks for Large-Scale Data Visualization}, 
+      year={2024},
+      volume={30},
+      number={1},
+      pages={965-974},
+      doi={10.1109/TVCG.2023.3327194}
+}</code></pre>
+  </div>
+</section>
 
 ## Architecture
 
