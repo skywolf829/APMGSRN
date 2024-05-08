@@ -4,6 +4,7 @@
 
 This repo contains code for adaptively placed multi-grid scene representation network (APMGSRN), an ensemble training routine for large-scale data, and a neural volume renderer.
 This work was accepted to VIS23, and included is all code used to train networks giving performance metrics shown in our submitted manuscript.
+The paper is available to view [here](https://ieeexplore.ieee.org/document/10297599).
 
 ![Image unavailable](/Figures/APMGSRN_architecture.jpg "Network architecture")
 ![Figure unavailable](/Figures/All_qualitative.jpg "Qualitative comparison")
